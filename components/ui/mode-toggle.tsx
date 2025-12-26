@@ -1,54 +1,58 @@
-import { Button, ButtonSize, ButtonVariant } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { useModeToggle } from '@/hooks/useModeToggle';
-import { Moon, Sun } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { Button, ButtonSize, ButtonVariant } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { useModeToggle } from "@/hooks/useModeToggle";
+import { ThemeMode } from "@/theme/colors";
+import { Palette, Sunrise, Sunset } from "lucide-react-native";
+import { ComponentProps, useEffect, useState } from "react";
 import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 
 type Props = {
   variant?: ButtonVariant;
   size?: ButtonSize;
 };
 
-export const ModeToggle = ({ variant = 'outline', size = 'icon' }: Props) => {
-  const { toggleMode, isDark } = useModeToggle();
+type IconName = ComponentProps<typeof Icon>["name"];
+
+const MODE_ICONS: Record<ThemeMode, IconName> = {
+  system: Palette,
+  aurora: Sunrise,
+  sunset: Sunset,
+};
+
+export const ModeToggle = ({ variant = "outline", size = "icon" }: Props) => {
+  const { toggleMode, mode } = useModeToggle();
   const rotation = useSharedValue(0);
   const scale = useSharedValue(1);
-  const [showIcon, setShowIcon] = useState<'sun' | 'moon'>(
-    isDark ? 'moon' : 'sun'
-  );
+  const [visibleMode, setVisibleMode] = useState<ThemeMode>(mode);
 
   useEffect(() => {
-    // Animate icon change
     scale.value = withTiming(0, { duration: 150 }, () => {
-      runOnJS(setShowIcon)(isDark ? 'moon' : 'sun');
+      runOnJS(setVisibleMode)(mode);
       scale.value = withTiming(1, { duration: 150 });
     });
-
-    // Only rotate when switching to sun (sun rays spinning effect)
-    if (!isDark) {
-      rotation.value = withTiming(rotation.value + 180, { duration: 300 });
-    }
-  }, [isDark]);
+    rotation.value = withTiming(rotation.value + 120, { duration: 300 });
+  }, [mode]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { rotate: showIcon === 'sun' ? `${rotation.value}deg` : '0deg' },
+        { rotate: `${rotation.value}deg` },
         { scale: scale.value },
       ],
     };
   });
 
+  const IconComponent = MODE_ICONS[visibleMode];
+
   return (
     <Button variant={variant} size={size} onPress={toggleMode}>
       <Animated.View style={animatedStyle}>
-        <Icon name={showIcon === 'moon' ? Moon : Sun} size={24} />
+        <Icon name={IconComponent} size={24} />
       </Animated.View>
     </Button>
   );

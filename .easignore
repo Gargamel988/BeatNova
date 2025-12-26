@@ -1,0 +1,61 @@
+# Build artifacts - EAS Build kendi build yapacak
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/debug.keystore
+
+# Node modules - EAS Build kendi yükleyecek
+node_modules/
+
+# Git - gereksiz
+.git/
+.gitignore
+
+# Cache ve log dosyaları
+*.log
+*.cache
+.cache/
+.expo/
+.expo-shared/
+
+# OS dosyaları
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE dosyaları
+.idea/
+.vscode/
+*.iml
+
+# Test ve coverage
+coverage/
+.nyc_output/
+
+# Temporary dosyalar
+tmp/
+temp/
+*.tmp
+
+# Environment dosyaları (güvenlik)
+.env.local
+.env.*.local
+
+# Metro bundler cache
+.metro/
+
+# Build outputs
+dist/
+build/
+*.apk
+*.aab
+*.ipa
+
+# Package manager lock files (EAS kendi yönetir)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+

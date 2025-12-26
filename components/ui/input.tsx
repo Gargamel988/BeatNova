@@ -419,7 +419,6 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
     const muted = useColor('textMuted');
     const primary = useColor('primary');
     const danger = useColor('red');
-
     const isTextarea = type === 'textarea';
 
     const handleFocus = (e: any) => {

@@ -363,7 +363,7 @@ export const Button = forwardRef<View, ButtonProps>(
     ) : (
       <TouchableOpacity
         ref={ref}
-        style={[buttonStyle, disabled && { opacity: 0.5 }, styleWithoutFlex]}
+        style={[buttonStyle, disabled && { opacity: 1 }, styleWithoutFlex]}
         onPress={handleTouchablePress}
         disabled={disabled || loading}
         activeOpacity={0.8}

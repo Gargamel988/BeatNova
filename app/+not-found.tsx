@@ -16,8 +16,8 @@ export default function NotFoundScreen() {
           padding: 20,
         }}
       >
-        <Text>This screen does not exist.</Text>
-        <Link href='/'>Go to home screen!</Link>
+        <Text>Bu sayfa bulunamadı.</Text>
+        <Link href='/'>Ana sayfaya dön</Link>
       </View>
     </>
   );

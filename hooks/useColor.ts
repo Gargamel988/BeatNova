@@ -1,16 +1,22 @@
-import { Colors } from '@/theme/colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { ThemeMode, systemColors } from "@/theme/colors";
+import { useThemeModeContext } from "@/providers/theme-provider";
+
+type Palette = typeof systemColors;
+type StringColorKey = {
+  [K in keyof Palette]: Palette[K] extends string ? K : never;
+}[keyof Palette];
+type ColorOverrides = Partial<Record<ThemeMode, string>>;
 
 export function useColor(
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark,
-  props?: { light?: string; dark?: string }
+  colorName: StringColorKey,
+  props?: ColorOverrides
 ) {
-  const theme = useColorScheme() ?? 'light';
-  const colorFromProps = props?.[theme];
+  const { palette, mode } = useThemeModeContext();
+  const colorFromProps = props?.[mode];
 
   if (colorFromProps) {
     return colorFromProps;
-  } else {
-    return Colors[theme][colorName];
   }
+
+  return palette[colorName];
 }
