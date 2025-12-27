@@ -7,12 +7,17 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal"
-    
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "GOOGLE_GENERATIVE_AI_API_KEY": "AIzaSyB9GYfqiore7LG2hghOf5wXq2vyYcBLbAs",
+        "TAVILY_API_KEY": "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",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://sfusqoptgbrcpkztgchq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdXNxb3B0Z2JyY3BrenRnY2hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5MTU5NzgsImV4cCI6MjA3OTQ5MTk3OH0.Sa0ytgUbRqibkcwfRWPdtJNzDDI0vLdF8GE_6BxXPzE"
       }
     },
     "production": {

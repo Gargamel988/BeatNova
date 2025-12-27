@@ -11,7 +11,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -24,18 +26,13 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": true,
       "permissions": [
-        "READ_EXTERNAL_STORAGE",
         "READ_MEDIA_AUDIO",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.ACCESS_MEDIA_LOCATION",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "package": "com.gargamel9288.beatnova"
     },
@@ -44,7 +41,6 @@
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
-    
       "expo-asset",
       "expo-router",
       "expo-web-browser",
@@ -53,14 +49,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
-          "isAccessMediaLocationEnabled": true,
           "androidPermissions": [
-            "android.permission.READ_EXTERNAL_STORAGE",
-            "android.permission.READ_MEDIA_AUDIO",
-            "android.permission.READ_MEDIA_IMAGES",
-            "android.permission.READ_MEDIA_VIDEO"
+            "android.permission.READ_MEDIA_AUDIO"
           ]
         }
       ],
@@ -97,9 +87,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "7bdd64cb-31da-48b6-ac72-42b20c596eeb"
+        "projectId": "ad693689-0a5a-4ded-8394-23fb6aa18978"
       }
     },
-    "owner": "gargamel9288"
+    "owner": "gargamel123"
   }
 }

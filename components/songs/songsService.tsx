@@ -1,7 +1,6 @@
 import { useCallback, Dispatch, SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as MediaLibrary from "expo-media-library";
-import { Audio } from "expo-av";
 import type { Asset } from "expo-media-library";
 
 export interface SongMetadata {
@@ -104,8 +103,6 @@ export default function useSongsService() {
       if (status !== "granted") {
         throw new Error("MediaLibrary izni reddedildi");
       }
-
-      await Audio.requestPermissionsAsync();
 
       const media = await MediaLibrary.getAssetsAsync({
         mediaType: MediaLibrary.MediaType.audio,
