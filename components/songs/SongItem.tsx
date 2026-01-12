@@ -1,11 +1,17 @@
-import React, { useMemo, useState } from "react";
-import { Image, TouchableOpacity } from "react-native";
+import React, { useMemo, useState, useCallback } from "react";
+import {
+  Image,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { ScrollView } from "@/components/ui/scroll-view";
+import * as MediaLibrary from "expo-media-library";
 import {
   Popover,
   PopoverBody,
@@ -33,10 +39,21 @@ import AddToPlaylistModal from "./AddToPlaylistModal";
 import { PlaylistType } from "@/type/PlaylistType";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "../ui/toast";
-import { addSongToPlaylist, getPlaylists, addSongToFavorites } from "@/services/PlaylistServices";
+import {
+  addSongToPlaylist,
+  getPlaylists,
+  addSongToFavorites,
+} from "@/services/PlaylistServices";
+import { deleteSong } from "@/services/SongsService";
+import DetailsSection from "@/components/segmenttabs/DetailsSection";
+import { BottomSheet, useBottomSheet } from "@/components/ui/bottom-sheet";
 
-
-type SongActionKey = "addToQueue" | "addToPlaylist" | "addToFavorites" | "info" | "remove";
+type SongActionKey =
+  | "addToQueue"
+  | "addToPlaylist"
+  | "addToFavorites"
+  | "info"
+  | "remove";
 
 type SongAction = {
   key: SongActionKey;
@@ -44,7 +61,6 @@ type SongAction = {
   description: string;
   icon: any;
   badgeClass: string;
-  textClass?: string;
 };
 
 const songActions: SongAction[] = [
@@ -53,37 +69,35 @@ const songActions: SongAction[] = [
     label: "Sıraya ekle",
     description: "Bu şarkıyı çalma sırasına ekle",
     icon: PlayCircle,
-    // Daha yumuşak, kuyruk aksiyonu için pastel mor
-    badgeClass: "rgba(147, 51, 234, 0.35)",
+    badgeClass: "primary",
   },
   {
     key: "addToPlaylist",
     label: "Listeye ekle",
     description: "Özel çalma listene kaydet",
     icon: ListPlus,
-    badgeClass: "#38bdf8",
+    badgeClass: "blue",
   },
   {
     key: "addToFavorites",
     label: "Favorilere ekle",
     description: "Bu şarkıyı favorilerinize ekle",
     icon: Heart,
-    badgeClass: "#ef4444",
+    badgeClass: "red",
   },
   {
     key: "info",
     label: "Detayları göster",
     description: "Albüm ve sanatçı bilgilerini aç",
     icon: Info,
-    badgeClass: "#18181b",
+    badgeClass: "secondary",
   },
   {
     key: "remove",
     label: "Kaldır",
     description: "Cihazından sil",
     icon: Trash2,
-    badgeClass: "#ef4444",
-    textClass: "text-red-400",
+    badgeClass: "red",
   },
 ];
 
@@ -94,6 +108,9 @@ function PopoverActionList({
   onSongAction,
   onAddToPlaylist,
   onAddToFavorites,
+  onAddToQueue,
+  onShowInfo,
+  onRemove,
   palette,
   wp,
   hp,
@@ -105,6 +122,9 @@ function PopoverActionList({
   onSongAction: (action: SongActionKey, song: Song) => void;
   onAddToPlaylist: () => void;
   onAddToFavorites: (songId: string) => void;
+  onAddToQueue?: () => void;
+  onShowInfo?: () => void;
+  onRemove?: () => void;
   palette: any;
   wp: any;
   hp: any;
@@ -113,28 +133,46 @@ function PopoverActionList({
 }) {
   const { setIsOpen } = usePopover();
 
+  const getBadgeColor = (badgeKey: string) => {
+    const colorMap: Record<string, string> = {
+      primary: palette.primary,
+      blue: palette.blue,
+      red: palette.red,
+      secondary: palette.secondary,
+      green: palette.green,
+    };
+    return colorMap[badgeKey] || palette.primary;
+  };
+
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: wp(2) }}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ gap: wp(2) }}
+    >
       {actions.map((action) => {
         const handlePress = () => {
-          if (action.key === "addToPlaylist") {
-            setIsOpen(false);
-            // Kısa bir gecikme ile modal'ı aç (popover'ın kapanması için)
-            setTimeout(() => {
-              onAddToPlaylist();
-            }, 200);
-          }
-          else if (action.key === "addToFavorites") {
-            setIsOpen(false);
-            setTimeout(() => {
-              onAddToFavorites(item.id);
-            }, 200);
-            return;
-          }
-          else {
-            setIsOpen(false);
-            onSongAction(action.key, item);
-          }
+          setIsOpen(false);
+          setTimeout(() => {
+            switch (action.key) {
+              case "addToPlaylist":
+                onAddToPlaylist();
+                break;
+              case "addToFavorites":
+                onAddToFavorites(item.id);
+                break;
+              case "addToQueue":
+                onAddToQueue?.();
+                break;
+              case "info":
+                onShowInfo?.();
+                break;
+              case "remove":
+                onRemove?.();
+                break;
+              default:
+                onSongAction(action.key, item);
+            }
+          }, 200);
         };
 
         return (
@@ -153,7 +191,7 @@ function PopoverActionList({
           >
             <View
               style={{
-                backgroundColor: action.badgeClass,
+                backgroundColor: getBadgeColor(action.badgeClass) + "40",
                 borderRadius: radius(10),
                 paddingHorizontal: wp(2.5),
                 paddingVertical: hp(1.5),
@@ -162,14 +200,15 @@ function PopoverActionList({
               <Icon
                 name={action.icon}
                 size={fontSize(16)}
-                color="white"
+                color={getBadgeColor(action.badgeClass)}
               />
             </View>
             <View className="flex-1">
               <Text
-                className="font-semibold "
+                className="font-semibold"
                 style={{
                   fontSize: fontSize(14),
+                  color: palette.text,
                 }}
               >
                 {action.label}
@@ -201,26 +240,42 @@ export default function SongItem({
   onSongUpdate,
   onSongAction,
 }: SongItemProps) {
-  const [visibleAddToPlaylistModal, setVisibleAddToPlaylistModal] = useState(false);
+  const [visibleAddToPlaylistModal, setVisibleAddToPlaylistModal] =
+    useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const {
+    isVisible: isInfoSheetVisible,
+    open: openInfoSheet,
+    close: closeInfoSheet,
+  } = useBottomSheet();
 
   const queryClient = useQueryClient();
-
   const { play, activeSong } = useAudioPlayerContext();
-  const { sortedPlaylist } = usePlaylistContext();
+  const { sortedPlaylist, setSortedPlaylist } = usePlaylistContext();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette } = useThemeModeContext();
   const { toast } = useToast();
-  const {data: playlistsData, isLoading: playlistsLoading} = useQuery<PlaylistType[]>({
-    queryKey: ['playlists'],
+
+  const { data: playlistsData, isLoading: playlistsLoading } = useQuery<
+    PlaylistType[]
+  >({
+    queryKey: ["playlists"],
     queryFn: () => getPlaylists(),
     enabled: visibleAddToPlaylistModal,
   });
+
   const playlists = useMemo(() => playlistsData ?? [], [playlistsData]);
   const { title, artist, duration, coverUri } = item.metadata;
   const hasArtwork = !!coverUri;
 
-  const { mutate } = useMutation({
-    mutationFn: async ({ songId, playlistId }: { songId: string, playlistId: number }) => {
+  const { mutate: addToPlaylistMutation } = useMutation({
+    mutationFn: async ({
+      songId,
+      playlistId,
+    }: {
+      songId: string;
+      playlistId: number;
+    }) => {
       return addSongToPlaylist(songId, playlistId);
     },
     onSuccess: () => {
@@ -229,7 +284,8 @@ export default function SongItem({
         description: "Şarkı başarıyla playliste eklendi",
         variant: "success",
       });
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      setVisibleAddToPlaylistModal(false);
+      queryClient.invalidateQueries({ queryKey: ["favorites"] });
     },
     onError: (error: any) => {
       toast({
@@ -239,42 +295,119 @@ export default function SongItem({
       });
     },
   });
-  
-  const handleImageError = () => {
+
+  const { mutate: addToFavoritesMutation } = useMutation({
+    mutationFn: async (songId: string) => {
+      return addSongToFavorites(songId);
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: data.success ? "Başarılı" : "Uyarı",
+        description: data.message,
+        variant: data.success ? "success" : "warning",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "error",
+      });
+    },
+  });
+
+  const handleImageError = useCallback(() => {
     onSongUpdate({
       ...item,
       metadata: { ...item.metadata, coverUri: undefined },
     });
-  };
-const {mutate: addToFavoritesMutation} = useMutation({
-  mutationFn: async (songId: string) => {
-    return addSongToFavorites(songId);
-  },
-  onSuccess: (data: any) => {
-    if (data.success) {
-      toast({
-        title: "Başarılı",
-        description: data.message,
-        variant: "success",
-      });
-    } else {
+  }, [item, onSongUpdate]);
+
+  const handleAddToQueue = useCallback(() => {
+    if (sortedPlaylist.find((s) => s.id === item.id)) {
       toast({
         title: "Uyarı",
-        description: data.message,
+        description: "Bu şarkı zaten sırada",
         variant: "warning",
       });
+      return;
     }
-  },
-  onError: (error: any) => {
+    setSortedPlaylist([...sortedPlaylist, item]);
     toast({
-      title: "Hata",
-      description: error.message,
-      variant: "error",
+      title: "Başarılı",
+      description: "Şarkı sıraya eklendi",
+      variant: "success",
     });
-  },
-});
+  }, [item, sortedPlaylist, setSortedPlaylist, toast]);
+
+  const handleRemove = useCallback(() => {
+    Alert.alert(
+      "Şarkıyı Sil",
+      "Bu şarkıyı cihazınızdan silmek istediğinizden emin misiniz?",
+      [
+        { text: "İptal", style: "cancel" },
+        {
+          text: "Sil",
+          style: "destructive",
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await MediaLibrary.deleteAssetsAsync([item.id]);
+
+              try {
+                await deleteSong(item.id);
+              } catch (dbError: any) {
+                console.warn("Veritabanından silme hatası:", dbError);
+                toast({
+                  title: "Uyarı",
+                  description:
+                    "Şarkı cihazdan silindi ancak veritabanında hata oluştu",
+                  variant: "warning",
+                });
+              }
+
+              toast({
+                title: "Başarılı",
+                description: "Şarkı silindi",
+                variant: "success",
+              });
+              queryClient.invalidateQueries({ queryKey: ["songs"] });
+            } catch (error: any) {
+              toast({
+                title: "Hata",
+                description: error.message || "Şarkı silinirken hata oluştu",
+                variant: "error",
+              });
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [item.id, toast, queryClient]);
 
   const isActive = activeSong?.id === item.id;
+
+  const songDetails = useMemo(
+    () => [
+      { label: "Dosya Adı", value: item.filename || "Bilinmiyor" },
+      { label: "Süre", value: duration > 0 ? formatTime(duration) : "—" },
+      { label: "Albüm", value: item.metadata?.album || "Bilinmeyen Albüm" },
+      { label: "Sanatçı", value: artist || "Bilinmeyen Sanatçı" },
+      {
+        label: "Oluşturulma",
+        value: item.creationTime
+          ? new Date(item.creationTime * 1000).toLocaleDateString("tr-TR")
+          : "—",
+      },
+    ],
+    [item, duration, artist]
+  );
+
+  const handlePlayPress = useCallback(() => {
+    play(item, sortedPlaylist.length > 0 ? sortedPlaylist : undefined);
+  }, [item, play, sortedPlaylist]);
 
   return (
     <TouchableOpacity
@@ -285,36 +418,24 @@ const {mutate: addToFavoritesMutation} = useMutation({
         borderColor: palette.border,
         borderRadius: radius(12),
         overflow: "hidden",
-        shadowColor: "transparent",
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        shadowOffset: { width: 0, height: 0 },
-        elevation: 0,
       }}
-      activeOpacity={1}
-      onPress={() => play(item, sortedPlaylist.length > 0 ? sortedPlaylist : undefined)}
+      activeOpacity={0.8}
+      onPress={handlePlayPress}
+      disabled={isDeleting}
     >
       <View
         className="flex-row"
         style={{
           padding: wp(2.5),
-          backgroundColor: isActive ? palette.overlay.purple30 : "transparent",
+          backgroundColor: isActive ? palette.primary : "transparent",
           borderWidth: isActive ? 1 : 0,
-          borderColor: isActive ? palette.purpleLight : "transparent",
-          overflow: "hidden",
+          borderColor: isActive ? palette.primary : "transparent",
           borderRadius: radius(12),
-          shadowColor: isActive ? palette.purpleLight : "transparent",
-          shadowOpacity: isActive ? 0.5 : 0,
-          shadowRadius: isActive ? 12 : 0,
-          shadowOffset: { width: 0, height: isActive ? 6 : 0 },
+          opacity: isDeleting ? 0.5 : 1,
         }}
       >
         {/* Album Artwork */}
-        <View
-          style={{
-            marginRight: wp(3),
-          }}
-        >
+        <View style={{ marginRight: wp(3) }}>
           {hasArtwork ? (
             <View className="relative flex-shrink">
               <Image
@@ -327,15 +448,19 @@ const {mutate: addToFavoritesMutation} = useMutation({
                 resizeMode="cover"
                 onError={handleImageError}
               />
-              {item.id === activeSong?.id && (
+              {isActive && (
                 <View
                   className="absolute inset-0 items-center justify-center"
                   style={{
                     borderRadius: radius(10),
-                    backgroundColor: "rgba(147, 51, 234, 0.3)",
+                    backgroundColor: palette.overlay.purple30,
                   }}
                 >
-                  <Feather name="play" size={fontSize(28)} color="#9333ea" />
+                  <Feather
+                    name="play"
+                    size={fontSize(28)}
+                    color={palette.primary}
+                  />
                 </View>
               )}
             </View>
@@ -365,11 +490,10 @@ const {mutate: addToFavoritesMutation} = useMutation({
         <View className="flex-row items-center justify-between flex-1">
           <View className="flex-col max-w-[85%]">
             <Text
-              className={`font-bold ${
-                isActive ? "text-purple-400" : "text-white"
-              }`}
               style={{
                 fontSize: fontSize(16),
+                fontWeight: "bold",
+                color: isActive ? palette.primaryForeground : palette.text,
                 marginBottom: hp(1),
               }}
               numberOfLines={1}
@@ -404,51 +528,53 @@ const {mutate: addToFavoritesMutation} = useMutation({
           <PopoverTrigger asChild>
             <TouchableOpacity
               className="justify-center"
-              style={{
-                marginLeft: wp(2),
-              }}
+              style={{ marginLeft: wp(2) }}
+              disabled={isDeleting}
             >
-              <Icon
-                name={MoreVerticalIcon}
-                size={fontSize(24)}
-                color={activeSong?.id === item.id ? "#9333ea" : "#b0b0b0"}
-              />
+              {isDeleting ? (
+                <ActivityIndicator size="small" color={palette.primary} />
+              ) : (
+                <Icon
+                  name={MoreVerticalIcon}
+                  size={fontSize(24)}
+                  color={isActive ? palette.primary : palette.textMuted}
+                />
+              )}
             </TouchableOpacity>
           </PopoverTrigger>
-          <PopoverContent side="bottom" align="end" style={{ padding: 0 }}>
+          <PopoverContent side="bottom" align="end">
             <PopoverHeader
-              style={{
-                paddingHorizontal: wp(2.5),
-                paddingVertical: hp(1.5),
-              }}
+              style={{ paddingHorizontal: wp(2.5), paddingVertical: hp(1.5) }}
             >
-                <Text
-                  className="font-semibold max-w-[70%] overflow-hidden"
-                  style={{
-                    fontSize: fontSize(16),
-                    
-                  }}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {title}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: fontSize(12),
-                    color: palette.textMuted,
-                  }}
-                >
-                  {artist}
-                </Text>
+              <Text
+                style={{
+                  fontSize: fontSize(16),
+                  fontWeight: "bold",
+                  color: palette.text,
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {title}
+              </Text>
+              <Text
+                style={{ fontSize: fontSize(12), color: palette.textMuted }}
+              >
+                {artist}
+              </Text>
             </PopoverHeader>
-            <PopoverBody style={{ paddingHorizontal: wp(2.5) , maxHeight: hp(45) }}>
-              <PopoverActionList 
+            <PopoverBody
+              style={{ paddingHorizontal: wp(2.5), maxHeight: hp(45) }}
+            >
+              <PopoverActionList
                 actions={songActions}
                 item={item}
                 onSongAction={onSongAction}
                 onAddToPlaylist={() => setVisibleAddToPlaylistModal(true)}
                 onAddToFavorites={() => addToFavoritesMutation(item.id)}
+                onAddToQueue={handleAddToQueue}
+                onShowInfo={openInfoSheet}
+                onRemove={handleRemove}
                 palette={palette}
                 wp={wp}
                 hp={hp}
@@ -462,22 +588,46 @@ const {mutate: addToFavoritesMutation} = useMutation({
           </PopoverContent>
         </Popover>
       </View>
+
       <AddToPlaylistModal
         isVisible={visibleAddToPlaylistModal}
         isLoadingData={playlistsLoading}
-        onClose={() => {
-          setVisibleAddToPlaylistModal(false);
-        }}
+        onClose={() => setVisibleAddToPlaylistModal(false)}
         playlists={playlists}
         onSelectPlaylist={(playlist) => {
           if (playlist.id) {
-            mutate({ songId: item.id as string, playlistId: playlist.id });
-            setVisibleAddToPlaylistModal(false);
+            addToPlaylistMutation({
+              songId: item.id as string,
+              playlistId: playlist.id,
+            });
           }
         }}
         selectedSongId={item.id}
       />
+
+      <BottomSheet
+        isVisible={isInfoSheetVisible}
+        onClose={closeInfoSheet}
+        title="Şarkı Detayları"
+        snapPoints={[0.5, 0.7]}
+      >
+        <View style={{ gap: hp(1) }}>
+          {coverUri && (
+            <View style={{ alignItems: "center", marginBottom: hp(2) }}>
+              <Image
+                source={{ uri: coverUri }}
+                style={{
+                  width: wp(40),
+                  height: wp(40),
+                  borderRadius: radius(16),
+                }}
+                resizeMode="cover"
+              />
+            </View>
+          )}
+          <DetailsSection details={songDetails} />
+        </View>
+      </BottomSheet>
     </TouchableOpacity>
   );
 }
-

@@ -32,8 +32,7 @@ interface MostPlayedSongsProps {
 export function MostPlayedSongs({ songs, listeningHistory = [] }: MostPlayedSongsProps) {
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("month");
-
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("week");
   // Tarih filtresine göre listening history'yi filtrele
   const filteredHistory = React.useMemo(() => {
     if (!listeningHistory || listeningHistory.length === 0) return [];

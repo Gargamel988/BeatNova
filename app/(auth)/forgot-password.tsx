@@ -38,11 +38,8 @@ export default function ForgotPassword() {
   const primaryText = useColor('authPrimaryText');
   const secondaryText = useColor('authSecondaryText');
   const buttonGradientStart = useColor('authButtonGradientStart');
-  const buttonGradientEnd = useColor('authButtonGradientEnd');
-  const buttonTextColor = useColor('authButtonText');
   const linkColor = useColor('authLink');
   const borderColor = useColor('border');
-  const cardBg = useColor('card');
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setIsLoading(true);
@@ -235,6 +232,11 @@ export default function ForgotPassword() {
                   onBlur={onBlur}
                   error={errors.email?.message}
                   icon={Mail}
+                  containerStyle={{
+                    borderColor: errors.email ? "transparent" : borderColor,
+                    borderWidth: 1,
+                    borderRadius: radius(99),
+                  }}
                 />
               )}
             />

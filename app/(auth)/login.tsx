@@ -1,6 +1,6 @@
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
@@ -11,7 +11,7 @@ import { TouchableOpacity, ScrollView } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Link, router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation} from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { LoginScheme, LoginSchemeType } from "@/schemes/LoginScheme";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +19,6 @@ import { useToast } from "@/components/ui/toast";
 import { useColor } from "@/hooks/useColor";
 import GoogleSignIn from "@/components/GoogleAuth";
 import { Separator } from "@/components/ui/separator";
-import useSongsService, { Song } from "@/components/songs/songsService";
 
 
 
@@ -187,7 +186,7 @@ export default function Login() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   containerStyle={{
-                    borderColor: borderColor,
+                    borderColor: errors.email ? "transparent" : borderColor,
                     borderWidth: 1,
                     borderRadius: radius(99),
                   }}
@@ -218,7 +217,7 @@ export default function Login() {
                   placeholder="Şifrenizi giriniz"
                   icon={Lock}
                   containerStyle={{
-                    borderColor: borderColor,
+                    borderColor: errors.password ? "transparent" : borderColor,
                     borderWidth: 1,
                     borderRadius: radius(99),
                   }}

@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -15,6 +16,8 @@ import {
   ThemeModes,
   ThemePalette,
 } from "@/theme/colors";
+import { useQuery } from "@tanstack/react-query";
+import { getProfile } from "@/services/ProfilServices";
 
 const MODE_SEQUENCE = ThemeModes;
 
@@ -61,6 +64,23 @@ const buildNavigationTheme = (palette: ThemePalette) => ({
 
 export const ThemeProvider = ({ children }: Props) => {
   const [mode, setMode] = useState<ThemeMode>("system");
+  
+  // Load theme from database
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => getProfile(),
+  });
+
+  // Set theme from database when profile loads
+  useEffect(() => {
+    if (profile?.data?.theme) {
+      const savedTheme = profile.data.theme as ThemeMode;
+      // Validate theme mode
+      if (ThemeModes.includes(savedTheme)) {
+        setMode(savedTheme);
+      }
+    }
+  }, [profile?.data?.theme]);
 
   const toggleMode = useCallback(() => {
     setMode((prev) => {

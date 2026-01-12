@@ -12,6 +12,7 @@ import useSongsService from "@/components/songs/songsService";
 import HomeHeader from "@/components/home/HomeHeader";
 import NowPlayingCard from "@/components/home/NowPlayingCard";
 import StatsCards from "@/components/home/StatsCards";
+import AIBanner from "@/components/home/AIBanner";
 import QuickAccess from "@/components/home/QuickAccess";
 import PinnedPlaylists from "@/components/home/PinnedPlaylists";
 import RecentSongs from "@/components/home/RecentSongs";
@@ -25,53 +26,62 @@ export default function Index() {
   const [isPlaylistModalVisible, setIsPlaylistModalVisible] = useState(false);
   const [playlist, setPlaylist] = useState<any>(null);
   // Verileri çek
-  const [songsDetails, deviceSongs, favorites, listeningHistory, playlists] = useQueries({
-    queries: [
-      {
-        queryKey: ["songs-details"],
-        queryFn: () => getAllSongsWithDetails(),
-      },
-      {
-        queryKey: ["songs"],
-        queryFn: () => loadSongs(),
-      },
-      {
-        queryKey: ["favorites"],
-        queryFn: () => getFavorites(),
-      },
-      {
-        queryKey: ["listeninghistory"],
-        queryFn: () => getlisteninghistory(),
-      },
-      {
-        queryKey: ["playlists"],
-        queryFn: () => getPlaylists(),
-      },
-    ],
-  });
+  const [songsDetails, deviceSongs, favorites, listeningHistory, playlists] =
+    useQueries({
+      queries: [
+        {
+          queryKey: ["songs-details"],
+          queryFn: () => getAllSongsWithDetails(),
+        },
+        {
+          queryKey: ["songs"],
+          queryFn: () => loadSongs(),
+        },
+        {
+          queryKey: ["favorites"],
+          queryFn: () => getFavorites(),
+        },
+        {
+          queryKey: ["listeninghistory"],
+          queryFn: () => getlisteninghistory(),
+        },
+        {
+          queryKey: ["playlists"],
+          queryFn: () => getPlaylists(),
+        },
+      ],
+    });
 
-  const isLoading = songsDetails.isLoading || deviceSongs.isLoading || favorites.isLoading || listeningHistory.isLoading || playlists.isLoading;
-
+  const isLoading =
+    songsDetails.isLoading ||
+    deviceSongs.isLoading ||
+    favorites.isLoading ||
+    listeningHistory.isLoading ||
+    playlists.isLoading;
 
   // Son çalınan şarkılar (listening history'den)
   const recentSongs = useMemo(() => {
     if (!listeningHistory.data || !songsDetails.data) return [];
-    
+
     // Son 7 günün dinleme geçmişini al ve şarkıları eşleştir
-    const recentHistory = listeningHistory
-      .data?.filter((item: any) => {
+    const recentHistory = listeningHistory.data
+      ?.filter((item: any) => {
         const itemDate = new Date(item.created_at);
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         return itemDate >= sevenDaysAgo;
       })
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
       .slice(0, 5);
 
     // Şarkıları eşleştir ve benzersiz yap
     const uniqueSongIds = new Set<string>();
-    return recentHistory?.map((item: any) => {
-      const song = songsDetails.data?.find((s: any) => s.id === item.song_id);
+    return recentHistory
+      ?.map((item: any) => {
+        const song = songsDetails.data?.find((s: any) => s.id === item.song_id);
         if (song && !uniqueSongIds.has(song.id)) {
           uniqueSongIds.add(song.id);
           return {
@@ -128,9 +138,6 @@ export default function Index() {
       .filter((song): song is NonNullable<typeof song> => song !== null);
   }, [listeningHistory.data, songsDetails.data]);
 
-  // Sabitlenmiş playlist'ler
-
-
   const handlePlaySong = (assetId: string) => {
     if (!deviceSongs) return;
     const song = deviceSongs.data?.find((s: any) => s.id === assetId);
@@ -146,9 +153,9 @@ export default function Index() {
 
   if (isLoading) {
     return (
-        <SafeAreaView style={{ flex: 1 }}>
-          <LoadingState message="Yükleniyor..." fullScreen />
-        </SafeAreaView>
+      <SafeAreaView style={{ flex: 1 }}>
+        <LoadingState message="Yükleniyor..." fullScreen />
+      </SafeAreaView>
     );
   }
 
@@ -165,16 +172,20 @@ export default function Index() {
         <HomeHeader />
         <NowPlayingCard activeSong={activeSong} />
         <StatsCards
-          totalSongs={songsDetails.data?.length || 0}
+          totalSongs={deviceSongs.data?.length || 0}
           totalPlaylists={playlists.data?.length || 0}
           totalFavorites={favorites.data?.length || 0}
         />
+        <AIBanner />
         <QuickAccess
-          songsCount={songsDetails.data?.length || 0}
+          songsCount={deviceSongs.data?.length || 0}
           playlistsCount={playlists.data?.length || 0}
           favoritesCount={favorites.data?.length || 0}
         />
-        <PinnedPlaylists playlists={playlists.data?.slice(0, 3) || []} onPlayPlaylist={handlePlayPlaylist} />
+        <PinnedPlaylists
+          playlists={playlists.data?.slice(0, 3) || []}
+          onPlayPlaylist={handlePlayPlaylist}
+        />
         <RecentSongs songs={recentSongs} onPlaySong={handlePlaySong} />
         <PopularSongs songs={popularSongs} onPlaySong={handlePlaySong} />
       </ScrollView>

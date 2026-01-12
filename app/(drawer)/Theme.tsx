@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useModeToggle } from "@/hooks/useModeToggle";
@@ -11,22 +11,56 @@ import { Icon } from "@/components/ui/icon";
 import { ArrowLeft, Check } from "lucide-react-native";
 import { router } from "expo-router";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
+import { useProfile } from "@/hooks/useProfil";
 
-const THEME_META: Record<ThemeMode, { label: string; icon: string; description: string }> = {
-  system: { 
-    label: "BeatNova", 
+const THEME_META: Record<
+  ThemeMode,
+  { label: string; icon: string; description: string }
+> = {
+  system: {
+    label: "BeatNova",
     icon: "🎛️",
-    description: "Klasik mor ve pembe tema"
+    description: "Klasik mor ve pembe tema",
   },
-  aurora: { 
-    label: "Aurora", 
+  aurora: {
+    label: "Aurora",
     icon: "🌌",
-    description: "Mavi ve cyan tonları"
+    description: "Mavi ve cyan tonları",
   },
-  sunset: { 
-    label: "Sunset", 
+  sunset: {
+    label: "Sunset",
     icon: "🌅",
-    description: "Turuncu ve kırmızı tonları"
+    description: "Turuncu ve kırmızı tonları",
+  },
+  ocean: {
+    label: "Ocean",
+    icon: "🌊",
+    description: "Mavi ve açık mavi tonları",
+  },
+  forest: {
+    label: "Forest",
+    icon: "🌲",
+    description: "Yeşil ve kahverengi tonları",
+  },
+  midnight: {
+    label: "Midnight",
+    icon: "🌙",
+    description: "Siyah ve gri tonları",
+  },
+  rose: {
+    label: "Rose",
+    icon: "🌹",
+    description: "Kırmızı ve pembe tonları",
+  },
+  amber: {
+    label: "Amber",
+    icon: "🌟",
+    description: "Turuncu ve sarı tonları",
+  },
+  lavender: {
+    label: "Lavender",
+    icon: "🌷",
+    description: "Mor ve açık mor tonları",
   },
 };
 
@@ -42,6 +76,7 @@ export default function ThemePlayground() {
   const cardBg = useColor("card");
   const borderColor = useColor("border");
   const primary = useColor("primary");
+  const { mutateUpdateProfile } = useProfile();
 
   return (
     <LinearGradient
@@ -104,6 +139,21 @@ export default function ThemePlayground() {
                 Uygulamanızın görünümünü özelleştirin
               </Text>
             </View>
+            <TouchableOpacity  
+            disabled={mutateUpdateProfile.isPending}
+            activeOpacity={0.8}
+            style={{
+              backgroundColor: primary,
+              padding: wp(4),
+              borderRadius: radius(16),
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onPress={() => {
+              mutateUpdateProfile.mutate({ theme: mode });
+            }}>
+              <Text style={{ color: "white", fontSize: fontSize(16), fontWeight: "bold" }}>Uygula</Text>
+            </TouchableOpacity>
           </Animated.View>
 
           {/* Theme Cards */}
@@ -119,7 +169,9 @@ export default function ThemePlayground() {
                   entering={FadeInDown.duration(400).delay(200 + index * 100)}
                 >
                   <TouchableOpacity
-                    onPress={() => setMode(key)}
+                    onPress={() => {
+                      setMode(key);
+                    }}
                     activeOpacity={0.8}
                     style={{
                       borderRadius: radius(20),
@@ -129,7 +181,9 @@ export default function ThemePlayground() {
                     }}
                   >
                     <LinearGradient
-                      colors={themePalette.gradient.main as [string, string, string]}
+                      colors={
+                        themePalette.gradient.main as [string, string, string]
+                      }
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={{
@@ -187,19 +241,21 @@ export default function ThemePlayground() {
                               marginTop: hp(1),
                             }}
                           >
-                            {themePalette.gradient.main.slice(0, 3).map((color, idx) => (
-                              <View
-                                key={idx}
-                                style={{
-                                  width: wp(8),
-                                  height: wp(8),
-                                  borderRadius: radius(8),
-                                  backgroundColor: color,
-                                  borderWidth: 1,
-                                  borderColor: "rgba(255, 255, 255, 0.2)",
-                                }}
-                              />
-                            ))}
+                            {themePalette.gradient.main
+                              .slice(0, 3)
+                              .map((color, idx) => (
+                                <View
+                                  key={idx}
+                                  style={{
+                                    width: wp(8),
+                                    height: wp(8),
+                                    borderRadius: radius(8),
+                                    backgroundColor: color,
+                                    borderWidth: 1,
+                                    borderColor: "rgba(255, 255, 255, 0.2)",
+                                  }}
+                                />
+                              ))}
                           </View>
                         </View>
                         {active && (
@@ -276,8 +332,8 @@ export default function ThemePlayground() {
                 lineHeight: fontSize(20),
               }}
             >
-              Tema değişikliği anında uygulanır. Farklı temaları deneyerek
-              en sevdiğinizi bulabilirsiniz.
+              Tema değişikliği anında uygulanır. Farklı temaları deneyerek en
+              sevdiğinizi bulabilirsiniz.
             </Text>
             <View
               style={{

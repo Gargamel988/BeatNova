@@ -3,10 +3,14 @@ import { View } from "react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { Text } from "./text";
-import { Icon } from "./icon";
 import { Music2, Search, Inbox, ListMusic } from "lucide-react-native";
 
-type EmptyStateIcon = "music" | "search" | "inbox" | "playlist" | React.ComponentType<any>;
+type EmptyStateIcon =
+  | "music"
+  | "search"
+  | "inbox"
+  | "playlist"
+  | React.ComponentType<any>;
 
 interface EmptyStateProps {
   title?: string;
@@ -34,62 +38,46 @@ export function EmptyState({
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
-
-  const containerStyle = {
-    flex: fullScreen ? 1 : undefined,
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
-    paddingVertical: fullScreen ? 0 : hp(4),
-    paddingHorizontal: wp(10),
-    gap: hp(2),
-  };
+  const borderColor = useColor("border");
 
   // Icon seçimi
-  const IconComponent = typeof icon === "string" ? iconMap[icon] || Music2 : icon;
+  const IconComponent =
+    typeof icon === "string" ? iconMap[icon] || Music2 : icon;
 
   return (
-    <View style={containerStyle}>
-      {showIcon && (
-        <View
-          style={{
-            width: wp(24),
-            height: wp(24),
-            borderRadius: radius(24),
-            backgroundColor: cardBg,
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: hp(1),
-          }}
-        >
-          <Icon name={IconComponent} size={wp(12)} color={textSecondary} />
-        </View>
-      )}
-      
+    <View
+      style={{
+        backgroundColor: cardBg,
+        borderRadius: radius(16),
+        borderWidth: 1,
+        borderColor: borderColor,
+        padding: wp(6),
+        alignItems: "center",
+        marginTop: hp(4),
+      }}
+    >
+      <IconComponent size={wp(10)} color={textSecondary} />
       <Text
         style={{
-          color: textPrimary,
           fontSize: fontSize(18),
-          fontWeight: "700",
-          textAlign: "center",
-          marginBottom: hp(0.5),
+          color: textPrimary,
+          marginTop: hp(2),
+          marginBottom: hp(1),
         }}
+        className="font-bold text-center"
       >
         {title}
       </Text>
-      
-      {message && (
-        <Text
-          style={{
-            color: textSecondary,
-            fontSize: fontSize(14),
-            textAlign: "center",
-            lineHeight: fontSize(20),
-          }}
-        >
-          {message}
-        </Text>
-      )}
+      <Text
+        style={{
+          fontSize: fontSize(14),
+          color: textSecondary,
+          textAlign: "center",
+          lineHeight: fontSize(20),
+        }}
+      >
+        {message}
+      </Text>
     </View>
   );
 }
-

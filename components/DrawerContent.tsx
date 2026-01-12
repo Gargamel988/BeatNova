@@ -13,7 +13,6 @@ import { router, usePathname } from "expo-router";
 import {
   User,
   BarChart3,
-  Users,
   Heart,
   LogOut,
   X,
@@ -37,7 +36,7 @@ interface DrawerContentProps {
 export default function DrawerContent(props: DrawerContentProps) {
   const { onClose } = props;
   const { wp, hp, fontSize, radius } = useResponsive();
-  
+
   // ThemeProvider context'ini güvenli bir şekilde kullan
   const themeContext = React.useContext(ThemeModeContext);
   const palette = themeContext?.palette || Colors.system;
@@ -69,11 +68,7 @@ export default function DrawerContent(props: DrawerContentProps) {
       icon: BarChart3,
       route: "/(drawer)/Statistic",
     },
-    {
-      title: "Arkadaşlar",
-      icon: Users,
-      route: "/(drawer)/Friends",
-    },
+
     {
       title: "Favoriler",
       icon: Heart,
@@ -84,12 +79,13 @@ export default function DrawerContent(props: DrawerContentProps) {
       icon: Palette,
       route: "/(drawer)/Theme",
     },
-  
   ];
 
   const isActive = (route: string) => {
     if (route === "/(drawer)/(tabs)") {
-      return pathname === "/(drawer)/(tabs)" || pathname === "/(drawer)/(tabs)/";
+      return (
+        pathname === "/(drawer)/(tabs)" || pathname === "/(drawer)/(tabs)/"
+      );
     }
     return pathname?.includes(route);
   };
@@ -186,7 +182,7 @@ export default function DrawerContent(props: DrawerContentProps) {
             }}
           >
             <LinearGradient
-              colors={[palette.purple, palette.pink]}
+              colors={[backgroundMid, backgroundEnd]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{
@@ -204,7 +200,7 @@ export default function DrawerContent(props: DrawerContentProps) {
                 }}
               >
                 <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.3)", "rgba(255, 255, 255, 0.1)"]}
+                  colors={[backgroundStart, backgroundEnd]}
                   style={{
                     width: wp(18),
                     height: wp(18),
@@ -217,7 +213,7 @@ export default function DrawerContent(props: DrawerContentProps) {
                 >
                   <Text
                     style={{
-                      color: "#FFFFFF",
+                      color: textPrimary,
                       fontSize: fontSize(22),
                       fontWeight: "800",
                     }}
@@ -228,7 +224,7 @@ export default function DrawerContent(props: DrawerContentProps) {
                 <View style={{ flex: 1 }}>
                   <Text
                     style={{
-                      color: "#FFFFFF",
+                      color: textPrimary,
                       fontSize: fontSize(20),
                       fontWeight: "800",
                       marginBottom: 4,
@@ -367,4 +363,3 @@ export default function DrawerContent(props: DrawerContentProps) {
     </LinearGradient>
   );
 }
-

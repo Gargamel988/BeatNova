@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { View } from "@/components/ui/view";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
@@ -20,18 +19,15 @@ import { QuickInsights } from "@/components/statistics/QuickInsights";
 import { HourlyChart } from "@/components/statistics/HourlyChart";
 import { GenreChart } from "@/components/statistics/GenreChart";
 import { PlaybackHabits } from "@/components/statistics/PlaybackHabits";
-import { ListeningTrend } from "@/components/statistics/ListeningTrend";
 import { ReplayScore } from "@/components/statistics/ReplayScore";
 import { getlisteninghistory } from "@/services/StatisticServices";
 import { getAllSongsWithDetails } from "@/services/SongsService";
 import { getFavorites } from "@/services/PlaylistServices";
+import { LoadingState } from "@/components/ui/loading-state";
 
 export default function Statistic() {
   const { wp, hp , fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
-  const backgroundStart = useColor("authBackgroundGradientStart");
-  const backgroundMid = useColor("authBackgroundGradientMid");
-  const backgroundEnd = useColor("authBackgroundGradientEnd");
   const textPrimary = useColor("authPrimaryText");
   const cardBg = useColor("card");
   const borderColor = useColor("border");
@@ -169,6 +165,7 @@ export default function Statistic() {
       cover: song.cover_url || null,
     }));
   }, [songs?.data]);
+
   const quickInsights = [
     {
       id: "favorites",
@@ -185,59 +182,268 @@ export default function Statistic() {
   ];
 
   const hourlyListeningData = [
-    { hour: 0, value: 5 },
-    { hour: 1, value: 2 },
-    { hour: 2, value: 1 },
-    { hour: 3, value: 0 },
-    { hour: 4, value: 0 },
-    { hour: 5, value: 0 },
-    { hour: 6, value: 3 },
-    { hour: 7, value: 8 },
-    { hour: 8, value: 12 },
-    { hour: 9, value: 15 },
-    { hour: 10, value: 18 },
-    { hour: 11, value: 20 },
-    { hour: 12, value: 25 },
-    { hour: 13, value: 22 },
-    { hour: 14, value: 19 },
-    { hour: 15, value: 16 },
-    { hour: 16, value: 14 },
-    { hour: 17, value: 18 },
-    { hour: 18, value: 28 },
-    { hour: 19, value: 32 },
-    { hour: 20, value: 35 },
-    { hour: 21, value: 30 },
-    { hour: 22, value: 22 },
-    { hour: 23, value: 12 },
+    { hour: 0, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 0).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 1, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 1).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 2, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 2).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 3, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 3).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 4, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 4).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 5, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 5).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 6, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 6).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 7, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 7).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 8, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 8).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 9, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 9).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 10, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 10).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 11, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 11).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 12, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 12).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 13, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 13).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 14, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 14).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 15, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 15).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 16, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 16).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 17, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 17).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 18, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 18).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 19, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 19).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 20, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 20).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 21, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 21).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 22, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 22).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 23, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 23).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
   ];
 
-  const genreData = [
-    { genre: "Pop", value: 35, color: colors.purpleLight },
-    { genre: "Rock", value: 25, color: colors.accent },
-    { genre: "Electronic", value: 20, color: colors.blue },
-    { genre: "Jazz", value: 12, color: colors.green },
-    { genre: "Hip-Hop", value: 8, color: colors.orange },
-  ];
+  // Genre tahmin fonksiyonu (artist'e göre basit bir tahmin)
+  const getGenreFromArtist = (artist: string): string => {
+    if (!artist) return "Diğer";
+    const artistLower = artist.toLowerCase();
+    
+    // Türk sanatçılar
+    if (artistLower.includes("tarkan") || artistLower.includes("sezen") || artistLower.includes("sertab") || 
+        artistLower.includes("ajda") || artistLower.includes("hande") || artistLower.includes("ece")) {
+      return "Pop";
+    }
+    if (artistLower.includes("duman") || artistLower.includes("mor ve ötesi") || artistLower.includes("teoman") ||
+        artistLower.includes("şebnem") || artistLower.includes("pinhani") || artistLower.includes("yüksek sadakat")) {
+      return "Rock";
+    }
+    if (artistLower.includes("ceza") || artistLower.includes("sagopa") || artistLower.includes("ezhel") ||
+        artistLower.includes("gazapizm") || artistLower.includes("allame") || artistLower.includes("şanışer")) {
+      return "Hip-Hop";
+    }
+    
+    // Yabancı sanatçılar
+    if (artistLower.includes("weeknd") || artistLower.includes("taylor swift") || artistLower.includes("ed sheeran") ||
+        artistLower.includes("dua lipa") || artistLower.includes("billie eilish") || artistLower.includes("post malone")) {
+      return "Pop";
+    }
+    if (artistLower.includes("imagine dragons") || artistLower.includes("coldplay") || artistLower.includes("linkin park") ||
+        artistLower.includes("foo fighters") || artistLower.includes("ac/dc") || artistLower.includes("metallica")) {
+      return "Rock";
+    }
+    if (artistLower.includes("drake") || artistLower.includes("kendrick") || artistLower.includes("eminem") ||
+        artistLower.includes("travis scott") || artistLower.includes("kanye")) {
+      return "Hip-Hop";
+    }
+    if (artistLower.includes("skrillex") || artistLower.includes("deadmau5") || artistLower.includes("avicii") ||
+        artistLower.includes("calvin harris") || artistLower.includes("martin garrix")) {
+      return "Electronic";
+    }
+    if (artistLower.includes("miles davis") || artistLower.includes("john coltrane") || artistLower.includes("ella fitzgerald") ||
+        artistLower.includes("louis armstrong") || artistLower.includes("bill evans")) {
+      return "Jazz";
+    }
+    
+    return "Diğer";
+  };
 
-  const averageCompletionRate = 68;
-  const mostSkippedSongs = [
-    { title: "Intro Track", artist: "Various", skipRate: 85 },
-    { title: "Ad Break", artist: "Podcast", skipRate: 92 },
-    { title: "Old Favorite", artist: "Classic", skipRate: 45 },
-  ];
+  // Dinleme geçmişinden genre istatistiklerini hesapla
+  const genreData = useMemo(() => {
+    if (!listeninghistory?.data || !songs?.data) {
+      return [
+        { genre: "Pop", value: 0, color: colors.purpleLight },
+        { genre: "Rock", value: 0, color: colors.accent },
+        { genre: "Electronic", value: 0, color: colors.blue },
+        { genre: "Jazz", value: 0, color: colors.green },
+        { genre: "Hip-Hop", value: 0, color: colors.orange },
+        { genre: "Diğer", value: 0, color: colors.textMuted },
+      ];
+    }
 
-  const replayScores = [
-    { title: "Midnight Dreams", artist: "The Neon Lights", replayCount: 5 },
-    { title: "Electric Soul", artist: "Luna Nova", replayCount: 4 },
-    { title: "Violet Pulse", artist: "Violet Waves", replayCount: 3 },
-  ];
+    // Şarkı ID'lerine göre artist map oluştur
+    const songArtistMap = new Map(
+      songs.data.map((song) => [song.id, song.artist || "Bilinmeyen Sanatçı"])
+    );
 
+    // Genre'lere göre dinleme süresini topla
+    const genreTotals = new Map<string, number>();
+    
+    listeninghistory.data.forEach((history) => {
+      const artist = songArtistMap.get(history.song_id) || "Bilinmeyen Sanatçı";
+      const genre = getGenreFromArtist(artist);
+      const currentTotal = genreTotals.get(genre) || 0;
+      genreTotals.set(genre, currentTotal + (history.total_seconds || 0));
+    });
+
+    // Toplam süreyi hesapla
+    const totalSeconds = Array.from(genreTotals.values()).reduce((sum, val) => sum + val, 0);
+    
+    // Yüzdelik değerlere çevir
+    const genreColors: Record<string, string> = {
+      "Pop": colors.purpleLight,
+      "Rock": colors.accent,
+      "Electronic": colors.blue,
+      "Jazz": colors.green,
+      "Hip-Hop": colors.orange,
+      "Diğer": colors.textMuted,
+    };
+
+    const genres = Array.from(genreTotals.entries())
+      .map(([genre, seconds]) => ({
+        genre,
+        value: totalSeconds > 0 ? Math.round((seconds / totalSeconds) * 100) : 0,
+        color: genreColors[genre] || colors.textMuted,
+      }))
+      .filter((item) => item.value > 0) // Sadece 0'dan büyük değerleri göster
+      .sort((a, b) => b.value - a.value); // Büyükten küçüğe sırala
+
+    return genres.length > 0 ? genres : [
+      { genre: "Veri Yok", value: 100, color: colors.textMuted },
+    ];
+  }, [listeninghistory?.data, songs?.data, colors]);
+
+  // Oynatma alışkanlığı verilerini hesapla
+  const playbackHabitsData = useMemo(() => {
+    if (!listeninghistory?.data || !songs?.data || listeninghistory.data.length === 0) {
+      return {
+        averageCompletionRate: 0,
+        mostSkippedSongs: [],
+      };
+    }
+
+    // Şarkı detaylarını map'e çevir
+    const songMap = new Map(
+      songs.data.map((song) => [
+        song.id,
+        {
+          title: song.title || "Bilinmeyen Şarkı",
+          artist: song.artist || "Bilinmeyen Sanatçı",
+          duration: song.duration || 0,
+        },
+      ])
+    );
+
+    // Şarkıları grupla ve toplam değerleri hesapla
+    const songStatsMap = new Map<
+      string,
+      {
+        title: string;
+        artist: string;
+        duration: number;
+        totalSeconds: number;
+        totalPlayCount: number;
+        totalSkipCount: number;
+      }
+    >();
+
+    listeninghistory.data.forEach((history) => {
+      const song = songMap.get(history.song_id);
+      if (!song || song.duration === 0) return;
+
+      const existing = songStatsMap.get(history.song_id);
+      if (existing) {
+        existing.totalSeconds += history.total_seconds || 0;
+        existing.totalPlayCount += history.play_count || 0;
+        existing.totalSkipCount += history.skip_count || 0;
+      } else {
+        songStatsMap.set(history.song_id, {
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration,
+          totalSeconds: history.total_seconds || 0,
+          totalPlayCount: history.play_count || 0,
+          totalSkipCount: history.skip_count || 0,
+        });
+      }
+    });
+
+    // Her şarkı için tamamlama oranı ve skip oranını hesapla
+    const songStats: {
+      completionRate: number;
+      skipRate: number;
+    }[] = [];
+
+    const skippedSongs: {
+      title: string;
+      artist: string;
+      skipCount: number;
+    }[] = [];
+
+    songStatsMap.forEach((stats) => {
+      const totalPlays = stats.totalPlayCount + stats.totalSkipCount;
+
+      // Tamamlama oranı: dinlenen süre / (şarkı süresi * çalınma sayısı)
+      let completionRate = 0;
+      if (stats.totalPlayCount > 0 && stats.duration > 0) {
+        const expectedSeconds = stats.duration * stats.totalPlayCount;
+        completionRate = Math.min(100, Math.round((stats.totalSeconds / expectedSeconds) * 100));
+      }
+
+      // Skip oranı: skip sayısı / toplam çalınma sayısı
+      let skipRate = 0;
+      if (totalPlays > 0) {
+        skipRate = Math.round((stats.totalSkipCount / totalPlays) * 100);
+      }
+
+      if (!isNaN(completionRate) && completionRate > 0) {
+        songStats.push({ completionRate, skipRate });
+      }
+
+      // Skip sayısı 0'dan büyük olan şarkıları ekle
+      if (stats.totalSkipCount > 0) {
+        skippedSongs.push({
+          title: stats.title,
+          artist: stats.artist,
+          skipCount: stats.totalSkipCount,
+        });
+      }
+    });
+
+    // Ortalama tamamlama oranını hesapla
+    const averageCompletionRate =
+      songStats.length > 0
+        ? Math.round(
+            songStats.reduce((sum, s) => sum + s.completionRate, 0) / songStats.length
+          )
+        : 0;
+
+    // En çok skip yapılan şarkıları sırala (skip sayısına göre)
+    const mostSkippedSongs = skippedSongs
+      .sort((a, b) => b.skipCount - a.skipCount)
+      .slice(0, 5);
+
+    return {
+      averageCompletionRate,
+      mostSkippedSongs,
+    };
+  }, [listeninghistory?.data, songs?.data]);
+
+  const averageCompletionRate = playbackHabitsData.averageCompletionRate;
+  const mostSkippedSongs = playbackHabitsData.mostSkippedSongs;
+
+const replayScores = useMemo(() => {
+  return listeninghistory?.data?.reduce((acc, item) => {
+    if (item.play_count ) {
+      const song = songs?.data?.find((song) => song.id === item.song_id);
+      if (song) {
+        acc.push({ title: song.title || "Bilinmeyen Şarkı", artist: song.artist || "Bilinmeyen Sanatçı", replayCount: item.play_count });
+      }
+    }
+    return acc;
+  }, [] as { title: string; artist: string; replayCount: number }[]);
+}, [listeninghistory?.data, songs?.data]);
+if(listeninghistory?.isLoading || songs?.isLoading || favorites?.isLoading) {
+
+  return <LoadingState message="İstatistikler yükleniyor..." fullScreen />;
+}
   return (
-    <LinearGradient
-      colors={[backgroundStart, backgroundMid, backgroundEnd]}
-      style={{ flex: 1 }}
-    >
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <ScrollView
           contentContainerStyle={{
             paddingHorizontal: wp(5),
@@ -322,13 +528,10 @@ export default function Statistic() {
           mostSkippedSongs={mostSkippedSongs}
         />
 
-        {/* Dinleme Trendi */}
-        <ListeningTrend data={weeklyListeningData} />
 
         {/* Tekrarlı Dinleme Skoru */}
         <ReplayScore songs={replayScores} />
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
   );
 }

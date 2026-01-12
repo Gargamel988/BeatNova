@@ -124,7 +124,7 @@ export default function PlaylistsPage() {
         label: "Toplam Süre",
         value: `${formatTime(
           playlists?.reduce(
-            (acc, playlist) => acc + (playlist?.duration ?? 0),
+            (acc, playlist) => acc + (Number(playlist?.duration) ?? 0),
             0
           ) ?? 0
         )}`,
@@ -158,11 +158,9 @@ export default function PlaylistsPage() {
   const isSearching = searchQuery.trim().length > 0;
 
   const handleRandomPlaylist = () => {
-    // Tüm playlist'lerden seç (sadece şarkısı olanlar)
     const playlistsWithSongs = playlists?.filter((playlist) => (playlist.song_count ?? 0) > 0);
     
     if (!playlistsWithSongs || playlistsWithSongs.length === 0) {
-      // Toast veya alert göster - şimdilik sadece return
       return;
     }
     
@@ -340,7 +338,7 @@ export default function PlaylistsPage() {
           </View>
         </>
 
-        {/* Empty State */}
+        {/* Empty State - Arama için */}
         {isSearching &&
           (!filteredPlaylists || filteredPlaylists.length === 0) && (
             <EmptyState 
@@ -350,8 +348,20 @@ export default function PlaylistsPage() {
             />
           )}
 
+        {/* Empty State - Genel (playlist yoksa) */}
+        {!playlistsLoading &&
+          !playlistsError &&
+          !isSearching &&
+          (!playlists || playlists.length === 0) && (
+            <EmptyState 
+              title="Henüz Playlist Yok"
+              message="İlk playlistini oluşturarak başla"
+              icon="playlist"
+            />
+          )}
+
         {/* Loading State */}
-        {playlistsLoading && !playlists && (
+        {playlistsLoading  && (
           <LoadingState message="Playlistler yükleniyor..." />
         )}
 

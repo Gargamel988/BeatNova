@@ -3,6 +3,7 @@ import { useProfile } from "@/hooks/useProfil";
 
 export const useAuth = () => {
   const { mutateInsertProfile } = useProfile();
+
   const login = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -13,6 +14,8 @@ export const useAuth = () => {
     }
     return data;
   };
+
+
   const register = async (email: string, password: string, username: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -23,17 +26,26 @@ export const useAuth = () => {
         },
       },
     });
+
+
     if (error) {
       throw error;
     }
-    
-    // Profil oluştur
-    if (data.user) {
-      mutateInsertProfile.mutate(data.user);
+
+    if (!data.user) {
+      throw new Error("Kullanıcı oluşturulamadı");
+    }
+
+    try {
+      await mutateInsertProfile.mutateAsync(data.user);
+    } catch {
+      throw new Error("Profil oluşturulurken bir hata oluştu");
     }
     
     return data;
   };
+
+
   const logout = async () => {
 
     const { error } = await supabase.auth.signOut();

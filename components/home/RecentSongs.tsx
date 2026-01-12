@@ -28,7 +28,6 @@ export default function RecentSongs({ songs, onPlaySong }: RecentSongsProps) {
   const borderColor = useColor("border");
   const accent = useColor("accent");
   const accentForeground = useColor("accentForeground");
-
   if (!songs || songs.length === 0) {
     return null;
   }

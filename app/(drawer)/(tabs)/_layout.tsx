@@ -1,16 +1,25 @@
 import { Tabs } from "expo-router";
 import { Ionicons , MaterialIcons} from "@expo/vector-icons";
+import { useColor } from "@/hooks/useColor";
+import React from "react";
+import { useResponsive } from "@/hooks/useResponsive";
 
-export default function _layout() {
+export default function TabLayout() {
+  const tabIconDefault = useColor("tabIconDefault");
+  const tabIconSelected = useColor("tabIconSelected");
+  const background = useColor("background");
+  const { hp, wp } = useResponsive();
   return (
     <Tabs 
       screenOptions={{ 
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
-          tabBarInactiveTintColor: '#FFFFFF',
-          tabBarActiveTintColor: '#4B0082',
+          tabBarInactiveTintColor: tabIconDefault,
+          tabBarActiveTintColor: tabIconSelected,
           tabBarStyle: {
-            backgroundColor: '#000000',
+            backgroundColor: background,
+            paddingHorizontal: wp(2),
+            paddingVertical: hp(1),
           },
           animation: 'shift',
       }}

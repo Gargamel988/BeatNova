@@ -221,6 +221,7 @@ const addSongToPlaylist = async (assetId: string, playlistId: number) => {
       .insert({
         song_id: songUuid,
         playlist_id: playlistId,
+        song_duration: songData.duration, // Duration'ı playlist_songs'a kaydet
       })
       .select()
       .single();

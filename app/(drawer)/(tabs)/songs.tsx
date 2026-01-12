@@ -10,9 +10,8 @@ import { getFavorites } from "@/services/PlaylistServices";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { useBottomSheet } from "@/components/ui/bottom-sheet";
-import { supabase } from "@/lib/supabase";
-import { Session } from "@supabase/supabase-js";
 import { insertSong } from "@/services/SongsService";
+import { useToast } from "@/components/ui/toast";
 
 //components
 import SongItem from "@/components/songs/SongItem";
@@ -36,23 +35,11 @@ export default function Songs() {
   const [filtersState, setFiltersState] =
     useState<Record<FilterKey, boolean>>(INITIAL_FILTERS);
   const { loadSongs, loadCoversInBackground } = useSongsService();
-  const { sortOption, setSortOption, setSortedPlaylist } = usePlaylistContext();
+  const { sortOption, setSortOption, setSortedPlaylist, sortedPlaylist } = usePlaylistContext();
   const { hp } = useResponsive();
-  const [session, setSession] = useState<Session | null>(null);
+  const { toast } = useToast();
   const insertedSongIdsRef = useRef<Set<string>>(new Set());
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.error(error);
-        return;
-      }
-      setSession(data.session);
-      if (!data.session) {
-        insertedSongIdsRef.current.clear();
-      }
-    });
-  }, []);
   const { mutate: insertSongMutation } = useMutation({
     mutationFn: (song: Song) => insertSong(song),
     onError: (error) => {
@@ -82,12 +69,11 @@ export default function Songs() {
   const { data: favoritesData } = useQuery<string[]>({
     queryKey: ["favorites"],
     queryFn: () => getFavorites(),
-    enabled: !!session,
   });
   const favorites = useMemo(() => favoritesData ?? [], [favoritesData]);
 
   useEffect(() => {
-    if (!session || !songsData.length) return;
+    if (!songsData.length) return;
 
     const pendingSongs = songsData.filter(
       (song) => !insertedSongIdsRef.current.has(song.id)
@@ -99,7 +85,7 @@ export default function Songs() {
       insertedSongIdsRef.current.add(song.id);
       insertSongMutation(song);
     });
-  }, [session, songsData, insertSongMutation]);
+  }, [songsData, insertSongMutation]);
 
   useEffect(() => {
     if (songsData.length) {
@@ -110,7 +96,7 @@ export default function Songs() {
 
   // coverUri yüklendikten sonra şarkıları güncelle
   useEffect(() => {
-    if (!session || !songs.length) return;
+    if (!songs.length) return;
 
     songs.forEach((song) => {
       // coverUri varsa ve şarkı zaten kaydedilmişse, güncelle
@@ -119,7 +105,7 @@ export default function Songs() {
         insertSongMutation(song);
       }
     });
-  }, [songs, session, insertSongMutation]);
+  }, [songs, insertSongMutation]);
 
   const toggleFilter = useCallback((key: FilterKey) => {
     setFiltersState((prev) => ({
@@ -213,25 +199,38 @@ export default function Songs() {
     (action: SongActionKey, song: Song) => {
       switch (action) {
         case "addToQueue":
-          // TODO: Implement add to queue
+          if (sortedPlaylist.find(s => s.id === song.id)) {
+            toast({
+              title: "Uyarı",
+              description: "Bu şarkı zaten sırada",
+              variant: "warning",
+            });
+            return;
+          }
+          setSortedPlaylist([...sortedPlaylist, song]);
+          toast({
+            title: "Başarılı",
+            description: "Şarkı sıraya eklendi",
+            variant: "success",
+          });
           break;
         case "addToPlaylist":
           // Bu işlem SongItem içinde yapılıyor
           break;
         case "addToFavorites":
-          // TODO: Implement add to favorites
+          // Bu işlem SongItem içinde yapılıyor
           break;
         case "info":
-          // TODO: Implement show info
+          // Bu işlem SongItem içinde yapılıyor
           break;
         case "remove":
-          // TODO: Implement remove
+          // Bu işlem SongItem içinde yapılıyor
           break;
         default:
           break;
       }
     },
-    []
+    [sortedPlaylist, setSortedPlaylist, toast]
   );
 
   const renderSong = useCallback(

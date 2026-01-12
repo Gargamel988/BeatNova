@@ -13,6 +13,7 @@ export default function GlobalMiniPlayer({ bottomOffset }: { bottomOffset?: numb
     resume,
     next,
     previous,
+    position,
   } = useAudioPlayerContext();
   const { sortedPlaylist } = usePlaylistContext();
   const [songsWithCovers, setSongs] = useState<Song[]>([]);
@@ -54,6 +55,8 @@ export default function GlobalMiniPlayer({ bottomOffset }: { bottomOffset?: numb
       nextSound={() => next(playlist, false)}
       previousSound={() => previous(playlist, false)}
       activeSong={activeSong}
+      duration={hydratedActiveSong?.metadata.duration ?? activeSong.metadata.duration}
+      currentTime={position}
       bottomOffset={bottomOffset}
     />
   );

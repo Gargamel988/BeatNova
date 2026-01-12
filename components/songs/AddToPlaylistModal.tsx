@@ -95,8 +95,24 @@ export default function AddToPlaylistModal({
 		}
 	};
 
+	// Modal görünür değilse hiç render etme
+	if (!isVisible) {
+		return null;
+	}
+
+	// Loading durumunu BottomSheet içinde göster
 	if (isLoadingData) {
-		return <LoadingState message="Playlistler yükleniyor..." size="large" showIcon={true} fullScreen={true} />;
+		return (
+			<BottomSheet
+				isVisible={isVisible}
+				onClose={onClose}
+				snapPoints={[0.5, 0.75, 0.9]}
+				disablePanGesture={false}
+				title="Playlist'e Ekle"
+			>
+				<LoadingState message="Playlistler yükleniyor..." size="large" showIcon={true} fullScreen={false} />
+			</BottomSheet>
+		);
 	}
 
 	const renderPlaylistItem = ({ item, index }: { item: PlaylistType; index?: number }) => {

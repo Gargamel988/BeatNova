@@ -22,7 +22,7 @@ export default function UpsertListeningTimeMutation() {
         listeningTime,
         songId,
         skipCount,
-        playCount
+        playCount,
       );
       return result;
     },

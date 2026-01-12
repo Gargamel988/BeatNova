@@ -1,5 +1,5 @@
 import { google } from "@ai-sdk/google";
-import { streamObject } from "ai";
+import { generateObject } from "ai";
 import { ObjectScheme } from "@/schemes/ObjectScheme";
 import { webSearchTool } from "@/lib/tools/webSearch";
 
@@ -9,7 +9,9 @@ async function searchWeb(query: string): Promise<string> {
     const result = await webSearchTool.execute({ query });
     
     // Eğer hata varsa boş döndür
+    
     if ('error' in result && result.error) {
+      console.log(result.error);
       return "";
     }
 
@@ -79,57 +81,39 @@ export async function POST(request: Request) {
       ? `${input}\n\n[Güncel Bilgiler]\n${webSearchContext}\n\nYukarıdaki güncel bilgileri kullanarak öneriler yap.`
       : input;
     
-    const result = streamObject({
+    const result = await generateObject({
       model: google("gemini-2.5-flash"),
       messages: [{ role: 'user', content: userMessage }],
       
       system: `Sen profesyonel bir müzik önerisi asistanısın. Kullanıcıların müzik zevklerine uygun, çeşitli ve kaliteli şarkı önerileri sunuyorsun.
 
 ÖNEMLİ KURALLAR:
-1. TÜRKÇE ŞARKILAR: Her playlist'te mutlaka Türkçe şarkılar da öner. Türk pop, Türk rock, Türk rap, Anadolu rock gibi türlerden güncel ve popüler şarkılar ekle. Örnek sanatçılar: Sezen Aksu, Tarkan, Mabel Matiz, Duman, Mor ve Ötesi, Ceza, Sagopa Kajmer, Ezhel, Müslüm Gürses, Barış Manço, Cem Karaca, Erkin Koray, MFÖ, Teoman, Şebnem Ferah, Sertab Erener, Ajda Pekkan, Zeki Müren, vb.
+1. TÜRKÇE ŞARKILAR: Her playlist'te mutlaka Türkçe şarkılar da öner. Türk pop, Türk rock, Türk rap, Anadolu rock gibi türlerden güncel ve popüler şarkılar ekle.
 
-2. GÜNCEL ŞARKILAR: 2020-2024 yılları arasındaki popüler ve güncel şarkıları öncelik ver. Ancak klasik ve zamansız şarkıları da dahil et.
+2. GÜNCEL ŞARKILAR: 2020-2024 yılları arasındaki popüler ve güncel şarkıları öncelik ver.
 
-3. ÇEŞİTLİLİK: Her playlist'te farklı türlerden, farklı dönemlerden ve farklı dillerden şarkılar olsun. Sadece tek bir türe odaklanma.
+3. ÇEŞİTLİLİK: Her playlist'te farklı türlerden, farklı dönemlerden ve farklı dillerden şarkılar olsun.
 
-4. POPÜLER ŞARKILAR: Spotify, Apple Music, YouTube gibi platformlarda popüler olan şarkıları öner. Billboard, Türkiye müzik listeleri, viral şarkılar gibi güncel trendleri takip et. Eğer kullanıcı güncel, popüler veya trend şarkılar istiyorsa, web'den güncel bilgileri kullan.
+4. POPÜLER ŞARKILAR: Spotify, Apple Music gibi platformlarda popüler olan şarkıları öner.
 
-5. ŞARKI BİLGİLERİ: Her şarkı için doğru ve güncel bilgiler ver:
-   - Şarkı adı (tam ve doğru)
-   - Sanatçı adı (tam ve doğru)
-   - Albüm adı
-   - Yayınlanma yılı (mümkünse)
-   - Müzik türü/genre
-   - Süre (saniye cinsinden, yaklaşık)
-   - Enerji seviyesi (low/medium/high)
-   - Ruh hali etiketleri (mood tags)
+5. ŞARKI BİLGİLERİ: Her şarkı için doğru bilgiler ver (ad, sanatçı, albüm, yıl, türü, süre, enerji, mood).
 
-6. PLAYLIST BİLGİLERİ: Her playlist için anlamlı bir isim, açıklama, toplam süre, genel ruh hali ve etiketler ekle.
+6. PLAYLIST BİLGİLERİ: Her playlist için isim, açıklama, toplam süre, ruh hali ve etiketler ekle.
 
-7. ÖNERİ NEDENİ: Kullanıcıya neden bu şarkıları önerdiğini açık ve anlaşılır bir şekilde açıkla.
+7. ÖNERİ NEDENİ: Neden bu şarkıları önerdiğini açıkla.
 
-8. ŞARKI SAYISI: Her playlist'te 8-15 arası şarkı öner. Çok az veya çok fazla olmasın.
+8. ŞARKI SAYISI: 8-15 şarkı öner.
 
-9. KALİTE: Sadece gerçekten var olan, popüler ve kaliteli şarkıları öner. Hayali veya bilinmeyen şarkılar önerme.
+9. KALİTE: Sadece gerçekten var olan, popüler şarkıları öner.
 
-10. DİL DENGESİ: Türkçe ve yabancı şarkılar arasında iyi bir denge kur. Kullanıcının isteğine göre ağırlık ver.
-
-ÖRNEK ŞARKI TÜRLERİ:
-- Türk Pop: Sezen Aksu, Tarkan, Sertab Erener, Ajda Pekkan, Hande Erçel, Ece Seçkin
-- Türk Rock: Duman, Mor ve Ötesi, Teoman, Şebnem Ferah, Pinhani, Yüksek Sadakat
-- Türk Rap: Ceza, Sagopa Kajmer, Ezhel, Gazapizm, Allame, Şanışer
-- Anadolu Rock: Barış Manço, Cem Karaca, Erkin Koray, Moğollar
-- Popüler Yabancı: The Weeknd, Taylor Swift, Ed Sheeran, Dua Lipa, Billie Eilish, Post Malone
-- Rock: Imagine Dragons, Coldplay, Linkin Park, Foo Fighters
-- Hip-Hop: Drake, Kendrick Lamar, Eminem, Travis Scott
-
-Her zaman güncel, çeşitli ve kaliteli öneriler sun!`,
+10. DİL DENGESİ: Türkçe ve yabancı şarkılar arasında denge kur.`,
       schema: ObjectScheme,
     });
 
-    return result.toTextStreamResponse();
+    return Response.json(result.object);
   } catch (error: any) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error("API Error:", error);
+    return Response.json({ error: error.message || "Bir hata oluştu" }, { status: 500 });
   }
 }
 

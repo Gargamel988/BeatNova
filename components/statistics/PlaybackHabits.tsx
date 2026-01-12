@@ -11,7 +11,7 @@ import { SkipForward } from "lucide-react-native";
 interface SkippedSong {
   title: string;
   artist: string;
-  skipRate: number;
+  skipCount: number;
 }
 
 interface PlaybackHabitsProps {
@@ -142,7 +142,7 @@ export function PlaybackHabits({
                       fontWeight: "700",
                     }}
                   >
-                    {song.skipRate}%
+                    {song.skipCount}
                   </Text>
                   <Text
                     style={{

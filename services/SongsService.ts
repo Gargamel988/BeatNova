@@ -163,4 +163,47 @@ const getAllSongsWithDetails = async (): Promise<{
     return [];
   }
 };
-export { insertSong, getsongs, getAllSongsWithDetails };
+
+// Şarkıyı veritabanından siler (asset_id'ye göre)
+const deleteSong = async (assetId: string): Promise<boolean> => {
+  try {
+    const user = await getUser();
+    if (!user?.id) {
+      throw new Error("Kullanıcı oturumu bulunamadı.");
+    }
+
+    // Önce şarkıyı bul (UUID'yi almak için)
+    const { data: songData, error: findError } = await supabase
+      .from("songs")
+      .select("id")
+      .eq("asset_id", assetId)
+      .eq("users_id", user.id)
+      .single();
+
+    if (findError || !songData) {
+      // Şarkı veritabanında yoksa, sadece cihazdan silindiği için hata verme
+      console.warn("Şarkı veritabanında bulunamadı:", assetId);
+      return true; // Başarılı say (cihazdan silindi)
+    }
+
+    const songUuid = songData.id;
+
+    // Şarkıyı veritabanından sil
+    const { error: deleteError } = await supabase
+      .from("songs")
+      .delete()
+      .eq("id", songUuid)
+      .eq("users_id", user.id);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("deleteSong hatası:", error);
+    throw error;
+  }
+};
+
+export { insertSong, getsongs, getAllSongsWithDetails, deleteSong };

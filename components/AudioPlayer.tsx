@@ -1,15 +1,12 @@
 import { Modal, TouchableOpacity } from "react-native";
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-} from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useAudioPlayerContext } from "@/providers/player-context";
 import {
   ChevronDown,
   MoreHorizontal,
   Music,
+  SkipBack,
+  SkipForward,
 } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -56,7 +53,9 @@ export default function AudioPlayer({
     position,
     shuffle,
     playlist: hookPlaylist,
-    isSongUuidLoading,
+    loopMode,
+    isShuffled,
+    loop,
   } = useAudioPlayerContext();
   const [songsWithCovers, setSongsState] = useState<Song[]>([]);
   const { loadSongs, loadCoversInBackground } = useSongsService();
@@ -69,8 +68,6 @@ export default function AudioPlayer({
     "controls" | "queue" | "details" | "notes"
   >("controls");
   const [notesBySong, setNotesBySong] = useState<Record<string, string>>({});
-  const [loops, setLoops] = useState<"all" | "one" | "none">("all");
-  const [shuffled, setShuffled] = useState(false);
   const status = useAudioPlayerStatus(audioPlayer);
 
   const { wp, hp, fontSize, radius } = useResponsive();
@@ -84,7 +81,9 @@ export default function AudioPlayer({
   }, [songsData, loadCoversInBackground]);
 
   const playlist = useMemo(() => {
-    return hookPlaylist ?? (songsWithCovers.length ? songsWithCovers : songsData);
+    return (
+      hookPlaylist ?? (songsWithCovers.length ? songsWithCovers : songsData)
+    );
   }, [hookPlaylist, songsWithCovers, songsData]);
 
   const hydratedActiveSong = useMemo(() => {
@@ -102,11 +101,19 @@ export default function AudioPlayer({
 
   // Şarkı bittiğinde sonraki şarkıya geç
   useEffect(() => {
-    if (!status?.didJustFinish || loops === "one") return;
-    
-    // Loop "all" modunda ve playlist sonuna geldiyse başa dön
-    if (loops === "all" && activeSong) {
-      const currentIndex = playlist.findIndex((song) => song.id === activeSong.id);
+    if (!status?.didJustFinish || !activeSong) return;
+
+    if (loopMode === "one") {
+      // Tek şarkı modu - aynı şarkıyı tekrar çal
+      audioPlayer.seekTo(0);
+      audioPlayer.play();
+      return;
+    }
+
+    if (loopMode === "all" && activeSong) {
+      const currentIndex = playlist.findIndex(
+        (song) => song.id === activeSong.id
+      );
       if (currentIndex === playlist.length - 1) {
         // Playlist'in başına dön
         const firstSong = playlist[0];
@@ -116,32 +123,15 @@ export default function AudioPlayer({
         return;
       }
     }
-    
+
     // Normal durumda sonraki şarkıya geç
-    next(playlist, shuffled);
+    next(playlist, isShuffled);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.didJustFinish]);
+  }, [status?.didJustFinish, activeSong, loopMode]);
 
-  // Loop modu değiştiğinde sadece audioPlayer.loop ayarını yap
-  useEffect(() => {
-    if (!activeSong || !audioPlayer) return;
-    
-    if (loops === "one") {
-      audioPlayer.loop = true;
-    } else {
-      audioPlayer.loop = false;
-    }
-  }, [loops, activeSong, audioPlayer]);
-
-  // Shuffle durumu değiştiğinde shuffle fonksiyonunu çağır
-  useEffect(() => {
-    shuffle(shuffled);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shuffled]);
-
-  const currentSong = (hydratedActiveSong ??
-    selectedSong ??
-    activeSong) as Song | undefined;
+  const currentSong = (hydratedActiveSong ?? selectedSong ?? activeSong) as
+    | Song
+    | undefined;
 
   const durationSeconds =
     (audioPlayer?.isLoaded && audioPlayer?.duration) ||
@@ -194,7 +184,11 @@ export default function AudioPlayer({
           justifyContent: "center",
         }}
       >
-        <Icon name={Music} size={fontSize(48)} color={colors.player.iconWhite} />
+        <Icon
+          name={Music}
+          size={fontSize(48)}
+          color={colors.player.iconWhite}
+        />
         <Text
           style={{
             fontSize: fontSize(32),
@@ -223,13 +217,15 @@ export default function AudioPlayer({
   const queue = useMemo(() => {
     if (!playlist.length) return [];
     if (!activeSong) return playlist;
-    const currentIndex = playlist.findIndex((song) => song.id === activeSong.id);
+    const currentIndex = playlist.findIndex(
+      (song) => song.id === activeSong.id
+    );
     return currentIndex >= 0 ? playlist.slice(currentIndex) : playlist;
   }, [playlist, activeSong]);
   const songId = activeSong?.id ?? "unknown";
   const currentNote = notesBySong[songId] ?? "";
 
-  const handlePlayToggle = () => {
+  const handlePlayToggle = useCallback(() => {
     if (!activeSong) {
       play(selectedSong);
       return;
@@ -239,7 +235,28 @@ export default function AudioPlayer({
     } else {
       resume();
     }
-  };
+  }, [activeSong, isPlaying, play, pause, resume, selectedSong]);
+
+  const handleSeekForward = useCallback(() => {
+    const newPosition = Math.min(position + 10, durationSeconds);
+    handleSeek(durationSeconds)(newPosition);
+  }, [position, durationSeconds, handleSeek]);
+
+  const handleSeekBackward = useCallback(() => {
+    const newPosition = Math.max(position - 10, 0);
+    handleSeek(durationSeconds)(newPosition);
+  }, [position, durationSeconds, handleSeek]);
+
+  const handleLoopToggle = useCallback(() => {
+    const modes: ("all" | "one" | "none")[] = ["all", "one", "none"];
+    const currentIndex = modes.indexOf(loopMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    loop(modes[nextIndex], playlist, isShuffled);
+  }, [loopMode, loop, playlist, isShuffled]);
+
+  const handleShuffleToggle = useCallback(() => {
+    shuffle(!isShuffled);
+  }, [isShuffled, shuffle]);
 
   const detailsItems = useMemo(
     () => [
@@ -294,29 +311,19 @@ export default function AudioPlayer({
           start={{ x: 0, y: 1 }}
           end={{ x: 1, y: 0 }}
         >
-          <LoadingOverlay
-            visible={isSongUuidLoading}
-            backdrop={true}
-            backdropOpacity={0.8}
-            size="lg"
-            variant="circle"
-            label="Şarkı bilgileri yükleniyor..."
-            showLabel={true}
-          />
           <View
             className="flex-1"
             style={{
               paddingHorizontal: wp(6),
               paddingTop: hp(5),
               gap: hp(2),
-              opacity: isSongUuidLoading ? 0.3 : 1,
             }}
           >
             <View className="flex-row justify-between items-center">
               <TouchableOpacity
                 onPress={onClose}
                 activeOpacity={0.8}
-                className="flex-row items-center "
+                className="flex-row items-center"
                 style={{
                   gap: wp(2),
                 }}
@@ -371,6 +378,7 @@ export default function AudioPlayer({
               onSelect={setActiveSegment}
               colors={colors}
             />
+
             {activeSegment === "controls" && (
               <>
                 <View
@@ -412,25 +420,19 @@ export default function AudioPlayer({
                 />
 
                 <PlayerControls
-                  shuffleActive={shuffled}
-                  onShuffleToggle={() => setShuffled(!shuffled)}
-                  onPrevious={() => previous(playlist, shuffled)}
+                  shuffleActive={isShuffled}
+                  onShuffleToggle={handleShuffleToggle}
+                  onPrevious={() => previous(playlist, isShuffled)}
                   onPlayToggle={handlePlayToggle}
                   isPlaying={isPlaying}
-                  onNext={() => next(playlist, shuffled)}
-                  loopMode={loops}
-                  onLoopToggle={() =>
-                    setLoops((prev) =>
-                      prev === "all" ? "one" : prev === "one" ? "none" : "all"
-                    )
-                  }
+                  onNext={() => next(playlist, isShuffled)}
+                  loopMode={loopMode}
+                  onLoopToggle={handleLoopToggle}
                   colors={colors}
                 />
               </>
             )}
-            {activeSegment === "queue" && (
-              <QueueSection queue={queue} />
-            )}
+            {activeSegment === "queue" && <QueueSection queue={queue} />}
             {activeSegment === "details" && (
               <DetailsSection details={detailsItems} />
             )}
@@ -443,4 +445,3 @@ export default function AudioPlayer({
     </Modal>
   );
 }
-

@@ -5,15 +5,15 @@ const upsertlisteningtime = async (
   listeningTime: number,
   songId: string,
   skipCount: number = 0,
-  playCount: number = 0
+  playCount: number = 0,
 ) => {
   try {
+
     const user = await getUser();
     if (!user?.id) {
       throw new Error("Kullanıcı oturumu bulunamadı");
     }
 
-    const today = new Date().toISOString();
 
     const { data: existing, error: selectError } = await supabase
       .from("listening_history")
@@ -30,7 +30,8 @@ const upsertlisteningtime = async (
     const safeSkipDelta = Math.max(0, Math.round(skipCount));
     const safePlayCount = Math.max(0, Math.round(playCount));
 
-    if (safeListeningDelta === 0 && safeSkipDelta === 0) {
+    // Eğer hiçbir değer yoksa kayıt yapma
+    if (safeListeningDelta === 0 && safeSkipDelta === 0 && safePlayCount === 0) {
       return existing ?? null;
     }
 
@@ -42,7 +43,6 @@ const upsertlisteningtime = async (
           song_id: songId,
           total_seconds: safeListeningDelta + (existing?.total_seconds ?? 0),
           skip_count: safeSkipDelta + (existing?.skip_count ?? 0),
-          updated_at: today,
           play_count: safePlayCount + (existing?.play_count ?? 0),
         },
         {
@@ -70,7 +70,7 @@ const upsertlisteningtime = async (
       .from("listening_history")
       .select("*")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false });
     if (error) {
       throw error;
     }

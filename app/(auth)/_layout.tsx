@@ -6,9 +6,9 @@ export default function _layout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: "transparent" },
-		animation: "fade_from_bottom",
+        animation: "slide_from_left",
       }}
-	  initialRouteName="login"
+      initialRouteName="login"
     >
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />

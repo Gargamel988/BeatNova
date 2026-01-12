@@ -27,20 +27,21 @@ export default function Register() {
   const { toast } = useToast();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { register } = useAuth();
+
   const {
     control,
     handleSubmit,
-    formState: { errors, isLoading },
+    formState: { errors,  isSubmitting },
     reset,
   } = useForm<RegisterSchemeType>({
     resolver: zodResolver(RegisterScheme),
   });
+
   const { mutate: registerMutation } = useMutation({
     mutationFn: async (data: RegisterSchemeType) => {
       const response = await register(data.email, data.password, data.username);
       return response;
     },
-
     onSuccess: () => {
       toast({
         title: "Başarılı",
@@ -50,7 +51,14 @@ export default function Register() {
       });
       reset();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Kayıt hatası:", error);
+      toast({
+        title: "Hata",
+        description: error?.message || "Kayıt işlemi sırasında bir hata oluştu",
+        variant: "error",
+        duration: 3000,
+      });
     },
   });
 
@@ -134,7 +142,7 @@ export default function Register() {
                   variant="filled"
                   keyboardType="default"
                   containerStyle={{
-                    borderColor: borderColor,
+                    borderColor: errors.username ? "transparent" : borderColor,
                     borderWidth: 1,
                     borderRadius: radius(99),
                   }}
@@ -166,7 +174,7 @@ export default function Register() {
                   icon={Mail}
                   variant="filled"
                   containerStyle={{
-                    borderColor: borderColor,
+                    borderColor: errors.email ? "transparent" : borderColor,
                     borderWidth: 1,
                     borderRadius: radius(99),
                   }}
@@ -201,7 +209,7 @@ export default function Register() {
                   icon={Lock}
                   variant="filled"
                   containerStyle={{
-                    borderColor: borderColor,
+                    borderColor: errors.password ? "transparent" : borderColor,
                     borderWidth: 1,
                     borderRadius: radius(99),
                     marginBottom: hp(3),
@@ -246,7 +254,7 @@ export default function Register() {
                 minHeight: hp(6),
               }}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <View className="flex-row items-center justify-center gap-2">
                   <ButtonSpinner size="lg" variant="circle" />
                   <Text

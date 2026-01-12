@@ -1,0 +1,103 @@
+{
+  "apiRoutes": [
+    {
+      "file": "_expo/functions/api/object+api.js",
+      "page": "/api/object",
+      "namedRegex": "^/api/object(?:/)?$",
+      "routeKeys": {}
+    }
+  ],
+  "htmlRoutes": [
+    {
+      "file": "./(drawer)/(tabs)/index.tsx",
+      "page": "/(drawer)/(tabs)/index",
+      "namedRegex": "^(?:/\\(drawer\\))?(?:/\\(tabs\\))?(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(drawer)/(tabs)/songs.tsx",
+      "page": "/(drawer)/(tabs)/songs",
+      "namedRegex": "^(?:/\\(drawer\\))?(?:/\\(tabs\\))?/songs(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(drawer)/Theme.tsx",
+      "page": "/(drawer)/Theme",
+      "namedRegex": "^(?:/\\(drawer\\))?/Theme(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(auth)/login.tsx",
+      "page": "/(auth)/login",
+      "namedRegex": "^(?:/\\(auth\\))?/login(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(drawer)/Profile.tsx",
+      "page": "/(drawer)/Profile",
+      "namedRegex": "^(?:/\\(drawer\\))?/Profile(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(drawer)/(tabs)/settings.tsx",
+      "page": "/(drawer)/(tabs)/settings",
+      "namedRegex": "^(?:/\\(drawer\\))?(?:/\\(tabs\\))?/settings(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(drawer)/(tabs)/PlayList.tsx",
+      "page": "/(drawer)/(tabs)/PlayList",
+      "namedRegex": "^(?:/\\(drawer\\))?(?:/\\(tabs\\))?/PlayList(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(drawer)/Favorite.tsx",
+      "page": "/(drawer)/Favorite",
+      "namedRegex": "^(?:/\\(drawer\\))?/Favorite(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(auth)/register.tsx",
+      "page": "/(auth)/register",
+      "namedRegex": "^(?:/\\(auth\\))?/register(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "expo-router/build/views/Sitemap.js",
+      "page": "/_sitemap",
+      "namedRegex": "^/_sitemap(?:/)?$",
+      "routeKeys": {},
+      "generated": true
+    },
+    {
+      "file": "./(drawer)/Statistic.tsx",
+      "page": "/(drawer)/Statistic",
+      "namedRegex": "^(?:/\\(drawer\\))?/Statistic(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(drawer)/(tabs)/MusicAssistant.tsx",
+      "page": "/(drawer)/(tabs)/MusicAssistant",
+      "namedRegex": "^(?:/\\(drawer\\))?(?:/\\(tabs\\))?/MusicAssistant(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(auth)/forgot-password.tsx",
+      "page": "/(auth)/forgot-password",
+      "namedRegex": "^(?:/\\(auth\\))?/forgot\\-password(?:/)?$",
+      "routeKeys": {}
+    }
+  ],
+  "notFoundRoutes": [
+    {
+      "file": "./+not-found.tsx",
+      "page": "/+not-found",
+      "namedRegex": "^(?:/(?<notfound>.+?))?(?:/)?$",
+      "routeKeys": {
+        "notfound": "not-found"
+      }
+    }
+  ],
+  "redirects": [],
+  "rewrites": []
+}
