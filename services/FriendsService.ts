@@ -3,13 +3,14 @@ import { getUser } from "@/lib/user";
 
 const requireUser = async () => {
   const user = await getUser();
-  if (!user?.id) throw new Error("Kullanıcı oturumu bulunamadı");
+  if (!user?.id) return null;
   return user;
 };
 
 export const getSuggestedUsers = async (searchQuery?: string) => {
   try {
     const user = await requireUser();
+    if (!user) return [];
 
     // Önce mevcut kullanıcının tüm ilişkilerini al (accepted, pending, rejected)
     const { data: allUserRelationships, error: relationsError } = await supabase
@@ -205,14 +206,16 @@ export const getSuggestedUsers = async (searchQuery?: string) => {
     });
 
     return suggestedUsersWithStats;
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes("session missing")) return [];
     console.error("getSuggestedUsers error:", error);
-    throw error;
+    return [];
   }
 };
 
 export const addFriend = async (userId: string) => {
   const user = await requireUser();
+  if (!user) return false;
 
   if (user.id === userId) {
     throw new Error("Kendinize arkadaşlık isteği gönderemezsiniz");
@@ -272,6 +275,7 @@ export const addFriend = async (userId: string) => {
 
 export const acceptFriendRequest = async (userId: string) => {
   const user = await requireUser();
+  if (!user) return false;
 
   // Güncelle ve güncellenen satır sayısını kontrol et
   const { data, error } = await supabase
@@ -290,6 +294,7 @@ export const acceptFriendRequest = async (userId: string) => {
 
 export const rejectFriendRequest = async (userId: string) => {
   const user = await requireUser();
+  if (!user) return false;
 
   const { data, error } = await supabase
     .from("friendships")
@@ -308,6 +313,7 @@ export const rejectFriendRequest = async (userId: string) => {
 // Gelen arkadaşlık istekleri (pending)
 export const getFriendRequests = async () => {
   const user = await requireUser();
+  if (!user) return [];
 
   // Önce friendships'leri çek
   const { data: requests, error } = await supabase
@@ -345,6 +351,7 @@ export const getFriendRequests = async () => {
 // Kabul edilmiş arkadaşlar (accepted)
 export const getFriends = async () => {
   const user = await requireUser();
+  if (!user) return [];
 
   // accepted olan ve içinde user geçen tüm satırları çek, hem requester hem addressee profil bilgilerini al
   const { data, error } = await supabase
@@ -378,6 +385,8 @@ export const getFriends = async () => {
 
 export const removeFriend = async (userId: string) => {
   const user = await requireUser();
+  if (!user) return false;
+
   // Silme koşulu: accepted ve iki yönden biri
   const orCond = `and(requester_id.eq.${user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${user.id})`;
   const { data, error } = await supabase

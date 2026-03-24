@@ -3,7 +3,7 @@
     "name": "beatnova",
     "slug": "beatnova",
     "scheme": "beatnova",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/beatnovalogo.jpeg",
     "userInterfaceStyle": "automatic",
@@ -11,28 +11,22 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": [
-          "audio"
-        ]
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/splash.png",
-        "backgroundImage": "./assets/images/splash.png",
-        "monochromeImage": "./assets/images/splash.png"
+        "foregroundImage": "./assets/images/beatnovalogo.jpeg",
+        "backgroundColor": "#E6F4FE"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": true,
       "permissions": [
-        "READ_MEDIA_AUDIO",
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.WAKE_LOCK",
-        "android.permission.INTERNET",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.INTERNET"
       ],
       "package": "com.gargamel9288.beatnova"
     },
@@ -49,9 +43,7 @@
       [
         "expo-media-library",
         {
-          "androidPermissions": [
-            "android.permission.READ_MEDIA_AUDIO"
-          ]
+          "androidPermissions": ["android.permission.READ_MEDIA_AUDIO"]
         }
       ],
       [
@@ -76,6 +68,13 @@
             "playInBackground": true,
             "enableMediaControls": true
           }
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-1444133443338193~5350662155",
+          "iosAppId": "ca-app-pub-1444133443338193~5350662155"
         }
       ]
     ],

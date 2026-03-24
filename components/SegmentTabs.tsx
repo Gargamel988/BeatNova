@@ -9,7 +9,6 @@ import {
   Play,
   List,
   Info,
-  NotebookPen,
   LucideProps,
 } from "lucide-react-native";
 export const SEGMENTS: {
@@ -17,11 +16,10 @@ export const SEGMENTS: {
   label: string;
   icon?: ComponentType<LucideProps>;
 }[] = [
-  { key: "controls", label: "Kontroller", icon: Play },
-  { key: "queue", label: "Sıra", icon: List },
-  { key: "details", label: "Detaylar", icon: Info },
-  { key: "notes", label: "Notlar", icon: NotebookPen },
-];
+    { key: "controls", label: "Kontroller", icon: Play },
+    { key: "queue", label: "Sıra", icon: List },
+    { key: "details", label: "Detaylar", icon: Info },
+  ];
 
 type SegmentKey = (typeof SEGMENTS)[number]["key"];
 

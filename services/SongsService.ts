@@ -64,13 +64,12 @@ const insertSong = async (song: Song) => {
     // Önce oturum kontrolü yap
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionData.session) {
-      console.error("Oturum hatası:", sessionError);
-      throw new Error("Kullanıcı oturumu bulunamadı.");
+      return null;
     }
 
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı.");
+      return null;
     }
 
     // users_id'nin auth.uid() ile eşleştiğinden emin ol
@@ -113,7 +112,7 @@ const getsongs = async (): Promise<{ id: string, asset_id: string }[] | null> =>
   try {
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı.");
+      return [];
     }
 
     const { data, error } = await supabase
@@ -141,16 +140,19 @@ const getAllSongsWithDetails = async (): Promise<{
   album: string;
   duration: number;
   cover_url: string | null;
+  genre: string | null;
+  mood: string[] | null;
+  energy_level: string | null;
 }[] | null> => {
   try {
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı.");
+      return [];
     }
 
     const { data, error } = await supabase
       .from("songs")
-      .select("id, asset_id, title, artist, album, duration, cover_url")
+      .select("id, asset_id, title, artist, album, duration, cover_url, genre, mood, energy_level")
       .eq("users_id", user.id)
       .order("created_at", { ascending: true });
 
@@ -164,12 +166,45 @@ const getAllSongsWithDetails = async (): Promise<{
   }
 };
 
+// AI tarafından sınıflandırılan metadata'yı günceller
+const updateSongsMetadata = async (results: { id: string, genre: string, energyLevel: string, mood: string[] }[]) => {
+  try {
+    const user = await getUser();
+    if (!user?.id) {
+      return false;
+    }
+
+    // Her sonuç için veritabanını güncelle
+    const updates = results.map(async (result) => {
+      const { error } = await supabase
+        .from("songs")
+        .update({
+          genre: result.genre,
+          energy_level: result.energyLevel,
+          mood: result.mood
+        })
+        .eq("id", result.id)
+        .eq("users_id", user.id);
+
+      if (error) {
+        console.error(`Şarkı güncelleme hatası (ID: ${result.id}):`, error);
+      }
+    });
+
+    await Promise.all(updates);
+    return true;
+  } catch (error) {
+    console.error("updateSongsMetadata hatası:", error);
+    return false;
+  }
+};
+
 // Şarkıyı veritabanından siler (asset_id'ye göre)
 const deleteSong = async (assetId: string): Promise<boolean> => {
   try {
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı.");
+      return false;
     }
 
     // Önce şarkıyı bul (UUID'yi almak için)
@@ -206,4 +241,4 @@ const deleteSong = async (assetId: string): Promise<boolean> => {
   }
 };
 
-export { insertSong, getsongs, getAllSongsWithDetails, deleteSong };
+export { insertSong, getsongs, getAllSongsWithDetails, deleteSong, updateSongsMetadata };

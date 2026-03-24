@@ -11,7 +11,7 @@ const upsertlisteningtime = async (
 
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı");
+      return null;
     }
 
 
@@ -55,16 +55,17 @@ const upsertlisteningtime = async (
       throw error;
     }
     return data;
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes("session missing")) return null;
     console.error("Error updating total played:", error);
-    throw error;
+    return null;
   }
 };
  const getlisteninghistory = async () => {
   try {
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı");
+      return [];
     }
     const { data, error } = await supabase
       .from("listening_history")
@@ -76,9 +77,10 @@ const upsertlisteningtime = async (
     }
     return data;
   }
-  catch (error) {
+  catch (error: any) {
+    if (error?.message?.includes("session missing")) return [];
     console.error("Error getting listening history:", error);
-    throw error;
+    return [];
   }
  }
  

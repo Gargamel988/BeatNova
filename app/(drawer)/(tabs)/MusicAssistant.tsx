@@ -3,6 +3,7 @@ import { experimental_useObject as useObject } from "@ai-sdk/react";
 import { fetch as expoFetch } from "expo/fetch";
 import { TouchableOpacity, ColorValue } from "react-native";
 import { useState } from "react";
+import { useAds } from "@/providers/AdsProvider";
 import { Input } from "@/components/ui/input";
 import { ScrollView } from "@/components/ui/scroll-view";
 import { Text } from "@/components/ui/text";
@@ -24,11 +25,13 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { useAudioPlayerContext } from "@/providers/player-context";
 import { EmptyState } from "@/components/ui/empty-state";
+import { AppBannerAd } from "@/components/AppBannerAd";
 
 export default function MusicAssistant() {
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette } = useThemeModeContext();
   const { isPlaying } = useAudioPlayerContext();
+  const { showRewarded, isRewardedLoaded } = useAds();
   const [input, setInput] = useState<string>("");
 
   const apiUrl = generateAPIUrl("api/object");
@@ -42,8 +45,16 @@ export default function MusicAssistant() {
   const handleSuggestion = (suggestion: string) => {
     const trimmedInput = (suggestion || input).trim();
     if (!trimmedInput) return;
-    submit({ input: trimmedInput });
-    setInput("");
+
+    if (!isRewardedLoaded) {
+      alert("Reklam henüz hazır değil, lütfen biraz bekleyin.");
+      return;
+    }
+
+    showRewarded(() => {
+      submit({ input: trimmedInput });
+      setInput("");
+    });
   };
 
   const formatDuration = (seconds?: number) => {
@@ -517,6 +528,8 @@ export default function MusicAssistant() {
             ))}
           </View>
         )}
+        
+        <AppBannerAd style={{ marginTop: hp(2) }} />
       </ScrollView>
     </SafeAreaView>
   );

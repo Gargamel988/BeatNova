@@ -26,14 +26,15 @@ export const getProfile = async () => {
       .eq("id", user.id)
       .maybeSingle();
     return { data, error };
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes("session missing")) return { data: null, error: null };
     return { data: null, error };
   }
 };
 
 export const insertProfile = async (user: User) => {
   if (!user?.id) {
-    throw new Error("Kullanıcı oturumu bulunamadı");
+    return null;
   }
   
   // user_name metadata'dan al, yoksa email'den kullanıcı adı oluştur
@@ -60,7 +61,7 @@ export const insertProfile = async (user: User) => {
     
   if (error) {
     console.error("Profil insert hatası:", error);
-    throw error;
+    return null;
   }
   
   return data || [];
@@ -70,7 +71,7 @@ export const insertProfile = async (user: User) => {
 export const updateCurrentSong = async (songId: string | null) => {
   const user = await getUser();
   if (!user?.id) {
-    throw new Error("Kullanıcı oturumu bulunamadı");
+    return null;
   }
   
   const { data, error } = await supabase
@@ -82,7 +83,8 @@ export const updateCurrentSong = async (songId: string | null) => {
     .select();
     
   if (error) {
-    throw error;
+    console.error("updateCurrentSong error:", error);
+    return null;
   }
   
   return data;
@@ -100,7 +102,7 @@ export const updateProfile = async (updates: {
 }) => {
   const user = await getUser();
   if (!user?.id) {
-    throw new Error("Kullanıcı oturumu bulunamadı");
+    return null;
   }
   
   const { data, error } = await supabase
@@ -111,7 +113,8 @@ export const updateProfile = async (updates: {
     .single();
     
   if (error) {
-    throw error;
+    console.error("updateProfile error:", error);
+    return null;
   }
   
   return data;
@@ -121,7 +124,7 @@ export const updateProfile = async (updates: {
 export const updateUserActiveStatus = async (isActive: boolean) => {
   const user = await getUser();
   if (!user?.id) {
-    throw new Error("Kullanıcı oturumu bulunamadı");
+    return null;
   }
   
   const { data, error } = await supabase
@@ -132,7 +135,8 @@ export const updateUserActiveStatus = async (isActive: boolean) => {
     .single();
     
   if (error) {
-    throw error;
+    console.error("updateUserActiveStatus error:", error);
+    return null;
   }
   
   return data;

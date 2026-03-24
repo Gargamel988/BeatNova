@@ -131,10 +131,24 @@ export default function Songs() {
   );
 
   const displayedSongs = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    
     let filtered = songs.filter((song) => {
-      // Metadata kontrolü ekle
       if (!song?.metadata?.title) return false;
-      return song.metadata.title.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const title = (song.metadata.title || "").toLowerCase();
+      const artist = (song.metadata.artist || "").toLowerCase();
+      const album = (song.metadata.album || "").toLowerCase();
+      const genre = (song.genre || "").toLowerCase();
+      const energy = (song.energy_level || "").toLowerCase();
+      const moods = (song.mood || []).map(m => m.toLowerCase());
+      
+      return title.includes(query) || 
+             artist.includes(query) || 
+             album.includes(query) || 
+             genre.includes(query) ||
+             energy.includes(query) ||
+             moods.some(m => m.includes(query));
     });
 
     // Apply filters

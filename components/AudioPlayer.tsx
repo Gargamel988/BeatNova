@@ -7,6 +7,8 @@ import {
   Music,
   SkipBack,
   SkipForward,
+  Moon,
+  Clock,
 } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -17,19 +19,18 @@ import { formatTime } from "@/utils/format";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useAudioPlayerStatus } from "expo-audio";
+import { BlurView } from "expo-blur";
 
 //components
 import { Icon } from "@/components/ui/icon";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
-import NotesSection from "@/components/segmenttabs/NotesSection";
 import DetailsSection from "@/components/segmenttabs/DetailsSection";
 import QueueSection from "@/components/segmenttabs/QueueSection";
 import PlayerControls from "@/components/segmenttabs/PlayerControls";
 import ProgressSection from "@/components/ProgressSection";
 import SegmentTabs, { SEGMENTS } from "@/components/SegmentTabs";
 import useSongsService, { Song } from "@/components/songs/songsService";
-import { LoadingOverlay } from "@/components/ui/spinner";
 
 export default function AudioPlayer({
   visible,
@@ -55,9 +56,13 @@ export default function AudioPlayer({
     playlist: hookPlaylist,
     loopMode,
     isShuffled,
+    isSleepTimerActive,
+    sleepTimerRemaining,
+    setSleepTimer,
     loop,
   } = useAudioPlayerContext();
   const [songsWithCovers, setSongsState] = useState<Song[]>([]);
+  const [sleepTimerModalVisible, setSleepTimerModalVisible] = useState(false);
   const { loadSongs, loadCoversInBackground } = useSongsService();
   const { data: songsData = [] } = useQuery<Song[]>({
     queryKey: ["songs"],
@@ -251,8 +256,8 @@ export default function AudioPlayer({
     const modes: ("all" | "one" | "none")[] = ["all", "one", "none"];
     const currentIndex = modes.indexOf(loopMode);
     const nextIndex = (currentIndex + 1) % modes.length;
-    loop(modes[nextIndex], playlist, isShuffled);
-  }, [loopMode, loop, playlist, isShuffled]);
+    loop(modes[nextIndex]);
+  }, [loopMode, loop]);
 
   const handleShuffleToggle = useCallback(() => {
     shuffle(!isShuffled);
@@ -305,46 +310,120 @@ export default function AudioPlayer({
       className="flex-1 justify-center items-center"
     >
       <View className="flex-1">
-        <LinearGradient
-          colors={colors.gradient.playerModal as [string, string, string]}
-          style={{ flex: 1 }}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 1, y: 0 }}
-        >
-          <View
-            className="flex-1"
-            style={{
-              paddingHorizontal: wp(6),
-              paddingTop: hp(5),
-              gap: hp(2),
-            }}
-          >
-            <View className="flex-row justify-between items-center">
-              <TouchableOpacity
-                onPress={onClose}
-                activeOpacity={0.8}
-                className="flex-row items-center"
+        {/* Dynamic Blurred Background */}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden" }}>
+          {currentSong?.metadata?.coverUri ? (
+            <>
+              <Image
+                source={{ uri: currentSong.metadata.coverUri }}
+                style={{ width: "100%", height: "100%" }}
+                contentFit="cover"
+              />
+              <BlurView
+                intensity={80}
+                tint="dark"
+                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+              />
+              {/* Overlay for additional contrast */}
+              <View
                 style={{
-                  gap: wp(2),
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: "rgba(0,0,0,0.4)"
+                }}
+              />
+            </>
+          ) : (
+            <LinearGradient
+              colors={colors.gradient.playerModal as [string, string, string]}
+              style={{ flex: 1 }}
+              start={{ x: 0, y: 1 }}
+              end={{ x: 1, y: 0 }}
+            />
+          )}
+        </View>
+
+        <View
+          className="flex-1"
+          style={{
+            paddingHorizontal: wp(6),
+            paddingTop: hp(5),
+            gap: hp(2),
+          }}
+        >
+          <View className="flex-row justify-between items-center">
+            <TouchableOpacity
+              onPress={onClose}
+              activeOpacity={0.8}
+              className="flex-row items-center"
+              style={{
+                gap: wp(2),
+              }}
+            >
+              <Icon
+                name={ChevronDown}
+                size={fontSize(24)}
+                color={colors.player.iconWhite}
+              />
+            </TouchableOpacity>
+
+            <View className="flex-1 items-center">
+              <Text
+                style={{
+                  fontSize: fontSize(16),
+                  color: colors.player.textPrimary,
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Şimdi Çalıyor
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize(12),
+                  color: colors.player.textMuted,
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı"}
+              </Text>
+            </View>
+
+
+          </View>
+
+          <View className="items-center justify-center">{CoverArt}</View>
+
+          <SegmentTabs
+            segments={SEGMENTS}
+            activeSegment={activeSegment}
+            onSelect={setActiveSegment}
+            colors={colors}
+          />
+
+          {activeSegment === "controls" && (
+            <>
+              <View
+                style={{
+                  gap: hp(0.5),
+                  marginTop: hp(2),
                 }}
               >
-                <Icon
-                  name={ChevronDown}
-                  size={fontSize(24)}
-                  color={colors.player.iconWhite}
-                />
-              </TouchableOpacity>
-
-              <View className="flex-1 items-center">
                 <Text
                   style={{
-                    fontSize: fontSize(16),
+                    fontSize: fontSize(18),
                     color: colors.player.textPrimary,
                   }}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  Şimdi Çalıyor
+                  {currentSong?.metadata?.title ??
+                    activeSong?.filename ??
+                    "Şarkı"}
                 </Text>
                 <Text
                   style={{
@@ -358,89 +437,115 @@ export default function AudioPlayer({
                 </Text>
               </View>
 
-              <TouchableOpacity
-                activeOpacity={0.8}
-                className="items-center justify-center"
-              >
-                <Icon
-                  name={MoreHorizontal}
-                  size={fontSize(24)}
-                  color={colors.player.iconWhite}
-                />
-              </TouchableOpacity>
-            </View>
+              <ProgressSection
+                progress={progress}
+                duration={durationSeconds}
+                position={position}
+                formatTime={formatTime}
+                handleSeek={handleSeek}
+              />
 
-            <View className="items-center justify-center">{CoverArt}</View>
+              <PlayerControls
+                shuffleActive={isShuffled}
+                onShuffleToggle={handleShuffleToggle}
+                onPrevious={() => previous(playlist, isShuffled)}
+                onPlayToggle={handlePlayToggle}
+                isPlaying={isPlaying}
+                onNext={() => next(playlist, isShuffled)}
+                loopMode={loopMode}
+                onLoopToggle={handleLoopToggle}
+                colors={colors}
+              />
+            </>
+          )}
+          {activeSegment === "queue" && <QueueSection queue={queue} />}
+          {activeSegment === "details" && (
+            <DetailsSection details={detailsItems} />
+          )}
 
-            <SegmentTabs
-              segments={SEGMENTS}
-              activeSegment={activeSegment}
-              onSelect={setActiveSegment}
-              colors={colors}
-            />
+        </View>
 
-            {activeSegment === "controls" && (
-              <>
+        <Modal
+          visible={sleepTimerModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setSleepTimerModalVisible(false)}
+        >
+          <TouchableOpacity
+            className="flex-1 justify-end"
+            activeOpacity={1}
+            onPress={() => setSleepTimerModalVisible(false)}
+          >
+            <BlurView intensity={40} tint="dark" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+
+            <View
+              style={{
+                backgroundColor: colors.popoverCard || colors.card || '#1A1A1A',
+                borderTopLeftRadius: radius(32),
+                borderTopRightRadius: radius(32),
+                padding: wp(6),
+                paddingBottom: hp(4),
+                gap: hp(2)
+              }}
+            >
+              <View className="items-center mb-2">
                 <View
                   style={{
-                    gap: hp(0.5),
-                    marginTop: hp(2),
+                    width: wp(12),
+                    height: 4,
+                    backgroundColor: colors.player.textMuted,
+                    borderRadius: 2,
+                    opacity: 0.3
+                  }}
+                />
+                <Text style={{ fontSize: fontSize(18), color: colors.player.textPrimary, fontWeight: 'bold', marginTop: hp(2) }}>
+                  Uyku Zamanlayıcısı
+                </Text>
+              </View>
+
+              {[15, 30, 45, 60].map((minutes) => (
+                <TouchableOpacity
+                  key={minutes}
+                  onPress={() => {
+                    setSleepTimer(minutes);
+                    setSleepTimerModalVisible(false);
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: hp(2),
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.player.textVeryDimmed
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: fontSize(18),
-                      color: colors.player.textPrimary,
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {currentSong?.metadata?.title ??
-                      activeSong?.filename ??
-                      "Şarkı"}
+                  <Text style={{ fontSize: fontSize(16), color: colors.player.textPrimary }}>
+                    {minutes} Dakika Sonra
                   </Text>
-                  <Text
-                    style={{
-                      fontSize: fontSize(12),
-                      color: colors.player.textMuted,
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı"}
-                  </Text>
-                </View>
+                  {isSleepTimerActive && Math.ceil((sleepTimerRemaining || 0) / 60) === minutes && (
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.player.iconActive }} />
+                  )}
+                </TouchableOpacity>
+              ))}
 
-                <ProgressSection
-                  progress={progress}
-                  duration={durationSeconds}
-                  position={position}
-                  formatTime={formatTime}
-                  handleSeek={handleSeek}
-                />
-
-                <PlayerControls
-                  shuffleActive={isShuffled}
-                  onShuffleToggle={handleShuffleToggle}
-                  onPrevious={() => previous(playlist, isShuffled)}
-                  onPlayToggle={handlePlayToggle}
-                  isPlaying={isPlaying}
-                  onNext={() => next(playlist, isShuffled)}
-                  loopMode={loopMode}
-                  onLoopToggle={handleLoopToggle}
-                  colors={colors}
-                />
-              </>
-            )}
-            {activeSegment === "queue" && <QueueSection queue={queue} />}
-            {activeSegment === "details" && (
-              <DetailsSection details={detailsItems} />
-            )}
-            {activeSegment === "notes" && (
-              <NotesSection note={currentNote} onChange={handleNoteChange} />
-            )}
-          </View>
-        </LinearGradient>
+              <TouchableOpacity
+                onPress={() => {
+                  setSleepTimer(null);
+                  setSleepTimerModalVisible(false);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: hp(2),
+                }}
+              >
+                <Text style={{ fontSize: fontSize(16), color: '#FF4D4D' }}>
+                  Zamanlayıcıyı Kapat
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
     </Modal>
   );

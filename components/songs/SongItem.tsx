@@ -537,7 +537,7 @@ export default function SongItem({
                 <Icon
                   name={MoreVerticalIcon}
                   size={fontSize(24)}
-                  color={isActive ? palette.primary : palette.textMuted}
+                  color={isActive ? palette.primaryForeground : palette.textMuted}
                 />
               )}
             </TouchableOpacity>

@@ -9,15 +9,44 @@ export interface SongMetadata {
   album: string;
   duration: number;
   coverUri?: string;
+  genre?: string;
+  mood?: string[];
+  energyLevel?: "low" | "medium" | "high";
 }
 
 export interface Song extends Asset {
   metadata: SongMetadata;
+  genre?: string;
+  mood?: string[];
+  energy_level?: string;
 }
 
 export default function useSongsService() {
   const queryClient = useQueryClient();
- const fetchCoverFromiTunes = useCallback(
+
+  // Sessizce izin durumunu kontrol eder
+  const getPermissions = useCallback(async () => {
+    try {
+      const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
+      return { status, canAskAgain };
+    } catch (error) {
+      console.error("getPermissions error:", error);
+      return { status: "undetermined", canAskAgain: true };
+    }
+  }, []);
+
+  // Kullanıcıdan aktif olarak izin ister
+  const requestPermissions = useCallback(async () => {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      return status === "granted";
+    } catch (error) {
+      console.error("requestPermissions error:", error);
+      return false;
+    }
+  }, []);
+
+  const fetchCoverFromiTunes = useCallback(
     async (title: string, artist: string): Promise<string | null> => {
       try {
         const query = encodeURIComponent(`${artist} ${title}`);
@@ -99,9 +128,11 @@ export default function useSongsService() {
 
   const loadSongs = async (): Promise<Song[]> => {
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status } = await MediaLibrary.getPermissionsAsync();
+      
+      // Eğer izin yoksa sessizce boş dön
       if (status !== "granted") {
-        throw new Error("MediaLibrary izni reddedildi");
+        return [];
       }
 
       const media = await MediaLibrary.getAssetsAsync({
@@ -127,7 +158,8 @@ export default function useSongsService() {
 
       return processedSongs;
     } catch (error) {
-      throw error;
+      console.error("loadSongs error:", error);
+      return [];
     }
   };
 
@@ -185,6 +217,8 @@ export default function useSongsService() {
 
 
   return {
+    getPermissions,
+    requestPermissions,
     fetchCoverFromiTunes,
     fetchCoverFromDeezer,
     parseFilename,

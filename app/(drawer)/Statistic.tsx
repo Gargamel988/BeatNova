@@ -24,13 +24,25 @@ import { getlisteninghistory } from "@/services/StatisticServices";
 import { getAllSongsWithDetails } from "@/services/SongsService";
 import { getFavorites } from "@/services/PlaylistServices";
 import { LoadingState } from "@/components/ui/loading-state";
+import { AppBannerAd } from "@/components/AppBannerAd";
+import { useAds } from "@/providers/AdsProvider";
+import { useEffect } from "react";
+
+
 
 export default function Statistic() {
-  const { wp, hp , fontSize, radius } = useResponsive();
+  const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
   const textPrimary = useColor("authPrimaryText");
   const cardBg = useColor("card");
   const borderColor = useColor("border");
+  const { showInterstitial } = useAds();
+
+  useEffect(() => {
+    // Show an interstitial ad when entering Statistics for a premium feel
+    showInterstitial();
+  }, []);
+
 
   const [listeninghistory, songs, favorites] = useQueries({
     queries: [
@@ -48,6 +60,7 @@ export default function Statistic() {
       },
     ],
   });
+
   const formatday = (day: string) => {
     return new Date(day).toLocaleDateString("tr-TR", { weekday: "long" });
   };
@@ -65,7 +78,7 @@ export default function Statistic() {
       }
       return max;
     },
-    null as { day: string; value: number } | null
+    null
   );
 
   const summaryCards = [
@@ -80,7 +93,7 @@ export default function Statistic() {
     {
       id: "playedSongs",
       label: "Çalınan Şarkı",
-      value: listeninghistory?.data?.reduce((acc, item) => acc + item.play_count, 0),
+      value: listeninghistory?.data?.reduce((acc: number, item: any) => acc + (item.play_count || 0), 0) || 0,
       subLabel: "Bu ay",
       delta: "+4%",
       icon: Activity,
@@ -88,7 +101,7 @@ export default function Statistic() {
     {
       id: "mostActiveDay",
       label: "En Aktif Gün",
-      value: formatday(mostActiveDay?.created_at || "-"),
+      value: mostActiveDay?.created_at ? formatday(mostActiveDay.created_at) : "-",
       subLabel: "Bu hafta",
       delta: "+8%",
       icon: Clock,
@@ -107,7 +120,7 @@ export default function Statistic() {
     if (!listeninghistory?.data || listeninghistory?.data?.length === 0) return [];
 
     const groupedByDay = listeninghistory?.data?.reduce(
-      (acc, d: { created_at: string; total_seconds: number }) => {
+      (acc: Record<string, number>, d: { created_at: string; total_seconds: number }) => {
         const day = new Date(d.created_at).toLocaleDateString("tr-TR", {
           weekday: "long",
         });
@@ -117,7 +130,7 @@ export default function Statistic() {
         acc[day] += d.total_seconds || 0;
         return acc;
       },
-      {} as Record<string, number>
+      {}
     );
 
     const weekday = [
@@ -134,28 +147,28 @@ export default function Statistic() {
         day === "Pazartesi"
           ? "Pzt"
           : day === "Salı"
-          ? "Sal"
-          : day === "Çarşamba"
-          ? "Çar"
-          : day === "Perşembe"
-          ? "Per"
-          : day === "Cuma"
-          ? "Cum"
-          : day === "Cumartesi"
-          ? "Cmt"
-          : day === "Pazar"
-          ? "Paz"
-          : day,
+            ? "Sal"
+            : day === "Çarşamba"
+              ? "Çar"
+              : day === "Perşembe"
+                ? "Per"
+                : day === "Cuma"
+                  ? "Cum"
+                  : day === "Cumartesi"
+                    ? "Cmt"
+                    : day === "Pazar"
+                      ? "Paz"
+                      : day,
       value: groupedByDay[day] || 0,
     }));
-  }, [listeninghistory]);
+  }, [listeninghistory?.data]);
 
 
 
   // Şarkı detaylarını MostPlayedSongs component'ine hazırla
   const songsForMostPlayed = useMemo(() => {
     if (!songs?.data) return [];
-    
+
     return songs.data.map((song) => ({
       id: song.id,
       title: song.title || "Bilinmeyen Şarkı",
@@ -182,75 +195,79 @@ export default function Statistic() {
   ];
 
   const hourlyListeningData = [
-    { hour: 0, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 0).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 1, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 1).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 2, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 2).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 3, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 3).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 4, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 4).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 5, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 5).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 6, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 6).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 7, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 7).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 8, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 8).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 9, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 9).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 10, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 10).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 11, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 11).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 12, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 12).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 13, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 13).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 14, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 14).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 15, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 15).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 16, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 16).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 17, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 17).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 18, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 18).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 19, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 19).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 20, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 20).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 21, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 21).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 22, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 22).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
-    { hour: 23, value: listeninghistory?.data?.filter((item) => new Date(item.created_at).getHours() === 23).reduce((acc, item) => acc + item.total_seconds, 0) || 0 },
+    { hour: 0, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 0).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 1, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 1).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 2, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 2).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 3, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 3).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 4, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 4).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 5, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 5).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 6, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 6).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 7, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 7).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 8, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 8).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 9, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 9).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 10, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 10).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 11, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 11).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 12, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 12).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 13, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 13).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 14, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 14).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 15, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 15).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 16, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 16).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 17, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 17).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 18, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 18).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 19, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 19).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 20, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 20).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 21, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 21).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 22, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 22).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
+    { hour: 23, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 23).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
   ];
 
   // Genre tahmin fonksiyonu (artist'e göre basit bir tahmin)
   const getGenreFromArtist = (artist: string): string => {
     if (!artist) return "Diğer";
     const artistLower = artist.toLowerCase();
-    
+
     // Türk sanatçılar
-    if (artistLower.includes("tarkan") || artistLower.includes("sezen") || artistLower.includes("sertab") || 
-        artistLower.includes("ajda") || artistLower.includes("hande") || artistLower.includes("ece")) {
+    if (artistLower.includes("tarkan") || artistLower.includes("sezen") || artistLower.includes("sertab") ||
+      artistLower.includes("ajda") || artistLower.includes("hande") || artistLower.includes("ece")) {
       return "Pop";
     }
     if (artistLower.includes("duman") || artistLower.includes("mor ve ötesi") || artistLower.includes("teoman") ||
-        artistLower.includes("şebnem") || artistLower.includes("pinhani") || artistLower.includes("yüksek sadakat")) {
+      artistLower.includes("şebnem") || artistLower.includes("pinhani") || artistLower.includes("yüksek sadakat")) {
       return "Rock";
     }
     if (artistLower.includes("ceza") || artistLower.includes("sagopa") || artistLower.includes("ezhel") ||
-        artistLower.includes("gazapizm") || artistLower.includes("allame") || artistLower.includes("şanışer")) {
+      artistLower.includes("gazapizm") || artistLower.includes("allame") || artistLower.includes("şanışer")) {
       return "Hip-Hop";
     }
-    
+
     // Yabancı sanatçılar
     if (artistLower.includes("weeknd") || artistLower.includes("taylor swift") || artistLower.includes("ed sheeran") ||
-        artistLower.includes("dua lipa") || artistLower.includes("billie eilish") || artistLower.includes("post malone")) {
+      artistLower.includes("dua lipa") || artistLower.includes("billie eilish") || artistLower.includes("post malone")) {
       return "Pop";
     }
     if (artistLower.includes("imagine dragons") || artistLower.includes("coldplay") || artistLower.includes("linkin park") ||
-        artistLower.includes("foo fighters") || artistLower.includes("ac/dc") || artistLower.includes("metallica")) {
+      artistLower.includes("foo fighters") || artistLower.includes("ac/dc") || artistLower.includes("metallica")) {
       return "Rock";
     }
     if (artistLower.includes("drake") || artistLower.includes("kendrick") || artistLower.includes("eminem") ||
-        artistLower.includes("travis scott") || artistLower.includes("kanye")) {
+      artistLower.includes("travis scott") || artistLower.includes("kanye")) {
       return "Hip-Hop";
     }
     if (artistLower.includes("skrillex") || artistLower.includes("deadmau5") || artistLower.includes("avicii") ||
-        artistLower.includes("calvin harris") || artistLower.includes("martin garrix")) {
+      artistLower.includes("calvin harris") || artistLower.includes("martin garrix")) {
       return "Electronic";
     }
     if (artistLower.includes("miles davis") || artistLower.includes("john coltrane") || artistLower.includes("ella fitzgerald") ||
-        artistLower.includes("louis armstrong") || artistLower.includes("bill evans")) {
+      artistLower.includes("louis armstrong") || artistLower.includes("bill evans")) {
       return "Jazz";
     }
-    
+
     return "Diğer";
   };
+
+
+
+
 
   // Dinleme geçmişinden genre istatistiklerini hesapla
   const genreData = useMemo(() => {
@@ -265,25 +282,27 @@ export default function Statistic() {
       ];
     }
 
-    // Şarkı ID'lerine göre artist map oluştur
-    const songArtistMap = new Map(
-      songs.data.map((song) => [song.id, song.artist || "Bilinmeyen Sanatçı"])
+    // Şarkı ID'lerine göre tür map'i oluştur
+    const songGenreMap = new Map(
+      songs.data.map((song) => [
+        song.id,
+        song.genre || getGenreFromArtist(song.artist || "")
+      ])
     );
 
     // Genre'lere göre dinleme süresini topla
     const genreTotals = new Map<string, number>();
-    
+
     listeninghistory.data.forEach((history) => {
-      const artist = songArtistMap.get(history.song_id) || "Bilinmeyen Sanatçı";
-      const genre = getGenreFromArtist(artist);
+      const genre = songGenreMap.get(history.song_id) || "Diğer";
       const currentTotal = genreTotals.get(genre) || 0;
       genreTotals.set(genre, currentTotal + (history.total_seconds || 0));
     });
 
     // Toplam süreyi hesapla
     const totalSeconds = Array.from(genreTotals.values()).reduce((sum, val) => sum + val, 0);
-    
-    // Yüzdelik değerlere çevir
+
+    // Renkleri ata
     const genreColors: Record<string, string> = {
       "Pop": colors.purpleLight,
       "Rock": colors.accent,
@@ -291,6 +310,10 @@ export default function Statistic() {
       "Jazz": colors.green,
       "Hip-Hop": colors.orange,
       "Diğer": colors.textMuted,
+      "Türkçe Pop": "#FF2D55",
+      "Anadolu Rock": "#FF9500",
+      "Arabesk": "#AF52DE",
+      "Rap": "#5856D6",
     };
 
     const genres = Array.from(genreTotals.entries())
@@ -299,8 +322,8 @@ export default function Statistic() {
         value: totalSeconds > 0 ? Math.round((seconds / totalSeconds) * 100) : 0,
         color: genreColors[genre] || colors.textMuted,
       }))
-      .filter((item) => item.value > 0) // Sadece 0'dan büyük değerleri göster
-      .sort((a, b) => b.value - a.value); // Büyükten küçüğe sırala
+      .filter((item) => item.value > 0)
+      .sort((a, b) => b.value - a.value);
 
     return genres.length > 0 ? genres : [
       { genre: "Veri Yok", value: 100, color: colors.textMuted },
@@ -408,8 +431,8 @@ export default function Statistic() {
     const averageCompletionRate =
       songStats.length > 0
         ? Math.round(
-            songStats.reduce((sum, s) => sum + s.completionRate, 0) / songStats.length
-          )
+          songStats.reduce((sum, s) => sum + s.completionRate, 0) / songStats.length
+        )
         : 0;
 
     // En çok skip yapılan şarkıları sırala (skip sayısına göre)
@@ -426,70 +449,72 @@ export default function Statistic() {
   const averageCompletionRate = playbackHabitsData.averageCompletionRate;
   const mostSkippedSongs = playbackHabitsData.mostSkippedSongs;
 
-const replayScores = useMemo(() => {
-  return listeninghistory?.data?.reduce((acc, item) => {
-    if (item.play_count ) {
-      const song = songs?.data?.find((song) => song.id === item.song_id);
-      if (song) {
-        acc.push({ title: song.title || "Bilinmeyen Şarkı", artist: song.artist || "Bilinmeyen Sanatçı", replayCount: item.play_count });
+  const replayScores = useMemo(() => {
+    return listeninghistory?.data?.reduce((acc, item) => {
+      if (item.play_count) {
+        const song = songs?.data?.find((song) => song.id === item.song_id);
+        if (song) {
+          acc.push({ title: song.title || "Bilinmeyen Şarkı", artist: song.artist || "Bilinmeyen Sanatçı", replayCount: item.play_count });
+        }
       }
-    }
-    return acc;
-  }, [] as { title: string; artist: string; replayCount: number }[]);
-}, [listeninghistory?.data, songs?.data]);
-if(listeninghistory?.isLoading || songs?.isLoading || favorites?.isLoading) {
+      return acc;
+    }, [] as { title: string; artist: string; replayCount: number }[]);
+  }, [listeninghistory?.data, songs?.data]);
+  if (listeninghistory?.isLoading || songs?.isLoading || favorites?.isLoading) {
 
-  return <LoadingState message="İstatistikler yükleniyor..." fullScreen />;
-}
+    return <LoadingState message="İstatistikler yükleniyor..." fullScreen />;
+  }
   return (
 
-      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <ScrollView
-          contentContainerStyle={{
-            paddingHorizontal: wp(5),
-            paddingTop: hp(2),
-            paddingBottom: hp(4),
-            gap: hp(2.5),
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: wp(5),
+          paddingTop: hp(2),
+          paddingBottom: hp(4),
+          gap: hp(2.5),
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header with Back Button */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: hp(2),
           }}
-          showsVerticalScrollIndicator={false}
         >
-          {/* Header with Back Button */}
-          <View
+          <TouchableOpacity
+            onPress={() => router.back()}
             style={{
-              flexDirection: "row",
+              width: wp(11),
+              height: wp(11),
+              borderRadius: radius(10),
+              backgroundColor: cardBg,
               alignItems: "center",
-              marginBottom: hp(2),
+              justifyContent: "center",
+              marginRight: wp(3),
+              borderWidth: 1,
+              borderColor,
+            }}
+            activeOpacity={0.7}
+          >
+            <Icon name={ArrowLeft} size={22} color={textPrimary} />
+          </TouchableOpacity>
+          <Text
+            style={{
+              color: textPrimary,
+              fontSize: fontSize(28),
+              fontWeight: "900",
+              letterSpacing: -0.5,
+              flex: 1,
             }}
           >
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{
-                width: wp(11),
-                height: wp(11),
-                borderRadius: radius(10),
-                backgroundColor: cardBg,
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: wp(3),
-                borderWidth: 1,
-                borderColor,
-              }}
-              activeOpacity={0.7}
-            >
-              <Icon name={ArrowLeft} size={22} color={textPrimary} />
-            </TouchableOpacity>
-            <Text
-              style={{
-                color: textPrimary,
-                fontSize: fontSize(28),
-                fontWeight: "900",
-                letterSpacing: -0.5,
-                flex: 1,
-              }}
-            >
-              İstatistikler
-            </Text>
-          </View>
+            İstatistikler
+          </Text>
+
+
+        </View>
         {/* Summary cards */}
         <View
           style={{
@@ -504,12 +529,14 @@ if(listeninghistory?.isLoading || songs?.isLoading || favorites?.isLoading) {
           ))}
         </View>
 
+        <AppBannerAd style={{ marginVertical: hp(1) }} />
+
         {/* Haftalık dinleme */}
         <WeeklyChart data={weeklyListeningData} />
 
         {/* En çok dinlenen şarkılar */}
-        <MostPlayedSongs 
-          songs={songsForMostPlayed} 
+        <MostPlayedSongs
+          songs={songsForMostPlayed}
           listeningHistory={listeninghistory?.data}
         />
 
@@ -531,7 +558,7 @@ if(listeninghistory?.isLoading || songs?.isLoading || favorites?.isLoading) {
 
         {/* Tekrarlı Dinleme Skoru */}
         <ReplayScore songs={replayScores} />
-        </ScrollView>
-      </SafeAreaView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

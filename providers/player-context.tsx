@@ -15,23 +15,22 @@ type AudioPlayerContextValue = {
   activeSong: Song | null;
   isPlaying: boolean;
   audioPlayer: AudioPlayer;
-  next: (data: Song[], useShuffle?: boolean) => Promise<void>;
-  previous: (data: Song[], useShuffle?: boolean) => Promise<void>;
+  next: (data: Song[], useShuffle?: boolean) => void;
+  previous: (data: Song[], useShuffle?: boolean) => void;
   handleSeek: (durationSeconds: number) => (value: number) => void;
   position: number;
   beginSeek: () => void;
   endSeek: () => void;
-  loop: (
-    loop: "all" | "one" | "none",
-    data: Song[],
-    useShuffle?: boolean
-  ) => Promise<void>;
+  loop: (mode: "all" | "one" | "none") => void;
   shuffle: (enable: boolean) => void;
   playlist: Song[] | null;
   isLoading: boolean;
   isShuffled: boolean;
   loopMode: "all" | "one" | "none";
-  stop: () => Promise<void>;
+  stop: () => void;
+  sleepTimerRemaining: number | null;
+  isSleepTimerActive: boolean;
+  setSleepTimer: (minutes: number | null) => void;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | undefined>(
@@ -59,6 +58,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     isShuffled,
     loopMode,
     stop,
+    sleepTimerRemaining,
+    isSleepTimerActive,
+    setSleepTimer,
   } = useAudioPlayerHook();
 
   const value = useMemo(
@@ -82,6 +84,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       isShuffled,
       loopMode,
       stop,
+      sleepTimerRemaining,
+      isSleepTimerActive,
+      setSleepTimer,
     }),
     [
       play,
@@ -103,6 +108,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       isShuffled,
       loopMode,
       stop,
+      sleepTimerRemaining,
+      isSleepTimerActive,
+      setSleepTimer,
     ]
   );
 

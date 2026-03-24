@@ -186,7 +186,7 @@ const addSongToPlaylist = async (assetId: string, playlistId: number) => {
   try {
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı");
+      return null;
     }
 
     // Önce songs tablosundan asset_id ile eşleşen kaydı bul (UUID id'yi almak için)
@@ -299,7 +299,7 @@ const addSongToFavorites = async (songId: string) => {
   try {
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı");
+      return { success: false, message: "Kullanıcı oturumu bulunamadı" };
     }
     const saved = await AsyncStorage.getItem("favorites");
     if (saved) {
@@ -323,15 +323,16 @@ const addSongToFavorites = async (songId: string) => {
       message: "Şarkı başarıyla favorilere eklendi",
     };
   } catch (error: any) {
+    if (error?.message?.includes("session missing")) return { success: false, message: "" };
     console.error("addSongToFavorites hatası:", error);
-    throw error;
+    return { success: false, message: "Hata" };
   }
 };
 const removeSongFromFavorites = async (songId: string) => {
   try {
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı");
+      return false;
     }
     const saved = await AsyncStorage.getItem("favorites");
     if (saved) {
@@ -354,7 +355,7 @@ const getFavorites = async () => {
   try {
     const user = await getUser();
     if (!user?.id) {
-      throw new Error("Kullanıcı oturumu bulunamadı");
+      return [];
     }
     const saved = await AsyncStorage.getItem("favorites");
     if (saved) {
