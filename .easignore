@@ -54,7 +54,3 @@ build/
 *.aab
 *.ipa
 
-# Package manager lock files (EAS kendi yönetir)
-package-lock.json
-yarn.lock
-pnpm-lock.yaml

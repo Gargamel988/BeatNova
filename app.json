@@ -47,6 +47,14 @@
         }
       ],
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "-keep class com.google.android.gms.internal.consent_sdk.** { *; }"
+          }
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/beatnovalogo.jpeg",
@@ -73,8 +81,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-1444133443338193~5350662155",
-          "iosAppId": "ca-app-pub-1444133443338193~5350662155"
+          "androidAppId": "ca-app-pub-1444133443338193~5350662155"
         }
       ]
     ],
