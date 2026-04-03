@@ -76,7 +76,6 @@ export function useAppStateBackground(callback: () => void) {
         nextAppState.match(/inactive|background/)
       ) {
         // Uygulama arka plana geçti
-		console.log("Uygulama arka plana geçti");
         callback();
       }
       appState.current = nextAppState;

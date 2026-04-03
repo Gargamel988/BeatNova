@@ -24,7 +24,6 @@ import { getlisteninghistory } from "@/services/StatisticServices";
 import { getAllSongsWithDetails } from "@/services/SongsService";
 import { getFavorites } from "@/services/PlaylistServices";
 import { LoadingState } from "@/components/ui/loading-state";
-import { AppBannerAd } from "@/components/AppBannerAd";
 import { useAds } from "@/providers/AdsProvider";
 import { useEffect } from "react";
 
@@ -179,18 +178,33 @@ export default function Statistic() {
     }));
   }, [songs?.data]);
 
+  const activeDaysCount = useMemo(() => {
+    if (!listeninghistory?.data) return 0;
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const uniqueDays = new Set(
+      listeninghistory.data
+        .filter((item: any) => new Date(item.created_at) >= thirtyDaysAgo)
+        .map((item: any) => new Date(item.created_at).toISOString().split('T')[0])
+    );
+
+    return uniqueDays.size;
+  }, [listeninghistory?.data]);
+
   const quickInsights = [
     {
       id: "favorites",
       label: "Favoriler",
-      value: favorites?.data?.length || 0,
-      hint: "+5 bu hafta",
+      value: (favorites?.data?.length || 0).toString(),
+      hint: (favorites?.data?.length || 0) > 0 ? "Koleksiyonun büyüyor" : "Henüz favori yok",
     },
     {
       id: "activeDays",
       label: "Aktif Günler",
-      value: "24/30",
-      hint: "Harika gidiyorsun!",
+      value: `${activeDaysCount}/30`,
+      hint: activeDaysCount > 20 ? "Harika gidiyorsun!" : "Daha fazla müzik dinle!",
     },
   ];
 
@@ -529,7 +543,6 @@ export default function Statistic() {
           ))}
         </View>
 
-        <AppBannerAd style={{ marginVertical: hp(1) }} />
 
         {/* Haftalık dinleme */}
         <WeeklyChart data={weeklyListeningData} />

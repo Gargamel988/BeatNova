@@ -51,9 +51,13 @@ export default function MusicAssistant() {
       return;
     }
 
+    // AI isteğini arka planda başlat
+    submit({ input: trimmedInput });
+    setInput("");
+
+    // Reklamı paralel olarak göster
     showRewarded(() => {
-      submit({ input: trimmedInput });
-      setInput("");
+      // Ödül kazanıldı - AI zaten arka planda başladığı için burada işlem yapmaya gerek yok
     });
   };
 
@@ -384,6 +388,8 @@ export default function MusicAssistant() {
           </View>
         )}
 
+        <AppBannerAd style={{ marginVertical: hp(1) }} />
+
         {/* Results Section */}
         {object?.songs && object.songs.length > 0 && (
           <View className="mt-4">
@@ -528,7 +534,7 @@ export default function MusicAssistant() {
             ))}
           </View>
         )}
-        
+
         <AppBannerAd style={{ marginTop: hp(2) }} />
       </ScrollView>
     </SafeAreaView>

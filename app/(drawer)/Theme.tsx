@@ -3,15 +3,17 @@ import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useModeToggle } from "@/hooks/useModeToggle";
-import { Colors, ThemeMode } from "@/theme/colors";
+import { Colors, ThemeMode, PREMIUM_THEMES } from "@/theme/colors";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { Icon } from "@/components/ui/icon";
-import { ArrowLeft, Check } from "lucide-react-native";
+import { ArrowLeft, Check, Lock } from "lucide-react-native";
 import { router } from "expo-router";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { useProfile } from "@/hooks/useProfil";
+import { useAds } from "@/providers/AdsProvider";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const THEME_META: Record<
   ThemeMode,
@@ -60,7 +62,62 @@ const THEME_META: Record<
   lavender: {
     label: "Lavender",
     icon: "🌷",
-    description: "Mor ve açık mor tonları",
+    description: "Mor ve leylak tonları",
+  },
+  emerald: {
+    label: "Zümrüt",
+    icon: "💎",
+    description: "Premium zümrüt yeşili tema",
+  },
+  ruby: {
+    label: "Yakut",
+    icon: "🏮",
+    description: "Premium yakut kırmızısı tema",
+  },
+  gold: {
+    label: "Altın",
+    icon: "👑",
+    description: "Premium altın sarısı tema",
+  },
+  diamond: {
+    label: "Elmas",
+    icon: "✨",
+    description: "Premium elmas gümüşü tema",
+  },
+  mint: {
+    label: "Nane",
+    icon: "🍃",
+    description: "Taze ve ferah yeşil tonları",
+  },
+  royal: {
+    label: "Kraliyet",
+    icon: "🔱",
+    description: "Asil mor ve altın detaylar",
+  },
+  cyber: {
+    label: "Siber",
+    icon: "⚡",
+    description: "Gelecekten gelen neon renkler",
+  },
+  cyper: {
+    label: "Cyper",
+    icon: "📟",
+    description: "Matrix esintili neon yeşil tema",
+  },
+  coffee: {
+    label: "Kahve",
+    icon: "☕",
+    description: "Sıcak ve huzurlu kahve tonları",
+  },
+  candy: {
+    label: "Şeker",
+    icon: "🍬",
+    description: "Tatlı pastel pembe tonları",
+  },
+  slate: {
+    label: "Arduvaz",
+    icon: "🏢",
+    description: "Modern ve ciddi gri tonları",
   },
 };
 
@@ -77,6 +134,73 @@ export default function ThemePlayground() {
   const borderColor = useColor("border");
   const primary = useColor("primary");
   const { mutateUpdateProfile } = useProfile();
+  const { showRewarded, isRewardedLoaded } = useAds();
+
+  const [unlockedThemes, setUnlockedThemes] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    loadUnlockedThemes();
+  }, []);
+
+  const loadUnlockedThemes = async () => {
+    try {
+      const saved = await AsyncStorage.getItem("unlocked_themes");
+      if (saved) {
+        setUnlockedThemes(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error("Error loading unlocked themes:", e);
+    }
+  };
+
+  const unlockTheme = async (themeKey: string) => {
+    try {
+      const currentUnlocked = await AsyncStorage.getItem("unlocked_themes");
+      let unlocked = currentUnlocked ? JSON.parse(currentUnlocked) : [];
+      if (!unlocked.includes(themeKey)) {
+        unlocked.push(themeKey);
+        await AsyncStorage.setItem("unlocked_themes", JSON.stringify(unlocked));
+        setUnlockedThemes(unlocked);
+      }
+    } catch (e) {
+      console.error("Error saving unlocked theme:", e);
+    }
+  };
+
+  const handleThemeSelect = (key: ThemeMode) => {
+    const isPremium = (PREMIUM_THEMES as readonly string[]).includes(key);
+    const isUnlocked = unlockedThemes.includes(key);
+
+    if (isPremium && !isUnlocked) {
+      if (!isRewardedLoaded) {
+        Alert.alert(
+          "Reklam Hazır Değil",
+          "Premium temayı açmak için reklam henüz yüklenmedi. Lütfen birkaç saniye bekleyin."
+        );
+        return;
+      }
+
+      Alert.alert(
+        "Premium Tema",
+        "Bu temayı kalıcı olarak açmak için bir reklam izlemek ister misiniz?",
+        [
+          { text: "Vazgeç", style: "cancel" },
+          {
+            text: "İzle ve Aç",
+            onPress: () => {
+              showRewarded(() => {
+                unlockTheme(key);
+                setMode(key);
+                Alert.alert("Tebrikler!", `${THEME_META[key].label} teması kalıcı olarak açıldı.`);
+              });
+            },
+          },
+        ]
+      );
+    } else {
+      setMode(key);
+    }
+  };
 
   return (
     <LinearGradient
@@ -140,18 +264,19 @@ export default function ThemePlayground() {
               </Text>
             </View>
             <TouchableOpacity  
-            disabled={mutateUpdateProfile.isPending}
-            activeOpacity={0.8}
-            style={{
-              backgroundColor: primary,
-              padding: wp(4),
-              borderRadius: radius(16),
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            onPress={() => {
-              mutateUpdateProfile.mutate({ theme: mode });
-            }}>
+              disabled={mutateUpdateProfile.isPending}
+              activeOpacity={0.8}
+              style={{
+                backgroundColor: primary,
+                padding: wp(4),
+                borderRadius: radius(16),
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={() => {
+                mutateUpdateProfile.mutate({ theme: mode });
+              }}
+            >
               <Text style={{ color: "white", fontSize: fontSize(16), fontWeight: "bold" }}>Uygula</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -159,9 +284,13 @@ export default function ThemePlayground() {
           {/* Theme Cards */}
           <View style={{ gap: hp(2) }}>
             {availableModes.map((key, index) => {
-              const { label, icon, description } = THEME_META[key];
+              const themeMeta = THEME_META[key];
+              if (!themeMeta) return null; // Safety check
+
+              const { label, icon, description } = themeMeta;
               const themePalette = Colors[key];
               const active = mode === key;
+              const isLocked = (PREMIUM_THEMES as readonly string[]).includes(key) && !unlockedThemes.includes(key);
 
               return (
                 <Animated.View
@@ -170,7 +299,7 @@ export default function ThemePlayground() {
                 >
                   <TouchableOpacity
                     onPress={() => {
-                      setMode(key);
+                      handleThemeSelect(key);
                     }}
                     activeOpacity={0.8}
                     style={{
@@ -258,7 +387,8 @@ export default function ThemePlayground() {
                               ))}
                           </View>
                         </View>
-                        {active && (
+                        
+                        {active ? (
                           <Animated.View
                             entering={FadeInRight.duration(300)}
                             style={{
@@ -274,7 +404,22 @@ export default function ThemePlayground() {
                           >
                             <Icon name={Check} size={24} color="#FFFFFF" />
                           </Animated.View>
-                        )}
+                        ) : isLocked ? (
+                          <View
+                            style={{
+                              width: wp(12),
+                              height: wp(12),
+                              borderRadius: radius(12),
+                              backgroundColor: "rgba(0, 0, 0, 0.3)",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderWidth: 1,
+                              borderColor: "rgba(255, 255, 255, 0.4)",
+                            }}
+                          >
+                            <Icon name={Lock} size={20} color="#FFFFFF" />
+                          </View>
+                        ) : null}
                       </View>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -333,7 +478,7 @@ export default function ThemePlayground() {
               }}
             >
               Tema değişikliği anında uygulanır. Farklı temaları deneyerek en
-              sevdiğinizi bulabilirsiniz.
+              sevdiğinizi bulabilirsiniz. Premium temaları reklam izleyerek kalıcı olarak açabilirsiniz.
             </Text>
             <View
               style={{
@@ -356,7 +501,7 @@ export default function ThemePlayground() {
                     fontWeight: "700",
                   }}
                 >
-                  {THEME_META[mode as ThemeMode].label}
+                  {THEME_META[mode as ThemeMode]?.label || "Seçili Değil"}
                 </Text>
               </Text>
             </View>

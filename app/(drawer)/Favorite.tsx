@@ -27,6 +27,7 @@ import { ScrollView } from "@/components/ui/scroll-view";
 import { SearchBar } from "@/components/ui/searchbar";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AppBannerAd } from "@/components/AppBannerAd";
 
 type SortOption = "newest" | "popular" | "alphabetical";
 
@@ -269,6 +270,9 @@ export default function Favorite() {
       )}
 
       {/* Search Bar */}
+
+      {/* Ad Section */}
+      <AppBannerAd style={{ marginVertical: hp(1) }} />
 
       {/* Sort Options */}
       {favorites.length > 0 && (

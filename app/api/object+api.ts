@@ -11,7 +11,6 @@ async function searchWeb(query: string): Promise<string> {
     // Eğer hata varsa boş döndür
     
     if ('error' in result && result.error) {
-      console.log(result.error);
       return "";
     }
 
@@ -112,7 +111,6 @@ export async function POST(request: Request) {
 
     return Response.json(result.object);
   } catch (error: any) {
-    console.error("API Error:", error);
     return Response.json({ error: error.message || "Bir hata oluştu" }, { status: 500 });
   }
 }

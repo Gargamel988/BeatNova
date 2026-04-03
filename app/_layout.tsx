@@ -19,7 +19,8 @@ import { ToastProvider } from "@/components/ui/toast";
 import { useColor } from "@/hooks/useColor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useResponsive } from "@/hooks/useResponsive";
-import { LoadingState } from "@/components/ui/loading-state";
+import { AnimatedLogoSplash } from "@/components/AnimatedLogoSplash";
+import { AdsProvider } from "@/providers/AdsProvider";
 
 
 SplashScreen.setOptions({
@@ -34,7 +35,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ToastProvider>
-          <RootContent colorScheme={colorScheme} />
+          <AdsProvider>
+            <RootContent colorScheme={colorScheme} />
+          </AdsProvider>
         </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>
@@ -99,11 +102,14 @@ function RootContent({ colorScheme }: RootContentProps) {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
+    const isLoginSuccess = segments[1] === "login-success";
+
+    if (isLoginSuccess) return;
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace("/(drawer)/(tabs)");
+      router.replace("/(auth)/login-success");
     }
   }, [isAuthenticated, segments, isLoading]);
 
@@ -124,50 +130,46 @@ function RootContent({ colorScheme }: RootContentProps) {
   const bottomOffset = isDrawerPage ? hp(12.5) : 0;
 
   if (isLoading) {
-    return (
-      <LoadingState
-        size="large"
-        message="Giriş yapılıyor..."
-        fullScreen={true}
-      />
-    );
+    return <AnimatedLogoSplash message="MüzikBox Hazırlanıyor..." />;
   }
 
   return (
     <ErrorBoundary>
-      <AudioPlayerProvider>
-        <PlaylistProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <LinearGradient
-              colors={[start, mid, end] as [string, string, string]}
-              start={{ x: 0, y: 1 }}
-              end={{ x: 1, y: 0 }}
-              style={{ flex: 1 }}
-            >
-              <StatusBar
-                style={colorScheme === "dark" ? "light" : "dark"}
-                animated
-              />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: "transparent" },
-                  animation: "fade",
-                }}
+      <AdsProvider>
+        <AudioPlayerProvider>
+          <PlaylistProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <LinearGradient
+                colors={[start, mid, end] as [string, string, string]}
+                start={{ x: 0, y: 1 }}
+                end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
               >
-                <Stack.Screen name="(drawer)" />
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              {isAuthenticated && (
-                <>
-                  <GlobalMiniPlayer bottomOffset={bottomOffset} />
-                </>
-              )}
-            </LinearGradient>
-          </GestureHandlerRootView>
-        </PlaylistProvider>
-      </AudioPlayerProvider>
+                <StatusBar
+                  style={colorScheme === "dark" ? "light" : "dark"}
+                  animated
+                />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: "transparent" },
+                    animation: "fade",
+                  }}
+                >
+                  <Stack.Screen name="(drawer)" />
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+                {isAuthenticated && (
+                  <>
+                    <GlobalMiniPlayer bottomOffset={bottomOffset} />
+                  </>
+                )}
+              </LinearGradient>
+            </GestureHandlerRootView>
+          </PlaylistProvider>
+        </AudioPlayerProvider>
+      </AdsProvider>
     </ErrorBoundary>
   );
 }

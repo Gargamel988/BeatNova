@@ -18,8 +18,8 @@ import PinnedPlaylists from "@/components/home/PinnedPlaylists";
 import RecentSongs from "@/components/home/RecentSongs";
 import PopularSongs from "@/components/home/PopularSongs";
 import PlayListPlayModal from "@/components/playlist/PlayListPlayModal";
-import { Ionicons } from "@expo/vector-icons";
 import { useColor } from "@/hooks/useColor";
+import { AppBannerAd } from "@/components/AppBannerAd";
 
 import { SleepTimerModal } from "@/components/settings/SleepTimerModal";
 import { Clock } from "lucide-react-native";
@@ -54,8 +54,13 @@ export default function Index() {
   }, []);
 
   const checkPermission = async () => {
-    const { status } = await getPermissions();
-    setPermissionStatus(status);
+    const { status, canAskAgain } = await getPermissions();
+    if (status === "undetermined" && canAskAgain) {
+      const granted = await requestPermissions();
+      setPermissionStatus(granted ? "granted" : "denied");
+    } else {
+      setPermissionStatus(status);
+    }
   };
 
   const handleRequestPermission = async () => {
@@ -265,6 +270,7 @@ export default function Index() {
           playlistsCount={playlists.data?.length || 0}
           favoritesCount={favorites.data?.length || 0}
         />
+        <AppBannerAd style={{ marginVertical: hp(1) }} />
         <PinnedPlaylists
           playlists={playlists.data?.slice(0, 3) || []}
           onPlayPlaylist={handlePlayPlaylist}

@@ -16,8 +16,9 @@ import {
   ThemeModes,
   ThemePalette,
 } from "@/theme/colors";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getProfile } from "@/services/ProfilServices";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const MODE_SEQUENCE = ThemeModes;
 
@@ -65,22 +66,53 @@ const buildNavigationTheme = (palette: ThemePalette) => ({
 export const ThemeProvider = ({ children }: Props) => {
   const [mode, setMode] = useState<ThemeMode>("system");
   
+  const queryClient = useQueryClient();
+
   // Load theme from database
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: () => getProfile(),
   });
 
-  // Set theme from database when profile loads
+  // Load theme from storage on initial mount
+  useEffect(() => {
+    const loadSavedTheme = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("user_theme");
+        if (saved && ThemeModes.includes(saved as ThemeMode)) {
+          setMode(saved as ThemeMode);
+        }
+      } catch (e) {
+        console.error("Error loading theme from storage:", e);
+      }
+    };
+    loadSavedTheme();
+  }, []);
+
+  // Set theme from database when profile loads and persist it
   useEffect(() => {
     if (profile?.data?.theme) {
-      const savedTheme = profile.data.theme as ThemeMode;
-      // Validate theme mode
-      if (ThemeModes.includes(savedTheme)) {
-        setMode(savedTheme);
+      const dbTheme = profile.data.theme as ThemeMode;
+      if (ThemeModes.includes(dbTheme)) {
+        setMode(dbTheme);
+        AsyncStorage.setItem("user_theme", dbTheme);
       }
     }
   }, [profile?.data?.theme]);
+
+  const handleSetMode = useCallback(async (newMode: ThemeMode) => {
+    setMode(newMode);
+    try {
+      await AsyncStorage.setItem("user_theme", newMode);
+      // Optional: Refresh profile query to stay in sync
+      queryClient.setQueryData(["profile"], (old: any) => ({
+        ...old,
+        data: { ...old?.data, theme: newMode }
+      }));
+    } catch (e) {
+      console.error("Error saving theme:", e);
+    }
+  }, [queryClient]);
 
   const toggleMode = useCallback(() => {
     setMode((prev) => {
@@ -107,12 +139,12 @@ export const ThemeProvider = ({ children }: Props) => {
   const contextValue = useMemo(
     () => ({
       mode,
-      setMode,
+      setMode: handleSetMode,
       toggleMode,
       palette,
       availableModes: ThemeModes,
     }),
-    [mode, toggleMode, palette]
+    [mode, handleSetMode, toggleMode, palette]
   );
 
   return (

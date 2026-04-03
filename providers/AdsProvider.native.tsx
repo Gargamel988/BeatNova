@@ -28,15 +28,13 @@ export const AdsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .initialize()
         .then(() => {
           setIsInitialized(true);
-          console.log('Ads initialized successfully');
+          // Ads initialized successfully
         })
         .catch(err => {
-          console.error('Ads initialization failed:', err);
           // Still set initialized to true to let the app continue without ads
           setIsInitialized(true);
         });
     } catch (error) {
-      console.error('Fatal Ads initialization error:', error);
       setIsInitialized(true);
     }
   }, []);
@@ -59,7 +57,7 @@ export const AdsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       requestNonPersonalizedAdsOnly: true,
     });
 
-    rewardedAd.addAdEventListener(AdEventType.LOADED, () => setIsRewardedLoaded(true));
+    rewardedAd.addAdEventListener(RewardedAdEventType.LOADED, () => setIsRewardedLoaded(true));
     rewardedAd.addAdEventListener(RewardedAdEventType.EARNED_REWARD, (reward: RewardedAdReward) => {
       if (onRewardCallback.current) {
         onRewardCallback.current();

@@ -141,20 +141,34 @@ export default function useSongsService() {
         sortBy: MediaLibrary.SortBy.creationTime,
       });
 
-      const processedSongs: Song[] = media.assets.map((asset) => {
-        const parsed = parseFilename(asset.filename);
+      const processedSongs: Song[] = await Promise.all(
+        media.assets.map(async (asset) => {
+          const parsed = parseFilename(asset.filename);
+          let uri = asset.uri;
 
-        return {
-          ...asset,
-          metadata: {
-            title: parsed.title || asset.filename.replace(/\.[^/.]+$/, ""),
-            artist: parsed.artist,
-            album: "Bilinmeyen Albüm",
-            duration: asset.duration,
-            coverUri: undefined,
-          },
-        };
-      });
+          // Eğer URI eksik veya boşsa, detaylı bilgi almayı dene
+          if (!uri || uri.trim() === "") {
+            try {
+              const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
+              uri = assetInfo.localUri || assetInfo.uri || uri;
+            } catch (e) {
+              console.debug(`Asset info fetch failed for ${asset.id}:`, e);
+            }
+          }
+
+          return {
+            ...asset,
+            uri,
+            metadata: {
+              title: parsed.title || asset.filename.replace(/\.[^/.]+$/, ""),
+              artist: parsed.artist,
+              album: "Bilinmeyen Albüm",
+              duration: asset.duration,
+              coverUri: undefined,
+            },
+          };
+        })
+      );
 
       return processedSongs;
     } catch (error) {
