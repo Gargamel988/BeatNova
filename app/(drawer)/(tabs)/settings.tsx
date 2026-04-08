@@ -29,6 +29,9 @@ import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAudioPlayerContext } from "@/providers/player-context";
+import * as MediaLibrary from "expo-media-library";
+import { Linking } from "react-native";
+import { Music, ImageIcon, ExternalLink } from "lucide-react-native";
 
 import { SleepTimerModal } from "@/components/settings/SleepTimerModal";
 
@@ -65,8 +68,20 @@ export default function Settings() {
   const [autoPlay, setAutoPlay] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [musicStatus, setMusicStatus] = useState<string>("undetermined");
+  const [photoStatus, setPhotoStatus] = useState<string>("undetermined");
 
   const { logout } = useAuth();
+
+  const checkPermissions = useCallback(async () => {
+    const music = await MediaLibrary.getPermissionsAsync();
+    setMusicStatus(music.status);
+    setPhotoStatus(music.status);
+  }, []);
+
+  useEffect(() => {
+    checkPermissions();
+  }, [checkPermissions]);
 
   useEffect(() => {
     let isMounted = true;
@@ -241,6 +256,21 @@ export default function Settings() {
 
         <Text style={{ fontSize: fontSize(16), fontWeight: "600", color: textPrimary, marginBottom: hp(1.5), marginTop: hp(2) }}>Diğer</Text>
         <SettingItem icon={Info} title="Hakkında" subtitle="BeatNova v1.0.0" onPress={() => Alert.alert("BeatNova Hakkında", "BeatNova v1.0.0\n\nYapay zeka destekli müzik asistanı ile müzik keşfetmeyin.\n\n© 2024 BeatNova")} />
+
+        <Text style={{ fontSize: fontSize(16), fontWeight: "600", color: textPrimary, marginBottom: hp(1.5), marginTop: hp(2) }}>İzinler</Text>
+        <SettingItem 
+          icon={Music} 
+          title="Müzik Kitaplığı" 
+          subtitle={musicStatus === 'granted' ? "Erişim Verildi" : "Erişim Yok (Ayarlara Git)"} 
+          onPress={() => Linking.openSettings()} 
+        />
+        <SettingItem 
+          icon={ImageIcon} 
+          title="Fotoğraf Kitaplığı" 
+          subtitle={photoStatus === 'granted' ? "Erişim Verildi" : "Erişim Yok (Ayarlara Git)"} 
+          onPress={() => Linking.openSettings()} 
+        />
+
         <SettingItem icon={LogOut} title="Çıkış Yap" isDangerous onPress={handleLogout} />
       </ScrollView>
       <SleepTimerModal

@@ -77,11 +77,9 @@ export function Link({
             if (canOpen) {
               await Linking.openURL(hrefString);
             } else {
-              console.warn(`Cannot open URL: ${hrefString}`);
               // Optionally show an alert to the user
             }
           } catch (error) {
-            console.error('Error opening URL:', error);
           }
         } else {
           // For HTTP/HTTPS URLs, use browser preference
@@ -93,7 +91,6 @@ export function Link({
             try {
               await openBrowserAsync(hrefString);
             } catch (error) {
-              console.error('Error opening browser:', error);
               // Fallback to external browser
               await Linking.openURL(hrefString);
             }

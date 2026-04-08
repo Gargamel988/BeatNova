@@ -56,6 +56,61 @@ const THEME_META: Record<ThemeMode, { label: string; icon: string; description: 
     icon: "💜",
     description: "Lavanta mor tonları"
   },
+  emerald: {
+    label: "Emerald",
+    icon: "🟢",
+    description: "Zümrüt yeşili tonları"
+  },
+  ruby: {
+    label: "Ruby",
+    icon: "🏮",
+    description: "Yakut kırmızısı tonları"
+  },
+  gold: {
+    label: "Gold",
+    icon: "👑",
+    description: "Zengin altın tonları"
+  },
+  diamond: {
+    label: "Diamond",
+    icon: "💠",
+    description: "Elmas gümüşü tonları"
+  },
+  mint: {
+    label: "Mint",
+    icon: "🌿",
+    description: "Nane tazeliği tonları"
+  },
+  royal: {
+    label: "Royal",
+    icon: "🏛️",
+    description: "Kraliyet mavisi"
+  },
+  cyber: {
+    label: "Cyber",
+    icon: "🤖",
+    description: "Siber neon tonları"
+  },
+  cyper: {
+    label: "Digital",
+    icon: "📟",
+    description: "Klasik digital yeşil"
+  },
+  coffee: {
+    label: "Coffee",
+    icon: "☕",
+    description: "Toprak ve kahve tonları"
+  },
+  candy: {
+    label: "Candy",
+    icon: "🍭",
+    description: "Şeker pembesi tonları"
+  },
+  slate: {
+    label: "Slate",
+    icon: "🩶",
+    description: "Modern gri tonları"
+  },
 };
 
 interface ThemeSelectorProps {
@@ -125,7 +180,12 @@ export function ThemeSelector({
 
         <View style={{ gap: hp(1.5) }}>
           {availableModes.map((themeMode) => {
-            const { label, icon, description } = THEME_META[themeMode];
+            const meta = THEME_META[themeMode] || {
+              label: themeMode.charAt(0).toUpperCase() + themeMode.slice(1),
+              icon: "🎨",
+              description: "Özel tema"
+            };
+            const { label, icon, description } = meta;
             const themePalette = Colors[themeMode];
             const active = currentMode === themeMode;
 

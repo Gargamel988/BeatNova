@@ -172,7 +172,7 @@ export default function ThemePlayground() {
     const isUnlocked = unlockedThemes.includes(key);
 
     if (isPremium && !isUnlocked) {
-      if (!isRewardedLoaded) {
+      if (!isRewardedLoaded('THEME_UNLOCK')) {
         Alert.alert(
           "Reklam Hazır Değil",
           "Premium temayı açmak için reklam henüz yüklenmedi. Lütfen birkaç saniye bekleyin."
@@ -188,7 +188,7 @@ export default function ThemePlayground() {
           {
             text: "İzle ve Aç",
             onPress: () => {
-              showRewarded(() => {
+              showRewarded('THEME_UNLOCK', () => {
                 unlockTheme(key);
                 setMode(key);
                 Alert.alert("Tebrikler!", `${THEME_META[key].label} teması kalıcı olarak açıldı.`);

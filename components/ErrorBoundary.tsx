@@ -35,7 +35,6 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Burada error logging servisine gönderebilirsiniz (Sentry, LogRocket, vb.)
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
   handleReset = () => {

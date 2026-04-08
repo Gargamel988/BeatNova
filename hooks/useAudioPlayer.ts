@@ -1,5 +1,5 @@
 import { Song } from "@/components/songs/songsService";
-import { getsongs } from "@/services/SongsService";
+import { getsongs, insertSong } from "@/services/SongsService";
 import {
   useAudioPlayer,
   useAudioPlayerStatus,
@@ -7,22 +7,25 @@ import {
 } from "expo-audio";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { AppState, AppStateStatus } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useSharedValue } from "react-native-reanimated";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProfile } from "./useProfil";
 import { UpsertListeningTimeMutation } from "@/mutation/statictics";
+import { useAds } from "@/providers/AdsProvider";
 
 type LoopMode = "all" | "one" | "none";
 
-import { useAds } from "@/providers/AdsProvider";
-
 export default function useAudioPlayerHook() {
+  const queryClient = useQueryClient();
   const audioPlayer = useAudioPlayer();
   const status = useAudioPlayerStatus(audioPlayer);
-  const { mutateUpdateCurrentSong } = useProfile();
+  const { mutateUpdateCurrentSong: mutateUpdateCurrentSongMutation } =
+    useProfile();
 
   const [activeSong, setActiveSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
+  const positionShared = useSharedValue(0);
   const [isSeeking, setIsSeeking] = useState(false);
   const [nextCount, setNextCount] = useState(0);
   const { showInterstitial } = useAds();
@@ -42,57 +45,97 @@ export default function useAudioPlayerHook() {
   const upsertListeningTimeMutation = UpsertListeningTimeMutation();
   const upsertListeningTimeRef = useRef(upsertListeningTimeMutation);
 
-  const { mutateUpdateCurrentSong: mutateUpdateCurrentSongMutation } =
-    useProfile();
   const mutateUpdateCurrentSongRef = useRef(
     mutateUpdateCurrentSongMutation.mutate,
   );
 
   const totalTimePlayed = useRef(0);
+  const lastSavedTime = useRef(0); // Tracking what we've already sent to Supabase
   const prevTime = useRef(0);
+  const wasInBackground = useRef(false);
+  const activeSongRef = useRef(activeSong);
+  const playCounted = useRef(false);
+  const statsHandlingRef = useRef(false);
+  const prevActiveSongId = useRef<string | null>(null);
+  const syncingSongs = useRef<Set<string>>(new Set());
 
   // Update refs every render to keep them current without triggering re-renders of effects
   useEffect(() => {
     upsertListeningTimeRef.current = upsertListeningTimeMutation;
     mutateUpdateCurrentSongRef.current = mutateUpdateCurrentSongMutation.mutate;
-  });
+  }, [upsertListeningTimeMutation, mutateUpdateCurrentSongMutation.mutate]);
+
+  useEffect(() => {
+    activeSongRef.current = activeSong;
+  }, [activeSong]);
 
   const { data: songs } = useQuery({
     queryKey: ["songs"],
     queryFn: () => getsongs(),
   });
 
-  const findSongUuidByAssetId = useCallback(
-    (assetId?: string | null) => {
-      if (!assetId || !songs || songs.length === 0) return undefined;
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(assetId)) return assetId;
-      const foundByAssetId = songs.find((item) => item.asset_id === assetId);
-      return foundByAssetId?.id;
+  // Ensure song exists in Supabase with its asset ID
+  const ensureSongInDb = useCallback(
+    async (asset: Song) => {
+      // Prevent concurrent syncs for the same song
+      if (syncingSongs.current.has(asset.id)) return asset.id;
+
+      // Small optimization: if we have it in our cache, skip DB check
+      const { data: existingSongs } = (queryClient.getQueryData([
+        "songs",
+      ]) as any) || { data: [] };
+      const exists = existingSongs?.some((s: any) => s.id === asset.id);
+
+      if (!exists) {
+        try {
+          syncingSongs.current.add(asset.id);
+          const savedSong = await insertSong(asset);
+          if (savedSong) {
+            queryClient.invalidateQueries({ queryKey: ["songs"] });
+          }
+        } finally {
+          syncingSongs.current.delete(asset.id);
+        }
+      }
+      return asset.id;
     },
-    [songs],
+    [queryClient],
   );
 
   const saveListeningTime = useCallback(
-    (songId: string | null | undefined, manualSkip: boolean = false) => {
+    (songId: string | null | undefined, isManual: boolean = false, forcePlayCount: number = 0) => {
       if (!songId) return;
-      const songUuid = findSongUuidByAssetId(songId);
-      if (!songUuid) return;
 
-      // Skip heuristic: if manually skipped in first 15s, it's a skipCount
-      const isIntentionalSkip = manualSkip && totalTimePlayed.current < 15;
+      // Final remainder to save (total vs what we already saved)
+      const deltaToSave = Math.max(
+        0,
+        totalTimePlayed.current - lastSavedTime.current,
+      );
+      // Skip logic: 30 saniyeden az dinlenmişse ve henüz "oynatıldı" sayılmamışsa atlama kabul et
+      const isIntentionalSkip = isManual && totalTimePlayed.current < 30 && !playCounted.current;
+
+      // Kaydedilecek anlamlı bir süre yoksa ve skip durumu değilse çık
+      if (deltaToSave < 0.1 && !isIntentionalSkip) {
+        return;
+      }
+
+      // Eğer doğal bitiş (heartbeat veya finish efekti) zaten süreyi kaydettiyse,
+      // manuel skip çağrısı 0 saniye kaydederek mükerrer kayıt oluşturmasın.
+      if (isIntentionalSkip && deltaToSave < 0.1 && lastSavedTime.current > 0) {
+        return;
+      }
+
 
       upsertListeningTimeRef.current({
-        listeningTime: totalTimePlayed.current,
-        songId: songUuid,
+        listeningTime: deltaToSave,
+        songId: songId,
         skipCount: isIntentionalSkip ? 1 : 0,
-        playCount: 0, // playCount is incremented at the start of 'play'
+        playCount: forcePlayCount,
       });
 
-      totalTimePlayed.current = 0;
+      lastSavedTime.current = totalTimePlayed.current; 
     },
-    [findSongUuidByAssetId],
+    [],
   );
 
   const compareSongIds = useCallback(
@@ -101,60 +144,90 @@ export default function useAudioPlayerHook() {
       id2: string | null | undefined,
     ): boolean => {
       if (!id1 || !id2) return false;
-      if (id1 === id2) return true;
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(id1) === uuidRegex.test(id2)) return id1 === id2;
-      if (!songs) return false;
-      const song1 = songs.find((s) => s.id === id1 || s.asset_id === id1);
-      const song2 = songs.find((s) => s.id === id2 || s.asset_id === id2);
-      if (!song1 || !song2) return false;
-      return song1.id === song2.id;
+      return id1 === id2;
     },
-    [songs],
+    [],
   );
 
   // Statistics & Listening Time Trace
   useEffect(() => {
-    if (!activeSong?.id || !status?.currentTime) return;
-    const delta = status.currentTime - prevTime.current;
-    if (delta > 0 && delta < 5) {
-      totalTimePlayed.current += delta;
-      // Heartbeat: update stats periodically (e.g. every 30s)
-      if (totalTimePlayed.current >= 30) {
-        const songUuid = findSongUuidByAssetId(activeSong.id);
-        if (songUuid) {
-          upsertListeningTimeRef.current({
-            listeningTime: totalTimePlayed.current,
-            songId: songUuid,
-            skipCount: 0,
-            playCount: 0,
-          });
-        }
-        totalTimePlayed.current = 0;
+    // Check if everything is there
+    if (!activeSong?.id || typeof status?.currentTime !== "number") return;
+
+    const currentPos = status.currentTime; // expo-audio uses seconds
+
+    // Initialize prevTime on first status update of a song to avoid huge initial delta
+    if (prevTime.current === 0 && currentPos > 0) {
+      prevTime.current = currentPos;
+      return;
+    }
+
+    const delta = currentPos - prevTime.current;
+    if (delta > 0) {
+      // If delta is huge (> 5s), it's a seek or first load, sync but don't accumulate
+      if (delta < 5 || wasInBackground.current) {
+        totalTimePlayed.current += delta;
+        wasInBackground.current = false;
       }
     }
-    prevTime.current = status.currentTime;
-  }, [activeSong?.id, status?.currentTime, findSongUuidByAssetId]);
+
+    // Heartbeat & Play Count: update stats periodically (30s)
+    const currentDeltaSinceLastSave =
+      totalTimePlayed.current - lastSavedTime.current;
+    if (currentDeltaSinceLastSave >= 30) {
+      let playCountToSend = 0;
+      if (!playCounted.current && totalTimePlayed.current >= 30) {
+        playCountToSend = 1;
+        playCounted.current = true;
+      }
+
+      upsertListeningTimeRef.current({
+        listeningTime: currentDeltaSinceLastSave,
+        songId: activeSong.id,
+        skipCount: 0,
+        playCount: playCountToSend,
+      });
+      lastSavedTime.current = totalTimePlayed.current;
+    }
+
+    prevTime.current = currentPos;
+  }, [activeSong?.id, status?.currentTime]);
 
   useEffect(() => {
+    // Şarkı değiştiğinde:
+    // 1. Eskiden kalan süre varsa eski şarkıya kaydet
+    if (
+      prevActiveSongId.current &&
+      prevActiveSongId.current !== activeSong?.id
+    ) {
+      saveListeningTime(prevActiveSongId.current, false);
+    }
+
+    // 2. Yeni şarkı için sayaçları sıfırla
     prevTime.current = 0;
     totalTimePlayed.current = 0;
+    lastSavedTime.current = 0;
+    playCounted.current = false;
+
+    // 3. Güncel ID'yi kaydet
+    prevActiveSongId.current = activeSong?.id || null;
   }, [activeSong?.id]);
 
   useEffect(() => {
-    if (!status?.didJustFinish || !activeSong?.id) return;
-    const songUuid = findSongUuidByAssetId(activeSong.id);
-    if (songUuid && totalTimePlayed.current > 0) {
-      upsertListeningTimeRef.current({
-        listeningTime: totalTimePlayed.current,
-        songId: songUuid,
-        skipCount: 0,
-        playCount: 0,
-      });
-      totalTimePlayed.current = 0;
+    if (status?.didJustFinish) {
+      if (!statsHandlingRef.current && activeSong?.id) {
+        statsHandlingRef.current = true;
+        
+        // Şarkı bittiğinde henüz playCount gönderilmemişse 1 gönder
+        const playCountToSend = playCounted.current ? 0 : 1;
+        if (playCountToSend === 1) playCounted.current = true;
+
+        saveListeningTime(activeSong.id, false, playCountToSend);
+      }
+    } else {
+      statsHandlingRef.current = false;
     }
-  }, [status?.didJustFinish, activeSong?.id, findSongUuidByAssetId]);
+  }, [status?.didJustFinish, activeSong?.id, saveListeningTime]);
 
   useEffect(() => {
     setAudioModeAsync({
@@ -180,17 +253,11 @@ export default function useAudioPlayerHook() {
       audioPlayer.replace(asset.uri);
       audioPlayer.play();
       setIsPlaying(true);
-      const newSongUuid = findSongUuidByAssetId(asset.id);
-      if (newSongUuid) {
-        mutateUpdateCurrentSongRef.current(newSongUuid);
-        // Track a new play session
-        upsertListeningTimeRef.current({
-          listeningTime: 0,
-          songId: newSongUuid,
-          skipCount: 0,
-          playCount: 1,
-        });
-      }
+
+      // Update UI/Profile immediately, then ensure sync in background
+      mutateUpdateCurrentSongRef.current(asset.id);
+
+      await ensureSongInDb(asset);
     } finally {
       setIsLoading(false);
     }
@@ -215,16 +282,20 @@ export default function useAudioPlayerHook() {
     audioPlayer.play();
     setIsPlaying(true);
     if (activeSong) {
-      const songUuid = findSongUuidByAssetId(activeSong.id);
-      if (songUuid) mutateUpdateCurrentSongRef.current(songUuid);
+      const songId = await ensureSongInDb(activeSong);
+      mutateUpdateCurrentSongRef.current(songId);
     }
-  }, [audioPlayer, activeSong, findSongUuidByAssetId]);
+  }, [audioPlayer, activeSong, ensureSongInDb]);
 
   const next = useCallback(
-    (data: Song[], useShuffle: boolean = false) => {
+    async (
+      data: Song[],
+      useShuffle: boolean = false,
+      isManual: boolean = true,
+    ) => {
       setIsLoading(true);
       try {
-        if (activeSong?.id) saveListeningTime(activeSong.id, true);
+        if (activeSong?.id) saveListeningTime(activeSong.id, isManual);
         const nextPlaylist =
           useShuffle && shuffledPlaylist
             ? shuffledPlaylist
@@ -242,25 +313,25 @@ export default function useAudioPlayerHook() {
           audioPlayer.play();
           setIsPlaying(true);
 
-          // Show Interstitial every 5 skips
+          mutateUpdateCurrentSongRef.current(nextSong.id);
+          await ensureSongInDb(nextSong);
+
+          // Show Interstitial every few skips
           const newCount = nextCount + 1;
           if (newCount >= 5) {
-            showInterstitial();
+            showInterstitial("SKIPS");
             setNextCount(0);
           } else {
             setNextCount(newCount);
           }
-
-          const nextSongUuid = findSongUuidByAssetId(nextSong.id);
-          if (nextSongUuid) mutateUpdateCurrentSongRef.current(nextSongUuid);
         } else if (useShuffle && shuffledPlaylist) {
           const nextSong = shuffledPlaylist[0];
           setActiveSong(nextSong);
           audioPlayer.replace(nextSong.uri);
           audioPlayer.play();
           setIsPlaying(true);
-          const nextSongUuid = findSongUuidByAssetId(nextSong.id);
-          if (nextSongUuid) mutateUpdateCurrentSongRef.current(nextSongUuid);
+          mutateUpdateCurrentSongRef.current(nextSong.id);
+          await ensureSongInDb(nextSong);
         }
       } finally {
         setIsLoading(false);
@@ -271,17 +342,23 @@ export default function useAudioPlayerHook() {
       audioPlayer,
       playlist,
       shuffledPlaylist,
-      findSongUuidByAssetId,
+      ensureSongInDb,
       compareSongIds,
       saveListeningTime,
+      nextCount,
+      showInterstitial,
     ],
   );
 
   const previous = useCallback(
-    (data: Song[], useShuffle: boolean = false) => {
+    async (
+      data: Song[],
+      useShuffle: boolean = false,
+      isManual: boolean = true,
+    ) => {
       setIsLoading(true);
       try {
-        if (activeSong?.id) saveListeningTime(activeSong.id, true);
+        if (activeSong?.id) saveListeningTime(activeSong.id, isManual);
         const prevPlaylist =
           useShuffle && shuffledPlaylist
             ? shuffledPlaylist
@@ -299,25 +376,25 @@ export default function useAudioPlayerHook() {
           audioPlayer.play();
           setIsPlaying(true);
 
-          // Show Interstitial every 5 skips
+          mutateUpdateCurrentSongRef.current(prevSong.id);
+          await ensureSongInDb(prevSong);
+
+          // Show Interstitial every few skips
           const newCount = nextCount + 1;
           if (newCount >= 5) {
-            showInterstitial();
+            showInterstitial("SKIPS");
             setNextCount(0);
           } else {
             setNextCount(newCount);
           }
-
-          const prevSongUuid = findSongUuidByAssetId(prevSong.id);
-          if (prevSongUuid) mutateUpdateCurrentSongRef.current(prevSongUuid);
         } else if (useShuffle && shuffledPlaylist) {
-          const prevSong = shuffledPlaylist[shuffledPlaylist.length - 1];
+          const prevSong = prevPlaylist[prevPlaylist.length - 1];
           setActiveSong(prevSong);
           audioPlayer.replace(prevSong.uri);
           audioPlayer.play();
           setIsPlaying(true);
-          const prevSongUuid = findSongUuidByAssetId(prevSong.id);
-          if (prevSongUuid) mutateUpdateCurrentSongRef.current(prevSongUuid);
+          mutateUpdateCurrentSongRef.current(prevSong.id);
+          await ensureSongInDb(prevSong);
         }
       } finally {
         setIsLoading(false);
@@ -328,9 +405,11 @@ export default function useAudioPlayerHook() {
       audioPlayer,
       playlist,
       shuffledPlaylist,
-      findSongUuidByAssetId,
+      ensureSongInDb,
       compareSongIds,
       saveListeningTime,
+      nextCount,
+      showInterstitial,
     ],
   );
 
@@ -371,8 +450,27 @@ export default function useAudioPlayerHook() {
     }
 
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState === "active" && isSleepTimerActive) {
-        tick();
+      if (nextAppState === "active") {
+        if (isSleepTimerActive) tick();
+        wasInBackground.current = true;
+      } else if (nextAppState === "background" || nextAppState === "inactive") {
+        // Use activeSongRef instead of activeSong state to avoid loop
+        const currentActiveSong = activeSongRef.current;
+        if (currentActiveSong?.id && totalTimePlayed.current > 0) {
+          const deltaToSave = Math.max(
+            0,
+            totalTimePlayed.current - lastSavedTime.current,
+          );
+          if (deltaToSave > 0) {
+            upsertListeningTimeRef.current({
+              listeningTime: deltaToSave,
+              songId: currentActiveSong.id,
+              skipCount: 0,
+              playCount: 0,
+            });
+            lastSavedTime.current = totalTimePlayed.current;
+          }
+        }
       }
     };
 
@@ -406,9 +504,13 @@ export default function useAudioPlayerHook() {
 
   useEffect(() => {
     if (!status || isSeeking) return;
-    if (typeof status.currentTime === "number") setPosition(status.currentTime);
+    if (typeof status.currentTime === "number") {
+      const positionInSeconds = status.currentTime;
+      positionShared.value = positionInSeconds;
+      setPosition(positionInSeconds);
+    }
     if (typeof status.playing === "boolean") setIsPlaying(status.playing);
-  }, [status, isSeeking]);
+  }, [status, isSeeking, positionShared]);
 
   const handleSeek = useCallback(
     (durationSeconds: number) => (value: number) => {
@@ -419,49 +521,6 @@ export default function useAudioPlayerHook() {
     },
     [audioPlayer],
   );
-
-  const beginSeek = useCallback(() => setIsSeeking(true), []);
-  const endSeek = useCallback(() => setIsSeeking(false), []);
-
-  useEffect(() => {
-    if (!status?.didJustFinish || !activeSong) return;
-    const currentPlaylist =
-      isShuffled && shuffledPlaylist ? shuffledPlaylist : playlist;
-    if (!currentPlaylist || currentPlaylist.length === 0) return;
-    if (loopMode === "one") {
-      audioPlayer.seekTo(0);
-      audioPlayer.play();
-    } else if (loopMode === "all") {
-      const currentIndex = currentPlaylist.findIndex((s) =>
-        compareSongIds(s.id, activeSong.id),
-      );
-      if (currentIndex === currentPlaylist.length - 1) {
-        const loopSong = currentPlaylist[0];
-        setActiveSong(loopSong);
-        audioPlayer.replace(loopSong.uri);
-        audioPlayer.play();
-        setIsPlaying(true);
-        const loopSongUuid = findSongUuidByAssetId(loopSong.id);
-        if (loopSongUuid) mutateUpdateCurrentSongRef.current(loopSongUuid);
-      } else {
-        next(currentPlaylist, isShuffled);
-      }
-    } else {
-      next(currentPlaylist, isShuffled);
-    }
-  }, [
-    status?.didJustFinish,
-    loopMode,
-    activeSong,
-    isShuffled,
-    shuffledPlaylist,
-    playlist,
-    audioPlayer,
-    next,
-    pause,
-    compareSongIds,
-    findSongUuidByAssetId,
-  ]);
 
   const updateLoopMode = useCallback(
     (mode: LoopMode) => {
@@ -539,14 +598,13 @@ export default function useAudioPlayerHook() {
     next,
     previous,
     handleSeek,
-    beginSeek,
-    endSeek,
     shuffle,
     loop: updateLoopMode,
     activeSong,
     audioPlayer,
     isPlaying,
     position,
+    positionShared,
     loopMode,
     isShuffled,
     playlist,

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { ScrollView, View, Text, TouchableOpacity } from "react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAudioPlayerContext } from "@/providers/player-context";
 import { useQueries } from "@tanstack/react-query";
@@ -20,7 +20,6 @@ import PopularSongs from "@/components/home/PopularSongs";
 import PlayListPlayModal from "@/components/playlist/PlayListPlayModal";
 import { useColor } from "@/hooks/useColor";
 import { AppBannerAd } from "@/components/AppBannerAd";
-
 import { SleepTimerModal } from "@/components/settings/SleepTimerModal";
 import { Clock } from "lucide-react-native";
 
@@ -124,7 +123,7 @@ export default function Index() {
           uniqueSongIds.add(song.id);
           return {
             id: song.id,
-            assetId: song.asset_id,
+            assetId: song.id,
             title: song.title,
             artist: song.artist,
             cover: song.cover_url || undefined,
@@ -159,7 +158,7 @@ export default function Index() {
         if (song) {
           return {
             id: song.id,
-            assetId: song.asset_id,
+            assetId: song.id,
             title: song.title,
             artist: song.artist,
             cover: song.cover_url || undefined,
@@ -270,7 +269,7 @@ export default function Index() {
           playlistsCount={playlists.data?.length || 0}
           favoritesCount={favorites.data?.length || 0}
         />
-        <AppBannerAd style={{ marginVertical: hp(1) }} />
+        <AppBannerAd placement="home" style={{ marginVertical: hp(1) }} />
         <PinnedPlaylists
           playlists={playlists.data?.slice(0, 3) || []}
           onPlayPlaylist={handlePlayPlaylist}

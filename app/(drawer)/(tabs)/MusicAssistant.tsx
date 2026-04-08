@@ -46,7 +46,7 @@ export default function MusicAssistant() {
     const trimmedInput = (suggestion || input).trim();
     if (!trimmedInput) return;
 
-    if (!isRewardedLoaded) {
+    if (!isRewardedLoaded('ASSISTANT')) {
       alert("Reklam henüz hazır değil, lütfen biraz bekleyin.");
       return;
     }
@@ -56,7 +56,7 @@ export default function MusicAssistant() {
     setInput("");
 
     // Reklamı paralel olarak göster
-    showRewarded(() => {
+    showRewarded('ASSISTANT', () => {
       // Ödül kazanıldı - AI zaten arka planda başladığı için burada işlem yapmaya gerek yok
     });
   };
@@ -388,7 +388,7 @@ export default function MusicAssistant() {
           </View>
         )}
 
-        <AppBannerAd style={{ marginVertical: hp(1) }} />
+        <AppBannerAd placement="assistant" style={{ marginVertical: hp(1) }} />
 
         {/* Results Section */}
         {object?.songs && object.songs.length > 0 && (
@@ -535,7 +535,6 @@ export default function MusicAssistant() {
           </View>
         )}
 
-        <AppBannerAd style={{ marginTop: hp(2) }} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -83,7 +83,6 @@ export const ThemeProvider = ({ children }: Props) => {
           setMode(saved as ThemeMode);
         }
       } catch (e) {
-        console.error("Error loading theme from storage:", e);
       }
     };
     loadSavedTheme();
@@ -110,7 +109,6 @@ export const ThemeProvider = ({ children }: Props) => {
         data: { ...old?.data, theme: newMode }
       }));
     } catch (e) {
-      console.error("Error saving theme:", e);
     }
   }, [queryClient]);
 

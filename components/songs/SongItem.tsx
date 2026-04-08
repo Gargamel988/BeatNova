@@ -233,12 +233,14 @@ interface SongItemProps {
   item: Song;
   onSongUpdate: (updatedSong: Song) => void;
   onSongAction: (action: SongActionKey, song: Song) => void;
+  isActive?: boolean;
 }
 
-export default function SongItem({
+function SongItemComponent({
   item,
   onSongUpdate,
   onSongAction,
+  isActive = false,
 }: SongItemProps) {
   const [visibleAddToPlaylistModal, setVisibleAddToPlaylistModal] =
     useState(false);
@@ -250,7 +252,7 @@ export default function SongItem({
   } = useBottomSheet();
 
   const queryClient = useQueryClient();
-  const { play, activeSong } = useAudioPlayerContext();
+  const { play } = useAudioPlayerContext();
   const { sortedPlaylist, setSortedPlaylist } = usePlaylistContext();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette } = useThemeModeContext();
@@ -357,7 +359,6 @@ export default function SongItem({
               try {
                 await deleteSong(item.id);
               } catch (dbError: any) {
-                console.warn("Veritabanından silme hatası:", dbError);
                 toast({
                   title: "Uyarı",
                   description:
@@ -387,7 +388,7 @@ export default function SongItem({
     );
   }, [item.id, toast, queryClient]);
 
-  const isActive = activeSong?.id === item.id;
+  // isActive is now a prop
 
   const songDetails = useMemo(
     () => [
@@ -631,3 +632,13 @@ export default function SongItem({
     </TouchableOpacity>
   );
 }
+
+export default React.memo(SongItemComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.metadata.coverUri === nextProps.item.metadata.coverUri &&
+    prevProps.item.metadata.title === nextProps.item.metadata.title &&
+    prevProps.item.metadata.artist === nextProps.item.metadata.artist
+  );
+});

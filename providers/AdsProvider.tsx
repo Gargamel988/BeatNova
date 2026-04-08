@@ -1,11 +1,14 @@
 import React, { createContext, useContext } from 'react';
 
+export type InterstitialPlacement = 'STATS_ENTRY' | 'SKIPS';
+export type RewardedPlacement = 'THEME_UNLOCK' | 'ASSISTANT';
+
 type AdsContextType = {
   isInitialized: boolean;
-  showInterstitial: () => void;
-  isInterstitialLoaded: boolean;
-  showRewarded: (onReward: () => void) => void;
-  isRewardedLoaded: boolean;
+  showInterstitial: (placement: InterstitialPlacement) => void;
+  isInterstitialLoaded: (placement: InterstitialPlacement) => boolean;
+  showRewarded: (placement: RewardedPlacement, onReward: () => void) => void;
+  isRewardedLoaded: (placement: RewardedPlacement) => boolean;
 };
 
 const AdsContext = createContext<AdsContextType | undefined>(undefined);
@@ -19,9 +22,9 @@ export const AdsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AdsContext.Provider value={{ 
       isInitialized: false, 
       showInterstitial: () => {}, 
-      isInterstitialLoaded: false,
+      isInterstitialLoaded: () => false,
       showRewarded: () => {},
-      isRewardedLoaded: false
+      isRewardedLoaded: () => false
     }}>
       {children}
     </AdsContext.Provider>

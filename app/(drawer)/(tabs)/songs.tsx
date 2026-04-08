@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import useSongsService, { Song } from "@/components/songs/songsService";
 import { usePlaylistContext } from "@/providers/playlist-context";
+import { useAudioPlayerContext, useAudioPositionContext } from "@/providers/player-context";
 import { useResponsive } from "@/hooks/useResponsive";
 import { getFavorites } from "@/services/PlaylistServices";
 
@@ -247,16 +248,18 @@ export default function Songs() {
     [sortedPlaylist, setSortedPlaylist, toast]
   );
 
+  const { activeSong } = useAudioPlayerContext();
+
   const renderSong = useCallback(
     ({ item }: { item: Song }) => (
-      
       <SongItem
         item={item}
         onSongUpdate={handleSongUpdate}
         onSongAction={handleSongAction}
+        isActive={activeSong?.id === item.id}
       />
     ),
-    [handleSongUpdate, handleSongAction]
+    [handleSongUpdate, handleSongAction, activeSong?.id]
   );
 
   return (

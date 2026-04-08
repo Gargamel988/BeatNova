@@ -1,26 +1,50 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import mobileAds, { InterstitialAd, AdEventType, TestIds, RewardedAd, RewardedAdReward, RewardedAdEventType } from 'react-native-google-mobile-ads';
 
+export type InterstitialPlacement = 'STATS_ENTRY' | 'SKIPS';
+export type RewardedPlacement = 'THEME_UNLOCK' | 'ASSISTANT';
+
 type AdsContextType = {
   isInitialized: boolean;
-  showInterstitial: () => void;
-  isInterstitialLoaded: boolean;
-  showRewarded: (onReward: () => void) => void;
-  isRewardedLoaded: boolean;
+  showInterstitial: (placement: InterstitialPlacement) => void;
+  isInterstitialLoaded: (placement: InterstitialPlacement) => boolean;
+  showRewarded: (placement: RewardedPlacement, onReward: () => void) => void;
+  isRewardedLoaded: (placement: RewardedPlacement) => boolean;
 };
 
 const AdsContext = createContext<AdsContextType | undefined>(undefined);
 
-const INTERSTITIAL_ID = process.env.EXPO_PUBLIC_AD_UNIT_ID_INTERSTITIAL || TestIds.INTERSTITIAL;
-const REWARDED_ID = process.env.EXPO_PUBLIC_AD_UNIT_ID_REWARDED || TestIds.REWARDED;
+const INTERSTITIAL_IDS: Record<InterstitialPlacement, string> = {
+  STATS_ENTRY: process.env.EXPO_PUBLIC_AD_UNIT_ID_INTERSTITIAL_STATS || TestIds.INTERSTITIAL,
+  SKIPS: process.env.EXPO_PUBLIC_AD_UNIT_ID_INTERSTITIAL_SKIPS || TestIds.INTERSTITIAL,
+};
+
+const REWARDED_IDS: Record<RewardedPlacement, string> = {
+  THEME_UNLOCK: process.env.EXPO_PUBLIC_AD_UNIT_ID_REWARDED_THEME || TestIds.REWARDED,
+  ASSISTANT: process.env.EXPO_PUBLIC_AD_UNIT_ID_REWARDED_ASSISTANT || TestIds.REWARDED,
+};
 
 export const AdsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
-  const [interstitial, setInterstitial] = useState<InterstitialAd | null>(null);
-  const [isInterstitialLoaded, setIsInterstitialLoaded] = useState(false);
-  const [rewarded, setRewarded] = useState<RewardedAd | null>(null);
-  const [isRewardedLoaded, setIsRewardedLoaded] = useState(false);
-  const onRewardCallback = React.useRef<(() => void) | null>(null);
+  const [interstitials, setInterstitials] = useState<Record<InterstitialPlacement, InterstitialAd | null>>({
+    STATS_ENTRY: null,
+    SKIPS: null,
+  });
+  const [loadedInterstitials, setLoadedInterstitials] = useState<Record<InterstitialPlacement, boolean>>({
+    STATS_ENTRY: false,
+    SKIPS: false,
+  });
+
+  const [rewardeds, setRewardeds] = useState<Record<RewardedPlacement, RewardedAd | null>>({
+    THEME_UNLOCK: null,
+    ASSISTANT: null,
+  });
+  const [loadedRewardeds, setLoadedRewardeds] = useState<Record<RewardedPlacement, boolean>>({
+    THEME_UNLOCK: false,
+    ASSISTANT: false,
+  });
+
+  const onRewardCallbacks = React.useRef<Record<string, (() => void) | null>>({});
 
   useEffect(() => {
     try {
@@ -28,10 +52,8 @@ export const AdsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .initialize()
         .then(() => {
           setIsInitialized(true);
-          // Ads initialized successfully
         })
         .catch(err => {
-          // Still set initialized to true to let the app continue without ads
           setIsInitialized(true);
         });
     } catch (error) {
@@ -39,70 +61,92 @@ export const AdsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const loadInterstitial = useCallback(() => {
-    const interstitialAd = InterstitialAd.createForAdRequest(INTERSTITIAL_ID, {
+  const loadInterstitial = useCallback((placement: InterstitialPlacement) => {
+    const id = INTERSTITIAL_IDS[placement];
+
+    const interstitialAd = InterstitialAd.createForAdRequest(id, {
       requestNonPersonalizedAdsOnly: true,
     });
-    interstitialAd.addAdEventListener(AdEventType.LOADED, () => setIsInterstitialLoaded(true));
-    interstitialAd.addAdEventListener(AdEventType.CLOSED, () => {
-      setIsInterstitialLoaded(false);
-      loadInterstitial();
+
+    interstitialAd.addAdEventListener(AdEventType.LOADED, () => {
+      setLoadedInterstitials(prev => ({ ...prev, [placement]: true }));
     });
+
+    interstitialAd.addAdEventListener(AdEventType.CLOSED, () => {
+      setLoadedInterstitials(prev => ({ ...prev, [placement]: false }));
+      loadInterstitial(placement);
+    });
+
     interstitialAd.load();
-    setInterstitial(interstitialAd);
+    setInterstitials(prev => ({ ...prev, [placement]: interstitialAd }));
   }, []);
 
-  const loadRewarded = useCallback(() => {
-    const rewardedAd = RewardedAd.createForAdRequest(REWARDED_ID, {
+  const loadRewarded = useCallback((placement: RewardedPlacement) => {
+    const id = REWARDED_IDS[placement];
+
+    const rewardedAd = RewardedAd.createForAdRequest(id, {
       requestNonPersonalizedAdsOnly: true,
     });
 
-    rewardedAd.addAdEventListener(RewardedAdEventType.LOADED, () => setIsRewardedLoaded(true));
+    rewardedAd.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      setLoadedRewardeds(prev => ({ ...prev, [placement]: true }));
+    });
+
     rewardedAd.addAdEventListener(RewardedAdEventType.EARNED_REWARD, (reward: RewardedAdReward) => {
-      if (onRewardCallback.current) {
-        onRewardCallback.current();
-        onRewardCallback.current = null;
+      if (onRewardCallbacks.current[placement]) {
+        onRewardCallbacks.current[placement]!();
+        onRewardCallbacks.current[placement] = null;
       }
     });
 
     rewardedAd.addAdEventListener(AdEventType.CLOSED, () => {
-      setIsRewardedLoaded(false);
-      loadRewarded();
+      setLoadedRewardeds(prev => ({ ...prev, [placement]: false }));
+      loadRewarded(placement);
     });
 
     rewardedAd.load();
-    setRewarded(rewardedAd);
+    setRewardeds(prev => ({ ...prev, [placement]: rewardedAd }));
   }, []);
 
   useEffect(() => {
     if (isInitialized) {
-      loadInterstitial();
-      loadRewarded();
+      (Object.keys(INTERSTITIAL_IDS) as InterstitialPlacement[]).forEach(loadInterstitial);
+      (Object.keys(REWARDED_IDS) as RewardedPlacement[]).forEach(loadRewarded);
     }
   }, [isInitialized, loadInterstitial, loadRewarded]);
 
-  const showInterstitial = useCallback(() => {
-    if (isInterstitialLoaded && interstitial) {
-      interstitial.show();
+  const showInterstitial = useCallback((placement: InterstitialPlacement) => {
+    const ad = interstitials[placement];
+    if (loadedInterstitials[placement] && ad) {
+      ad.show();
     }
-  }, [isInterstitialLoaded, interstitial]);
+  }, [loadedInterstitials, interstitials]);
 
-  const showRewarded = useCallback((onReward: () => void) => {
-    if (isRewardedLoaded && rewarded) {
-      onRewardCallback.current = onReward;
-      rewarded.show();
+  const isInterstitialLoadedFn = useCallback((placement: InterstitialPlacement) => {
+    return loadedInterstitials[placement];
+  }, [loadedInterstitials]);
+
+  const showRewarded = useCallback((placement: RewardedPlacement, onReward: () => void) => {
+    const ad = rewardeds[placement];
+    if (loadedRewardeds[placement] && ad) {
+      onRewardCallbacks.current[placement] = onReward;
+      ad.show();
     } else {
       alert('Reklam henüz yüklenmedi, lütfen biraz bekleyin.');
     }
-  }, [isRewardedLoaded, rewarded]);
+  }, [loadedRewardeds, rewardeds]);
+
+  const isRewardedLoadedFn = useCallback((placement: RewardedPlacement) => {
+    return loadedRewardeds[placement];
+  }, [loadedRewardeds]);
 
   return (
-    <AdsContext.Provider value={{ 
-      isInitialized, 
-      showInterstitial, 
-      isInterstitialLoaded,
+    <AdsContext.Provider value={{
+      isInitialized,
+      showInterstitial,
+      isInterstitialLoaded: isInterstitialLoadedFn,
       showRewarded,
-      isRewardedLoaded
+      isRewardedLoaded: isRewardedLoadedFn
     }}>
       {children}
     </AdsContext.Provider>

@@ -208,7 +208,6 @@ export const getSuggestedUsers = async (searchQuery?: string) => {
     return suggestedUsersWithStats;
   } catch (error: any) {
     if (error?.message?.includes("session missing")) return [];
-    console.error("getSuggestedUsers error:", error);
     return [];
   }
 };

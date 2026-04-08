@@ -25,8 +25,7 @@ export default function ProgressSection({
 		<View style={{ gap: 12 }}>
 			<Progress
 				value={progress}
-				interactive
-				onValueChange={handleSeek(duration)}
+				interactive={false}
 				height={fontSize(6)}
 			/>
 			<View className="flex-row justify-between">

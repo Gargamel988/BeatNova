@@ -26,7 +26,6 @@ const GoogleSignIn = ({ text }: { text: string }) => {
       } = await supabase.auth.getSession();
 
       if (sessionError || !session?.user) {
-        console.warn("Session bulunamadı:", sessionError);
         return;
       }
 
@@ -42,7 +41,6 @@ const GoogleSignIn = ({ text }: { text: string }) => {
       // Profil yoksa oluştur
       if (!profile) {
         if (profileError) {
-          console.error("Profil kontrolü hatası:", profileError);
           // Hata varsa bile devam et, belki profil gerçekten yoktur
         }
         
@@ -57,7 +55,6 @@ const GoogleSignIn = ({ text }: { text: string }) => {
         }
       }
     } catch (error: any) {
-      console.error("createProfileIfNotExists hatası:", error);
       // Hata durumunda toast göster
       toast({
         title: "Uyarı",

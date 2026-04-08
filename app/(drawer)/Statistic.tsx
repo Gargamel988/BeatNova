@@ -39,7 +39,7 @@ export default function Statistic() {
 
   useEffect(() => {
     // Show an interstitial ad when entering Statistics for a premium feel
-    showInterstitial();
+    showInterstitial('STATS_ENTRY');
   }, []);
 
 
@@ -552,9 +552,6 @@ export default function Statistic() {
           songs={songsForMostPlayed}
           listeningHistory={listeninghistory?.data}
         />
-
-        {/* Hızlı içgörüler */}
-        <QuickInsights insights={quickInsights} />
 
         {/* En Aktif Dinleme Saatleri */}
         <HourlyChart data={hourlyListeningData} />

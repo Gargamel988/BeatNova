@@ -27,10 +27,6 @@ export default function _layout() {
           options={{ title: "Favoriler", drawerLabel: "Favoriler" }}
         />
         <Drawer.Screen
-          name="Profile"
-          options={{ title: "Profil", drawerLabel: "Profil" }}
-        />
-        <Drawer.Screen
           name="Statistic"
           options={{ title: "İstatistikler", drawerLabel: "İstatistikler" }}
         />

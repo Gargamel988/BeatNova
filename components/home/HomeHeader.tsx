@@ -8,7 +8,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { useNavigation } from "expo-router";
 
-export default function HomeHeader() {
+export function HomeHeaderComponent() {
   const { wp, hp, fontSize, radius } = useResponsive();
   const navigation = useNavigation();
   const cardBg = useColor("card");
@@ -71,4 +71,7 @@ export default function HomeHeader() {
       </View>
   );
 }
+
+export default React.memo(HomeHeaderComponent);
+
 

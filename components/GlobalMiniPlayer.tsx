@@ -5,16 +5,13 @@ import { usePlaylistContext } from "@/providers/playlist-context";
 import useSongsService, { Song } from "./songs/songsService";
 import { useQuery } from "@tanstack/react-query";
 
-export default function GlobalMiniPlayer({ bottomOffset }: { bottomOffset?: number } = {}) { 
-  const {
-    activeSong,
-    pause,
-    isPlaying,
-    resume,
-    next,
-    previous,
-    position,
-  } = useAudioPlayerContext();
+function GlobalMiniPlayerComponent({
+  bottomOffset,
+}: {
+  bottomOffset?: number;
+} = {}) {
+  const { activeSong, pause, isPlaying, resume, next, previous } =
+    useAudioPlayerContext();
   const { sortedPlaylist } = usePlaylistContext();
   const [songsWithCovers, setSongs] = useState<Song[]>([]);
   const { loadSongs, loadCoversInBackground } = useSongsService();
@@ -31,9 +28,12 @@ export default function GlobalMiniPlayer({ bottomOffset }: { bottomOffset?: numb
     }
   }, [songsData, loadCoversInBackground]);
 
-  const playlist = sortedPlaylist.length > 0 
-    ? sortedPlaylist 
-    : (songsWithCovers.length ? songsWithCovers : songsData);
+  const playlist =
+    sortedPlaylist.length > 0
+      ? sortedPlaylist
+      : songsWithCovers.length
+        ? songsWithCovers
+        : songsData;
 
   const hydratedActiveSong = useMemo(() => {
     if (!activeSong) return undefined;
@@ -46,7 +46,9 @@ export default function GlobalMiniPlayer({ bottomOffset }: { bottomOffset?: numb
 
   return (
     <MiniPlayer
-      coverUri={hydratedActiveSong?.metadata.coverUri ?? activeSong.metadata.coverUri}
+      coverUri={
+        hydratedActiveSong?.metadata.coverUri ?? activeSong.metadata.coverUri
+      }
       title={hydratedActiveSong?.metadata.title ?? activeSong.metadata.title}
       artist={hydratedActiveSong?.metadata.artist ?? activeSong.metadata.artist}
       isPlaying={isPlaying}
@@ -55,10 +57,13 @@ export default function GlobalMiniPlayer({ bottomOffset }: { bottomOffset?: numb
       nextSound={() => next(playlist, false)}
       previousSound={() => previous(playlist, false)}
       activeSong={activeSong}
-      duration={hydratedActiveSong?.metadata.duration ?? activeSong.metadata.duration}
-      currentTime={position}
+      duration={
+        hydratedActiveSong?.metadata.duration ?? activeSong.metadata.duration
+      }
       bottomOffset={bottomOffset}
     />
   );
 }
+
+export default React.memo(GlobalMiniPlayerComponent);
 

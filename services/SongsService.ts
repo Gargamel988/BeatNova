@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { getUser } from "@/lib/user";
 
 type SongInsertPayload = {
-  asset_id: string;
+  id: string;
   title: string;
   artist: string;
   album: string;
@@ -26,29 +26,28 @@ const sanitizeSong = (song: Song, userId: string): SongInsertPayload | null => {
       coverUri: undefined,
     },
   } = song;
-  
+
   // audio_url zorunlu, null veya undefined ise null döndür
-  if (!uri || typeof uri !== 'string' || uri.trim() === '') {
-    console.warn(`Şarkı URI bulunamadı, atlanıyor. Asset ID: ${asset_id}`);
+  if (!uri || typeof uri !== "string" || uri.trim() === "") {
     return null;
   }
-  
+
   const fallbackTitle = metadata.title || `Şarkı-${asset_id}`;
   const normalizeDuration = (value?: number) =>
     Number.isFinite(value) ? Math.round(value as number) : 0;
-  
+
   // coverUri'yi normalize et: undefined, null veya boş string ise null yap
   const normalizeCoverUrl = (coverUri?: string | null): string | null => {
-    if (!coverUri || typeof coverUri !== 'string' || coverUri.trim() === '') {
+    if (!coverUri || typeof coverUri !== "string" || coverUri.trim() === "") {
       return null;
     }
     return coverUri.trim();
   };
 
   const normalizedCoverUrl = normalizeCoverUrl(metadata.coverUri);
-  
+
   return {
-    asset_id,
+    id: asset_id, // Map device asset_id to our DB primary key
     audio_url: uri.trim(),
     duration: normalizeDuration(metadata.duration ?? duration),
     title: fallbackTitle,
@@ -62,7 +61,8 @@ const sanitizeSong = (song: Song, userId: string): SongInsertPayload | null => {
 const insertSong = async (song: Song) => {
   try {
     // Önce oturum kontrolü yap
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
     if (sessionError || !sessionData.session) {
       return null;
     }
@@ -81,34 +81,31 @@ const insertSong = async (song: Song) => {
     }
 
     // RLS politikası için auth.uid() kontrolü
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
     if (authUser?.id !== user.id) {
-      console.warn("User ID mismatch:", { authId: authUser?.id, userId: user.id });
     }
 
     const { data, error } = await supabase
       .from("songs")
-      .upsert(payload, { onConflict: "asset_id,users_id" })
+      .upsert(payload, { onConflict: "id" })
       .select()
       .single();
 
     if (error) {
-      // RLS hatası için daha açıklayıcı mesaj
-      if (error.code === "42501") {
-        console.error("RLS Politikası Hatası: songs tablosuna ekleme yetkisi yok. Kullanıcı ID:", user.id);
-        console.error("Payload:", payload);
-      }
       throw error;
     }
     return data;
   } catch (error) {
-    console.error("insertSong hatası:", error);
     return null;
   }
 };
 
 // Belirli bir cihaz şarkısı (MediaLibrary asset) için Supabase'deki şarkı UUID'sini döner
-const getsongs = async (): Promise<{ id: string, asset_id: string }[] | null> => {
+const getsongs = async (): Promise<
+  { id: string }[] | null
+> => {
   try {
     const user = await getUser();
     if (!user?.id) {
@@ -117,33 +114,34 @@ const getsongs = async (): Promise<{ id: string, asset_id: string }[] | null> =>
 
     const { data, error } = await supabase
       .from("songs")
-      .select("id, asset_id")
+      .select("id")
       .eq("users_id", user.id)
       .order("created_at", { ascending: true });
 
     if (error) {
       throw error;
     }
-    return data as { id: string, asset_id: string }[] | null;
+    return data as { id: string }[] | null;
   } catch (error) {
-    console.error("getsongs hatası:", error);
     return [];
   }
 };
 
 // Tüm şarkı detaylarını çeker (istatistikler için)
-const getAllSongsWithDetails = async (): Promise<{
-  id: string;
-  asset_id: string;
-  title: string;
-  artist: string;
-  album: string;
-  duration: number;
-  cover_url: string | null;
-  genre: string | null;
-  mood: string[] | null;
-  energy_level: string | null;
-}[] | null> => {
+const getAllSongsWithDetails = async (): Promise<
+  | {
+      id: string;
+      title: string;
+      artist: string;
+      album: string;
+      duration: number;
+      cover_url: string | null;
+      genre: string | null;
+      mood: string[] | null;
+      energy_level: string | null;
+    }[]
+  | null
+> => {
   try {
     const user = await getUser();
     if (!user?.id) {
@@ -152,7 +150,9 @@ const getAllSongsWithDetails = async (): Promise<{
 
     const { data, error } = await supabase
       .from("songs")
-      .select("id, asset_id, title, artist, album, duration, cover_url, genre, mood, energy_level")
+      .select(
+        "id, title, artist, album, duration, cover_url, genre, mood, energy_level",
+      )
       .eq("users_id", user.id)
       .order("created_at", { ascending: true });
 
@@ -161,13 +161,14 @@ const getAllSongsWithDetails = async (): Promise<{
     }
     return data;
   } catch (error) {
-    console.error("getAllSongsWithDetails hatası:", error);
     return [];
   }
 };
 
 // AI tarafından sınıflandırılan metadata'yı günceller
-const updateSongsMetadata = async (results: { id: string, genre: string, energyLevel: string, mood: string[] }[]) => {
+const updateSongsMetadata = async (
+  results: { id: string; genre: string; energyLevel: string; mood: string[] }[],
+) => {
   try {
     const user = await getUser();
     if (!user?.id) {
@@ -181,25 +182,23 @@ const updateSongsMetadata = async (results: { id: string, genre: string, energyL
         .update({
           genre: result.genre,
           energy_level: result.energyLevel,
-          mood: result.mood
+          mood: result.mood,
         })
         .eq("id", result.id)
         .eq("users_id", user.id);
 
       if (error) {
-        console.error(`Şarkı güncelleme hatası (ID: ${result.id}):`, error);
       }
     });
 
     await Promise.all(updates);
     return true;
   } catch (error) {
-    console.error("updateSongsMetadata hatası:", error);
     return false;
   }
 };
 
-// Şarkıyı veritabanından siler (asset_id'ye göre)
+// Şarkıyı veritabanından siler (id'ye göre)
 const deleteSong = async (assetId: string): Promise<boolean> => {
   try {
     const user = await getUser();
@@ -207,27 +206,11 @@ const deleteSong = async (assetId: string): Promise<boolean> => {
       return false;
     }
 
-    // Önce şarkıyı bul (UUID'yi almak için)
-    const { data: songData, error: findError } = await supabase
-      .from("songs")
-      .select("id")
-      .eq("asset_id", assetId)
-      .eq("users_id", user.id)
-      .single();
-
-    if (findError || !songData) {
-      // Şarkı veritabanında yoksa, sadece cihazdan silindiği için hata verme
-      console.warn("Şarkı veritabanında bulunamadı:", assetId);
-      return true; // Başarılı say (cihazdan silindi)
-    }
-
-    const songUuid = songData.id;
-
-    // Şarkıyı veritabanından sil
+    // Since ID is now the device's asset_id, we can delete directly
     const { error: deleteError } = await supabase
       .from("songs")
       .delete()
-      .eq("id", songUuid)
+      .eq("id", assetId)
       .eq("users_id", user.id);
 
     if (deleteError) {
@@ -236,9 +219,14 @@ const deleteSong = async (assetId: string): Promise<boolean> => {
 
     return true;
   } catch (error) {
-    console.error("deleteSong hatası:", error);
     throw error;
   }
 };
 
-export { insertSong, getsongs, getAllSongsWithDetails, deleteSong, updateSongsMetadata };
+export {
+  insertSong,
+  getsongs,
+  getAllSongsWithDetails,
+  deleteSong,
+  updateSongsMetadata,
+};

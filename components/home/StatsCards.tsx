@@ -12,7 +12,7 @@ type StatsCardsProps = {
   totalFavorites: number;
 };
 
-export default function StatsCards({
+export function StatsCardsComponent({
   totalSongs,
   totalPlaylists,
   totalFavorites,
@@ -89,4 +89,7 @@ export default function StatsCards({
     </View>
   );
 }
+
+export default React.memo(StatsCardsComponent);
+
 

@@ -21,7 +21,7 @@ type PopularSongsProps = {
   onPlaySong: (assetId: string) => void;
 };
 
-export default function PopularSongs({ songs, onPlaySong }: PopularSongsProps) {
+export function PopularSongsComponent({ songs, onPlaySong }: PopularSongsProps) {
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -152,4 +152,7 @@ export default function PopularSongs({ songs, onPlaySong }: PopularSongsProps) {
     </View>
   );
 }
+
+export default React.memo(PopularSongsComponent);
+
 

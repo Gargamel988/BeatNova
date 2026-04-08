@@ -30,7 +30,6 @@ export default function useSongsService() {
       const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
       return { status, canAskAgain };
     } catch (error) {
-      console.error("getPermissions error:", error);
       return { status: "undetermined", canAskAgain: true };
     }
   }, []);
@@ -41,7 +40,6 @@ export default function useSongsService() {
       const { status } = await MediaLibrary.requestPermissionsAsync();
       return status === "granted";
     } catch (error) {
-      console.error("requestPermissions error:", error);
       return false;
     }
   }, []);
@@ -152,12 +150,12 @@ export default function useSongsService() {
               const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
               uri = assetInfo.localUri || assetInfo.uri || uri;
             } catch (e) {
-              console.debug(`Asset info fetch failed for ${asset.id}:`, e);
             }
           }
 
           return {
             ...asset,
+            asset_id: asset.id,
             uri,
             metadata: {
               title: parsed.title || asset.filename.replace(/\.[^/.]+$/, ""),
@@ -172,7 +170,6 @@ export default function useSongsService() {
 
       return processedSongs;
     } catch (error) {
-      console.error("loadSongs error:", error);
       return [];
     }
   };
@@ -180,51 +177,70 @@ export default function useSongsService() {
   // Cover'ları arka planda yükle
   const loadCoversInBackground = useCallback(
     async (songsList: Song[], setSongs: Dispatch<SetStateAction<Song[]>>) => {
-      // Her şarkı için sırayla cover ara (rate limit için)
+      let pendingUpdates: Record<string, string> = {};
+      let lastUpdateTime = Date.now();
+      const BATCH_SIZE = 5;
+      const BATCH_INTERVAL = 2000; // 2 seconds between updates
+
+      const applyPendingUpdates = () => {
+        if (Object.keys(pendingUpdates).length === 0) return;
+
+        const updates = { ...pendingUpdates };
+        pendingUpdates = {};
+        lastUpdateTime = Date.now();
+
+        setSongs((prevSongs) =>
+          prevSongs.map((s) => {
+            const newCover = updates[s.id];
+            return newCover
+              ? { ...s, metadata: { ...s.metadata, coverUri: newCover } }
+              : s;
+          })
+        );
+      };
+
       for (let i = 0; i < songsList.length; i++) {
         const song = songsList[i];
-        
-        // Song veya metadata yoksa atla
-        if (!song || !song.metadata) {
-          continue;
-        }
-        
-        const { title = "Bilinmeyen Şarkı", artist = "Bilinmeyen Sanatçı" } = song.metadata;
+        if (!song?.metadata) continue;
 
-        // Title veya artist yoksa atla
+        const { title, artist } = song.metadata;
         if (!title || !artist || title === "Bilinmeyen Şarkı" || artist === "Bilinmeyen Sanatçı") {
           continue;
         }
 
         try {
-          // Önce iTunes'dan dene
-          let coverUrl = await fetchCoverFromiTunes(title, artist);
+          // Pre-check if it already has a cover to avoid redundant fetching
+          if (song.metadata.coverUri) continue;
 
-          // iTunes'da bulamazsa Deezer'dan dene
+          let coverUrl = await fetchCoverFromiTunes(title, artist);
           if (!coverUrl) {
             coverUrl = await fetchCoverFromDeezer(title, artist);
           }
 
           if (coverUrl) {
-            // State'i güncelle
-            setSongs((prevSongs) =>
-              prevSongs.map((s) =>
-                s.id === song.id
-                  ? { ...s, metadata: { ...s.metadata, coverUri: coverUrl } }
-                  : s
-              )
-            );
+            pendingUpdates[song.id] = coverUrl;
+
+            const now = Date.now();
+            const shouldUpdate =
+              Object.keys(pendingUpdates).length >= BATCH_SIZE ||
+              (now - lastUpdateTime >= BATCH_INTERVAL &&
+                Object.keys(pendingUpdates).length > 0);
+
+            if (shouldUpdate) {
+              applyPendingUpdates();
+            }
           }
 
-          // Rate limit için bekleme (her 5 şarkıda bir)
-          if (i % 5 === 0) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
+          // Rate limit / polite delay
+          if (i % 3 === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
           }
         } catch (error) {
-          // Hata durumunda sessizce devam et
-          console.debug("Cover yükleme hatası:", error);
         }
       }
+
+      // Final update for remaining items
+      applyPendingUpdates();
     },
     [fetchCoverFromDeezer, fetchCoverFromiTunes]
   );

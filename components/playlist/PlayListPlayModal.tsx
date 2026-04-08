@@ -9,12 +9,16 @@ import { getPlaylistSongs } from "@/services/PlaylistServices";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { Icon } from "@/components/ui/icon";
-import { X, Play, Music2 } from "lucide-react-native";
+import { X, Play, Music2, Trash2 } from "lucide-react-native";
 import { useAudioPlayerContext } from "@/providers/player-context";
 import { formatTime } from "@/utils/format";
 import { LinearGradient } from "expo-linear-gradient";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deletePlaylist } from "@/services/PlaylistServices";
+import { Alert } from "react-native";
+import { useToast } from "@/components/ui/toast";
 
 export default function PlayListPlayModal({
   visible,
@@ -27,6 +31,8 @@ export default function PlayListPlayModal({
   playlistId: number | string;
   autoPlayShuffled?: boolean;
 }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { palette: colors } = useThemeModeContext();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { play, activeSong, shuffle } = useAudioPlayerContext();
@@ -37,7 +43,42 @@ export default function PlayListPlayModal({
   const textSecondary = useColor("authSecondaryText");
   const accent = useColor("accent");
 
-  const { data: songs, isLoading} = useQuery({
+  const deleteMutation = useMutation({
+    mutationFn: (id: number | string) => deletePlaylist(id),
+    onSuccess: () => {
+      toast({
+        title: "Başarılı",
+        description: "Playlist başarıyla silindi",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Playlist silinirken bir hata oluştu",
+        variant: "error",
+      });
+    },
+  });
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Playlist'i Sil",
+      "Bu playlist'i ve içindeki tüm şarkı bağlantılarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      [
+        { text: "İptal", style: "cancel" },
+        {
+          text: "Sil",
+          style: "destructive",
+          onPress: () => deleteMutation.mutate(playlistId)
+        },
+      ]
+    );
+  };
+
+  const { data: songs, isLoading } = useQuery({
     queryKey: ["playlistSongs", playlistId],
     queryFn: () => getPlaylistSongs(playlistId),
     enabled: !!playlistId && visible,
@@ -47,7 +88,7 @@ export default function PlayListPlayModal({
   useEffect(() => {
     if (autoPlayShuffled && visible && songs && songs.length > 0 && !hasAutoPlayed.current) {
       hasAutoPlayed.current = true;
-      
+
       // Şarkıları Song formatına çevir
       const playlistSongs = songs.map((song: any) => ({
         id: song.id,
@@ -71,7 +112,7 @@ export default function PlayListPlayModal({
 
       // Şarkıları karıştır
       const shuffled = [...playlistSongs].sort(() => Math.random() - 0.5);
-      
+
       // İlk şarkıyı çal
       if (shuffled.length > 0) {
         play(shuffled[0], shuffled);
@@ -79,7 +120,7 @@ export default function PlayListPlayModal({
         shuffle(true);
       }
     }
-    
+
     // Modal kapandığında reset et
     if (!visible) {
       hasAutoPlayed.current = false;
@@ -89,28 +130,28 @@ export default function PlayListPlayModal({
 
     const playlistSongs = songs?.map((song: any) => {
       return {
-          id: song.id,
-          filename: song.title || "",
-          uri: song.audio_url || "",
-          mediaType: "audio" as const,
-          width: 0,
-          height: 0,
+        id: song.id,
+        filename: song.title || "",
+        uri: song.audio_url || "",
+        mediaType: "audio" as const,
+        width: 0,
+        height: 0,
+        duration: song.duration || 0,
+        creationTime: 0,
+        modificationTime: 0,
+        albumId: song.album || "",
+        metadata: {
+          title: song.title || "",
+          artist: song.artist || "",
+          album: song.album || "",
           duration: song.duration || 0,
-          creationTime: 0,
-          modificationTime: 0,
-          albumId: song.album || "",
-          metadata: {
-            title: song.title || "",
-            artist: song.artist || "",
-            album: song.album || "",
-            duration: song.duration || 0,
-            coverUri: song.cover_url || null,
-          },
+          coverUri: song.cover_url || null,
+        },
       };
     });
     if (!playlistSongs) return;
     const clickedIndex = playlistSongs.findIndex((s) => s.id === song.id);
-    
+
     play(playlistSongs[clickedIndex], playlistSongs);
   };
 
@@ -258,23 +299,41 @@ export default function PlayListPlayModal({
               </Text>
             )}
           </View>
-          <TouchableOpacity
-            onPress={onClose}
-            style={{
-              backgroundColor: cardBg,
-              borderRadius: radius(10),
-              padding: wp(2.5),
-            }}
-          >
-            <Icon name={X} size={wp(6)} color={textPrimary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: wp(3) }}>
+            <TouchableOpacity
+              onPress={handleDelete}
+              disabled={deleteMutation.isPending}
+              style={{
+                backgroundColor: colors.red + "20",
+                borderRadius: radius(10),
+                padding: wp(2.5),
+              }}
+            >
+              <Icon
+                name={Trash2}
+                size={wp(6)}
+                color={colors.red}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={onClose}
+              style={{
+                backgroundColor: cardBg,
+                borderRadius: radius(10),
+                padding: wp(2.5),
+              }}
+            >
+              <Icon name={X} size={wp(6)} color={textPrimary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Content */}
         {isLoading ? (
-          <LoadingState 
-            message="Şarkılar yükleniyor..." 
-            fullScreen 
+          <LoadingState
+            message="Şarkılar yükleniyor..."
+            fullScreen
           />
         ) : songs && songs.length > 0 ? (
           <FlatList
@@ -287,7 +346,7 @@ export default function PlayListPlayModal({
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          <EmptyState 
+          <EmptyState
             title="Playlist Boş"
             message="Bu playlist'te henüz şarkı yok"
             icon="playlist"

@@ -60,7 +60,6 @@ export const insertProfile = async (user: User) => {
     .select();
     
   if (error) {
-    console.error("Profil insert hatası:", error);
     return null;
   }
   
@@ -69,6 +68,9 @@ export const insertProfile = async (user: User) => {
 
 
 export const updateCurrentSong = async (songId: string | null) => {
+  if (!songId) {
+  }
+
   const user = await getUser();
   if (!user?.id) {
     return null;
@@ -83,7 +85,6 @@ export const updateCurrentSong = async (songId: string | null) => {
     .select();
     
   if (error) {
-    console.error("updateCurrentSong error:", error);
     return null;
   }
   
@@ -113,7 +114,6 @@ export const updateProfile = async (updates: {
     .single();
     
   if (error) {
-    console.error("updateProfile error:", error);
     return null;
   }
   
@@ -135,7 +135,6 @@ export const updateUserActiveStatus = async (isActive: boolean) => {
     .single();
     
   if (error) {
-    console.error("updateUserActiveStatus error:", error);
     return null;
   }
   

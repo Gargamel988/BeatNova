@@ -123,7 +123,6 @@ const getPlaylists = async () => {
 
     return playlistsWithCounts;
   } catch (error) {
-    console.error("getPlaylists hatası:", error);
     return [];
   }
 };
@@ -163,22 +162,37 @@ const updatePlaylist = async (playlist: PlaylistType) => {
     return null;
   }
 };
-const deletePlaylist = async (id: number) => {
+const deletePlaylist = async (id: number | string) => {
   try {
     const user = await getUser();
+    if (!user?.id) throw new Error("Kullanıcı bulunamadı");
+
+
+    // 1. Önce playlist_songs tablosundaki şarkı bağlantılarını sil
+    const { error: songsError } = await supabase
+      .from("playlist_songs")
+      .delete()
+      .eq("playlist_id", id);
+
+    if (songsError) {
+      throw songsError;
+    }
+
+    // 2. Playlist'in kendisini sil
     const { data, error } = await supabase
       .from("playlists")
       .delete()
       .eq("id", id)
-      .eq("user_id", user?.id)
+      .eq("user_id", user.id)
       .select()
       .single();
+
     if (error) {
       throw error;
     }
+
     return data;
   } catch (error) {
-    console.error(error);
     return null;
   }
 };
@@ -189,11 +203,11 @@ const addSongToPlaylist = async (assetId: string, playlistId: number) => {
       return null;
     }
 
-    // Önce songs tablosundan asset_id ile eşleşen kaydı bul (UUID id'yi almak için)
+    // Önce songs tablosundan ID ile eşleşen kaydı bul (duration'ı almak için)
     const { data: songData, error: songError } = await supabase
       .from("songs")
       .select("id, duration")
-      .eq("asset_id", assetId)
+      .eq("id", assetId)
       .eq("users_id", user.id)
       .single();
 
@@ -231,7 +245,6 @@ const addSongToPlaylist = async (assetId: string, playlistId: number) => {
     }
     return data;
   } catch (error: any) {
-    console.error("addSongToPlaylist hatası:", error);
     throw error;
   }
 };
@@ -324,7 +337,6 @@ const addSongToFavorites = async (songId: string) => {
     };
   } catch (error: any) {
     if (error?.message?.includes("session missing")) return { success: false, message: "" };
-    console.error("addSongToFavorites hatası:", error);
     return { success: false, message: "Hata" };
   }
 };
@@ -346,7 +358,6 @@ const removeSongFromFavorites = async (songId: string) => {
     }
     return false;
   } catch (error: any) {
-    console.error("removeSongFromFavorites hatası:", error);
     return false;
   }
 };
@@ -363,7 +374,6 @@ const getFavorites = async () => {
     }
     return [];
   } catch (error: any) {
-    console.error("getFavorites hatası:", error);
     return [];
   }
 };

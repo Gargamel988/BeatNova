@@ -11,14 +11,12 @@ import { useProfile } from "@/hooks/useProfil";
 import { useAuth } from "@/hooks/useAuth";
 import { router, usePathname } from "expo-router";
 import {
-  User,
   BarChart3,
   Heart,
   LogOut,
   X,
   Home,
   Palette,
-  Sparkles,
 } from "lucide-react-native";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 
@@ -58,11 +56,6 @@ export default function DrawerContent(props: DrawerContentProps) {
       title: "Ana Sayfa",
       icon: Home,
       route: "/(drawer)/(tabs)",
-    },
-    {
-      title: "Profil",
-      icon: User,
-      route: "/(drawer)/Profile",
     },
     {
       title: "İstatistikler",
@@ -173,78 +166,6 @@ export default function DrawerContent(props: DrawerContentProps) {
                 <Icon name={X} size={20} color={textPrimary} />
               </TouchableOpacity>
             )}
-          </Animated.View>
-
-          {/* User Profile Section */}
-          <Animated.View
-            entering={FadeInDown.duration(400).delay(150)}
-            style={{
-              marginBottom: hp(3),
-            }}
-          >
-            <LinearGradient
-              colors={[backgroundMid, backgroundEnd]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                borderRadius: radius(20),
-                padding: wp(5),
-                borderWidth: 1,
-                borderColor: "rgba(255, 255, 255, 0.1)",
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: wp(4),
-                }}
-              >
-                <LinearGradient
-                  colors={[backgroundStart, backgroundEnd]}
-                  style={{
-                    width: wp(18),
-                    height: wp(18),
-                    borderRadius: radius(16),
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderWidth: 2,
-                    borderColor: "rgba(255, 255, 255, 0.3)",
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: textPrimary,
-                      fontSize: fontSize(22),
-                      fontWeight: "800",
-                    }}
-                  >
-                    {getUserInitials(profile?.data?.display_name)}
-                  </Text>
-                </LinearGradient>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      color: textPrimary,
-                      fontSize: fontSize(20),
-                      fontWeight: "800",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {profile?.data?.display_name || "Kullanıcı"}
-                  </Text>
-                  <Text
-                    style={{
-                      color: "rgba(255, 255, 255, 0.85)",
-                      fontSize: fontSize(13),
-                    }}
-                    numberOfLines={1}
-                  >
-                    {profile?.data?.bio || "Müzik tutkunu"}
-                  </Text>
-                </View>
-              </View>
-            </LinearGradient>
           </Animated.View>
 
           {/* Drawer Items */}

@@ -20,7 +20,7 @@ type RecentSongsProps = {
   onPlaySong: (assetId: string) => void;
 };
 
-export default function RecentSongs({ songs, onPlaySong }: RecentSongsProps) {
+export function RecentSongsComponent({ songs, onPlaySong }: RecentSongsProps) {
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -158,4 +158,7 @@ export default function RecentSongs({ songs, onPlaySong }: RecentSongsProps) {
     </View>
   );
 }
+
+export default React.memo(RecentSongsComponent);
+
 

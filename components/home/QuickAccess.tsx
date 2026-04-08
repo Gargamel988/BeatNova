@@ -13,7 +13,7 @@ type QuickAccessProps = {
   favoritesCount: number;
 };
 
-export default function QuickAccess({
+export function QuickAccessComponent({
   songsCount,
   playlistsCount,
   favoritesCount,
@@ -124,4 +124,7 @@ export default function QuickAccess({
     </View>
   );
 }
+
+export default React.memo(QuickAccessComponent);
+
 

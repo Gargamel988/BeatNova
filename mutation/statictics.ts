@@ -30,7 +30,6 @@ export default function UpsertListeningTimeMutation() {
       queryClient.invalidateQueries({ queryKey: ["allStatistics"] });
     },
     onError: (error) => {
-      console.error("Mutation error:", error);
     },
   });
   return upsertListeningTime;

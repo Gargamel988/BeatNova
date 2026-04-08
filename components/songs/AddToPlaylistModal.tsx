@@ -59,7 +59,7 @@ export default function AddToPlaylistModal({
 		mutationFn: async (playlistId: number) => {
 			return addSongToPlaylist(selectedSongId as string, playlistId);
 		},
-		onSuccess: () => {
+		onSuccess: (response) => {
 			toast({
 				title: "Playliste ekleme işlemi başarılı",
 				description: "Şarkı başarıyla playliste eklendi",
@@ -89,7 +89,6 @@ export default function AddToPlaylistModal({
 			// Şarkıyı playlist'e ekleme işlemi burada yapılacak
 			addSongToPlaylistMutation(playlist.id as number);
 		} catch (error) {
-			console.error('Playlist\'e ekleme hatası:', error);
 			setIsLoading(false);
 			setSelectedPlaylistId(null);
 		}
@@ -180,32 +179,7 @@ export default function AddToPlaylistModal({
 						>
 							{item.name}
 						</Text>
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								gap: wp(1.5),
-								backgroundColor: muted + '20',
-								paddingHorizontal: wp(2),
-								paddingVertical: wp(1),
-								borderRadius: radius(8),
-							}}
-						>
-							<Icon
-								name={isPublic ? Globe : Lock}
-								size={12}
-								color={textSecondary}
-							/>
-							<Text
-								style={{
-									color: textSecondary,
-									fontSize: fontSize(10),
-									fontWeight: '600',
-								}}
-							>
-								{isPublic ? 'Herkese Açık' : 'Özel'}
-							</Text>
-						</View>
+						{/* Removed privacy badge section */}
 					</View>
 
 					{item.description ? (

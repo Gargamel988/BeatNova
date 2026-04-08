@@ -189,197 +189,195 @@ export default function Favorite() {
               Favoriler
             </Text>
           </View>
-      <SearchBar
-        placeholder="Şarkı, sanatçı veya albüm ara..."
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        leftIcon={
-          <Icon name={Search} size={fontSize(18)} color={colors.textMuted} />
-        }
-        containerStyle={{
-          backgroundColor: colors.overlay.white12,
-          borderRadius: radius(14),
-          borderWidth: 1,
-          borderColor: colors.overlay.white15,
-          marginTop: hp(2),
-        }}
-      />
-      {/* Play Buttons */}
-      {favorites.length > 0 && (
-        <View
-          style={{
-            flexDirection: "row",
-            gap: wp(3),
-            marginTop: hp(4),
-            marginBottom: hp(2),
-          }}
-        >
-          <TouchableOpacity
-            onPress={handlePlayAll}
-            style={{
-              flex: 1,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: wp(2),
-              backgroundColor: colors.purpleLight,
-              borderRadius: radius(14),
-              paddingVertical: hp(2),
-              borderWidth: 1,
-              borderColor: colors.purpleLight,
-            }}
-          >
-            <Icon name={Play} size={fontSize(20)} color={colors.text} />
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: fontSize(16),
-                fontWeight: "700",
-              }}
-            >
-              Çal
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleShuffle}
-            style={{
-              flex: 1,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: wp(2),
+          <SearchBar
+            placeholder="Şarkı, sanatçı veya albüm ara..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            leftIcon={
+              <Icon name={Search} size={fontSize(18)} color={colors.textMuted} />
+            }
+            containerStyle={{
               backgroundColor: colors.overlay.white12,
               borderRadius: radius(14),
-              paddingVertical: hp(2),
               borderWidth: 1,
               borderColor: colors.overlay.white15,
+              marginTop: hp(2),
             }}
-          >
-            <Icon name={Shuffle} size={fontSize(20)} color={colors.text} />
-            <Text
+          />
+          {/* Play Buttons */}
+          {favorites.length > 0 && (
+            <View
               style={{
-                color: colors.text,
-                fontSize: fontSize(16),
-                fontWeight: "700",
+                flexDirection: "row",
+                gap: wp(3),
+                marginTop: hp(4),
+                marginBottom: hp(2),
               }}
             >
-              Karıştır ve Çal
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Search Bar */}
-
-      {/* Ad Section */}
-      <AppBannerAd style={{ marginVertical: hp(1) }} />
-
-      {/* Sort Options */}
-      {favorites.length > 0 && (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: hp(2),
-            gap: wp(2),
-          }}
-        >
-          <View
-            style={{ flexDirection: "row", alignItems: "center", gap: wp(1.5) }}
-          >
-            <Icon
-              name={ArrowUpDown}
-              size={fontSize(16)}
-              color={colors.textSecondary}
-            />
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: fontSize(14),
-                fontWeight: "600",
-                marginRight: wp(2),
-              }}
-            >
-              Sırala:
-            </Text>
-          </View>
-          {(["newest", "popular", "alphabetical"] as SortOption[]).map(
-            (option) => (
               <TouchableOpacity
-                key={option}
-                onPress={() => setSortOption(option)}
+                onPress={handlePlayAll}
                 style={{
-                  paddingHorizontal: wp(3),
-                  paddingVertical: hp(0.8),
-                  borderRadius: radius(10),
-                  backgroundColor:
-                    sortOption === option
-                      ? colors.purpleLight
-                      : colors.overlay.white12,
+                  flex: 1,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: wp(2),
+                  backgroundColor: colors.purpleLight,
+                  borderRadius: radius(14),
+                  paddingVertical: hp(2),
                   borderWidth: 1,
-                  borderColor:
-                    sortOption === option
-                      ? colors.purpleLight
-                      : colors.overlay.white15,
+                  borderColor: colors.purpleLight,
                 }}
               >
+                <Icon name={Play} size={fontSize(20)} color={colors.text} />
                 <Text
                   style={{
-                    color:
-                      sortOption === option
-                        ? colors.text
-                        : colors.textSecondary,
-                    fontSize: fontSize(12),
-                    fontWeight: sortOption === option ? "700" : "500",
+                    color: colors.text,
+                    fontSize: fontSize(16),
+                    fontWeight: "700",
                   }}
                 >
-                  {option === "newest"
-                    ? "En Yeni"
-                    : option === "popular"
-                    ? "En Popüler"
-                    : "A-Z"}
+                  Çal
                 </Text>
               </TouchableOpacity>
-            )
+              <TouchableOpacity
+                onPress={handleShuffle}
+                style={{
+                  flex: 1,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: wp(2),
+                  backgroundColor: colors.overlay.white12,
+                  borderRadius: radius(14),
+                  paddingVertical: hp(2),
+                  borderWidth: 1,
+                  borderColor: colors.overlay.white15,
+                }}
+              >
+                <Icon name={Shuffle} size={fontSize(20)} color={colors.text} />
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: fontSize(16),
+                    fontWeight: "700",
+                  }}
+                >
+                  Karıştır ve Çal
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
-        </View>
-      )}
 
-      {/* Songs List */}
-      {favorites.length === 0 ? (
-        <View style={{ marginTop: hp(8) }}>
-          <EmptyState
-            title="Henüz Favori Yok"
-            message="Beğendiğiniz şarkıları favorilere ekleyin"
-            icon={Heart}
-            fullScreen={false}
-          />
-        </View>
-      ) : filteredAndSortedFavorites.length === 0 ? (
-        <View style={{ marginTop: hp(8) }}>
-          <EmptyState
-            title="Sonuç Bulunamadı"
-            message={`"${searchQuery}" için sonuç bulunamadı`}
-            icon={Search}
-            fullScreen={false}
-          />
-        </View>
-      ) : (
-        <View style={{ marginTop: hp(1) }}>
-          <FlatList
-            data={filteredAndSortedFavorites}
-            scrollEnabled={false}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <FavoriteSongItem
-                item={item}
-                playlist={filteredAndSortedFavorites}
+          {/* Ad Section */}
+          <AppBannerAd placement="favorites" style={{ marginVertical: hp(1) }} />
+
+          {/* Sort Options */}
+          {favorites.length > 0 && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: hp(2),
+                gap: wp(2),
+              }}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: wp(1.5) }}
+              >
+                <Icon
+                  name={ArrowUpDown}
+                  size={fontSize(16)}
+                  color={colors.textSecondary}
+                />
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: fontSize(14),
+                    fontWeight: "600",
+                    marginRight: wp(2),
+                  }}
+                >
+                  Sırala:
+                </Text>
+              </View>
+              {(["newest", "popular", "alphabetical"] as SortOption[]).map(
+                (option) => (
+                  <TouchableOpacity
+                    key={option}
+                    onPress={() => setSortOption(option)}
+                    style={{
+                      paddingHorizontal: wp(3),
+                      paddingVertical: hp(0.8),
+                      borderRadius: radius(10),
+                      backgroundColor:
+                        sortOption === option
+                          ? colors.purpleLight
+                          : colors.overlay.white12,
+                      borderWidth: 1,
+                      borderColor:
+                        sortOption === option
+                          ? colors.purpleLight
+                          : colors.overlay.white15,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          sortOption === option
+                            ? colors.text
+                            : colors.textSecondary,
+                        fontSize: fontSize(12),
+                        fontWeight: sortOption === option ? "700" : "500",
+                      }}
+                    >
+                      {option === "newest"
+                        ? "En Yeni"
+                        : option === "popular"
+                          ? "En Popüler"
+                          : "A-Z"}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              )}
+            </View>
+          )}
+
+          {/* Songs List */}
+          {favorites.length === 0 ? (
+            <View style={{ marginTop: hp(8) }}>
+              <EmptyState
+                title="Henüz Favori Yok"
+                message="Beğendiğiniz şarkıları favorilere ekleyin"
+                icon={Heart}
+                fullScreen={false}
               />
-            )}
-            contentContainerStyle={{ paddingBottom: hp(2) }}
-          />
-        </View>
-      )}
+            </View>
+          ) : filteredAndSortedFavorites.length === 0 ? (
+            <View style={{ marginTop: hp(8) }}>
+              <EmptyState
+                title="Sonuç Bulunamadı"
+                message={`"${searchQuery}" için sonuç bulunamadı`}
+                icon={Search}
+                fullScreen={false}
+              />
+            </View>
+          ) : (
+            <View style={{ marginTop: hp(1) }}>
+              <FlatList
+                data={filteredAndSortedFavorites}
+                scrollEnabled={false}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <FavoriteSongItem
+                    item={item}
+                    playlist={filteredAndSortedFavorites}
+                  />
+                )}
+                contentContainerStyle={{ paddingBottom: hp(2) }}
+              />
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>

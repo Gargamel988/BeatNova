@@ -15,10 +15,9 @@ type AudioPlayerContextValue = {
   activeSong: Song | null;
   isPlaying: boolean;
   audioPlayer: AudioPlayer;
-  next: (data: Song[], useShuffle?: boolean) => void;
-  previous: (data: Song[], useShuffle?: boolean) => void;
+  next: (data: Song[], useShuffle?: boolean, isManual?: boolean) => void;
+  previous: (data: Song[], useShuffle?: boolean, isManual?: boolean) => void;
   handleSeek: (durationSeconds: number) => (value: number) => void;
-  position: number;
   beginSeek: () => void;
   endSeek: () => void;
   loop: (mode: "all" | "one" | "none") => void;
@@ -33,9 +32,18 @@ type AudioPlayerContextValue = {
   setSleepTimer: (minutes: number | null) => void;
 };
 
+type AudioPositionContextValue = {
+  position: number;
+  positionShared: { value: number };
+};
+
 const AudioPlayerContext = createContext<AudioPlayerContextValue | undefined>(
   undefined
 );
+
+const AudioPositionContext = createContext<
+  AudioPositionContextValue | undefined
+>(undefined);
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const {
@@ -49,8 +57,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     previous,
     handleSeek,
     position,
-    beginSeek,
-    endSeek,
+    positionShared,
     loop,
     shuffle,
     playlist,
@@ -63,7 +70,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     setSleepTimer,
   } = useAudioPlayerHook();
 
-  const value = useMemo(
+  const playerValue = useMemo(
     () => ({
       play,
       pause,
@@ -74,9 +81,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       next,
       previous,
       handleSeek,
-      position,
-      beginSeek,
-      endSeek,
       loop,
       shuffle,
       playlist,
@@ -98,9 +102,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       next,
       previous,
       handleSeek,
-      position,
-      beginSeek,
-      endSeek,
       loop,
       shuffle,
       playlist,
@@ -114,11 +115,16 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     ]
   );
 
+  const positionValue = useMemo(
+    () => ({ position, positionShared }),
+    [position, positionShared]
+  );
+
   return (
-    <AudioPlayerContext.Provider
-      value={value as unknown as AudioPlayerContextValue}
-    >
-      {children}
+    <AudioPlayerContext.Provider value={playerValue as unknown as AudioPlayerContextValue}>
+      <AudioPositionContext.Provider value={positionValue}>
+        {children}
+      </AudioPositionContext.Provider>
     </AudioPlayerContext.Provider>
   );
 }
@@ -128,6 +134,16 @@ export function useAudioPlayerContext() {
   if (!context) {
     throw new Error(
       "useAudioPlayerContext must be used within an AudioPlayerProvider"
+    );
+  }
+  return context;
+}
+
+export function useAudioPositionContext() {
+  const context = useContext(AudioPositionContext);
+  if (!context) {
+    throw new Error(
+      "useAudioPositionContext must be used within an AudioPlayerProvider"
     );
   }
   return context;

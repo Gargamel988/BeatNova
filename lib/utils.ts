@@ -39,11 +39,9 @@ export const generateAPIUrl = (relativePath: string) => {
         return `${origin}${path}`;
       }
     } catch (error) {
-      console.warn('Failed to parse URL from experienceUrl:', error);
     }
   }
 
   // Fallback: localhost (sadece emülatör/simülatör için)
-  console.warn('Using localhost as fallback');
   return `http://localhost:8081${path}`;
 };

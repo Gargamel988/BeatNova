@@ -8,12 +8,15 @@ const upsertlisteningtime = async (
   playCount: number = 0,
 ) => {
   try {
+    if (!songId) {
+      return null;
+    }
+
 
     const user = await getUser();
     if (!user?.id) {
       return null;
     }
-
 
     const { data: existing, error: selectError } = await supabase
       .from("listening_history")
@@ -30,6 +33,15 @@ const upsertlisteningtime = async (
     const safeSkipDelta = Math.max(0, Math.round(skipCount));
     const safePlayCount = Math.max(0, Math.round(playCount));
 
+    const finalPayload = {
+      user_id: user.id,
+      song_id: songId,
+      total_seconds: safeListeningDelta + (existing?.total_seconds ?? 0),
+      skip_count: safeSkipDelta + (existing?.skip_count ?? 0),
+      play_count: safePlayCount + (existing?.play_count ?? 0),
+    };
+
+
     // Eğer hiçbir değer yoksa kayıt yapma
     if (safeListeningDelta === 0 && safeSkipDelta === 0 && safePlayCount === 0) {
       return existing ?? null;
@@ -38,13 +50,7 @@ const upsertlisteningtime = async (
     const { data, error } = await supabase
       .from("listening_history")
       .upsert(
-        {
-          user_id: user.id,
-          song_id: songId,
-          total_seconds: safeListeningDelta + (existing?.total_seconds ?? 0),
-          skip_count: safeSkipDelta + (existing?.skip_count ?? 0),
-          play_count: safePlayCount + (existing?.play_count ?? 0),
-        },
+        finalPayload,
         {
           onConflict: "user_id, song_id",
         }
@@ -54,10 +60,10 @@ const upsertlisteningtime = async (
     if (error) {
       throw error;
     }
+
     return data;
   } catch (error: any) {
     if (error?.message?.includes("session missing")) return null;
-    console.error("Error updating total played:", error);
     return null;
   }
 };
@@ -79,7 +85,6 @@ const upsertlisteningtime = async (
   }
   catch (error: any) {
     if (error?.message?.includes("session missing")) return [];
-    console.error("Error getting listening history:", error);
     return [];
   }
  }

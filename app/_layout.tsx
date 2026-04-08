@@ -28,16 +28,15 @@ SplashScreen.setOptions({
   fade: true,
 });
 
+const queryClient = new QueryClient();
+
 export default function RootLayout() {
   const colorScheme = useColorScheme() || "system";
-  const queryClient = useMemo(() => new QueryClient(), []);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ToastProvider>
-          <AdsProvider>
-            <RootContent colorScheme={colorScheme} />
-          </AdsProvider>
+          <RootContent colorScheme={colorScheme} />
         </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>

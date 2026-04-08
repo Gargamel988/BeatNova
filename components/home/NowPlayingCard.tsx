@@ -11,7 +11,7 @@ type NowPlayingCardProps = {
   activeSong: Song | null;
 };
 
-export default function NowPlayingCard({ activeSong }: NowPlayingCardProps) {
+export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -92,4 +92,7 @@ export default function NowPlayingCard({ activeSong }: NowPlayingCardProps) {
     </View>
   );
 }
+
+export default React.memo(NowPlayingCardComponent);
+
 

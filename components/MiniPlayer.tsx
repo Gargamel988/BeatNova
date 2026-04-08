@@ -24,13 +24,13 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
+import { useAudioPositionContext } from "@/providers/player-context";
 
-export default function MiniPlayer({
+function MiniPlayerComponent({
   coverUri,
   title,
   artist,
   duration,
-  currentTime,
   isPlaying,
   resumeSound,
   stopSound,
@@ -42,7 +42,6 @@ export default function MiniPlayer({
   coverUri?: string;
   title?: string;
   duration?: number;
-  currentTime?: number;
   artist?: string;
   isPlaying?: boolean;
   resumeSound?: () => void;
@@ -54,7 +53,14 @@ export default function MiniPlayer({
 }) {
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
+  const { position } = useAudioPositionContext();
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const radiusValueBase = wp(5.5);
+  const circumference = 2 * Math.PI * radiusValueBase;
+  const totalDuration = duration || 1;
+  const progress = Math.min(1, position / totalDuration);
+  const strokeDashoffset = circumference * (1 - progress);
 
   const screenWidth = Dimensions.get("window").width;
   const translateX = useSharedValue(0);
@@ -73,7 +79,6 @@ export default function MiniPlayer({
       });
       opacity.value = withTiming(1, { duration: 300 });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSong?.id]);
 
   const panGesture = Gesture.Pan()
@@ -108,7 +113,6 @@ export default function MiniPlayer({
     };
   });
 
-  // Şarkının ilk harfini al (title'dan)
   const getInitial = () => {
     if (title && title.length > 0) {
       return title.charAt(0).toUpperCase();
@@ -151,83 +155,80 @@ export default function MiniPlayer({
               activeOpacity={0.8}
               style={{ flex: 1 }}
             >
-              <View
-                className="flex-row items-center justify-between"
-              >
-                <View className="flex-row items-center"
-                style={{
-                  gap: wp(4),
-                }}
+              <View className="flex-row items-center justify-between">
+                <View
+                  className="flex-row items-center"
+                  style={{
+                    gap: wp(4),
+                  }}
                 >
-                {/* Sol tarafta gradient kare buton */}
-                {coverUri ? (
-                  <Image
-                    source={{ uri: coverUri }}
+                  {coverUri ? (
+                    <Image
+                      source={{ uri: coverUri }}
+                      style={{
+                        width: wp(12),
+                        height: wp(12),
+                        borderRadius: radius(12),
+                        borderWidth: 1,
+                        borderColor: colors.overlay.white10,
+                      }}
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={colors.gradient.purplePink as [string, string]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      className="items-center justify-center"
+                      style={{
+                        width: wp(12),
+                        height: wp(12),
+                        borderRadius: radius(12),
+                        borderWidth: 1,
+                        borderColor: colors.overlay.white20,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: fontSize(20),
+                          fontWeight: "800",
+                          color: colors.player.iconWhite,
+                        }}
+                      >
+                        {getInitial()}
+                      </Text>
+                    </LinearGradient>
+                  )}
+                  <View
+                    className="flex-col "
                     style={{
-                      width: wp(12),
-                      height: wp(12),
-                      borderRadius: radius(12),
-                      borderWidth: 1,
-                      borderColor: colors.overlay.white10,
-                    }}
-                  />
-                ) : (
-                  <LinearGradient
-                    colors={colors.gradient.purplePink as [string, string]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    className="items-center justify-center"
-                    style={{
-                      width: wp(12),
-                      height: wp(12),
-                      borderRadius: radius(12),
-                      borderWidth: 1,
-                      borderColor: colors.overlay.white20,
+                      gap: hp(0.5),
+                      marginRight: wp(3),
+                      overflow: "hidden",
+                      maxWidth: wp(30),
                     }}
                   >
                     <Text
                       style={{
-                        fontSize: fontSize(20),
-                        fontWeight: "800",
+                        fontSize: fontSize(16),
+                        fontWeight: "600",
                         color: colors.player.iconWhite,
                       }}
+                      numberOfLines={1}
                     >
-                      {getInitial()}
+                      {title}
                     </Text>
-                  </LinearGradient>
-                )}
-                <View
-                  className="flex-col "
-                  style={{ 
-                    gap: hp(0.5), 
-                    marginRight: wp(3) ,
-                    overflow: "hidden",
-                  maxWidth: wp(30),
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: fontSize(16),
-                      fontWeight: "600",
-                      color: colors.player.iconWhite,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {title}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: fontSize(12),
-                      fontWeight: "400",
-                      color: colors.player.textMuted,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {artist}
-                  </Text>
+                    <Text
+                      style={{
+                        fontSize: fontSize(12),
+                        fontWeight: "400",
+                        color: colors.player.textMuted,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {artist}
+                    </Text>
                   </View>
                 </View>
-                {/* Sağ tarafta kontrol butonları */}
                 <View
                   className="flex-row items-center"
                   style={{
@@ -271,36 +272,29 @@ export default function MiniPlayer({
                     }}
                     activeOpacity={0.8}
                   >
-                    {duration && currentTime !== undefined && duration > 0 ? (
+                    {duration && duration > 0 ? (
                       <Svg
                         width={wp(12)}
                         height={wp(12)}
                         style={{ position: "absolute" }}
                       >
-                        {/* Background circle */}
                         <Circle
                           cx={wp(6)}
                           cy={wp(6)}
-                          r={wp(5.5)}
+                          r={radiusValueBase}
                           stroke={colors.overlay.white20}
                           strokeWidth={2}
                           fill="none"
                         />
-                        {/* Progress circle */}
                         <Circle
                           cx={wp(6)}
                           cy={wp(6)}
-                          r={wp(5.5)}
+                          r={radiusValueBase}
                           stroke={colors.player.iconWhite}
                           strokeWidth={2}
                           fill="none"
-                          strokeDasharray={2 * Math.PI * wp(5.5)}
-                          strokeDashoffset={
-                            2 *
-                            Math.PI *
-                            wp(5.5) *
-                            (1 - Math.min(1, currentTime / duration))
-                          }
+                          strokeDasharray={circumference}
+                          strokeDashoffset={strokeDashoffset}
                           strokeLinecap="round"
                           transform={`rotate(-90 ${wp(6)} ${wp(6)})`}
                         />
@@ -355,3 +349,5 @@ export default function MiniPlayer({
     </>
   );
 }
+
+export default React.memo(MiniPlayerComponent);

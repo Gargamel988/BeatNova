@@ -1,3 +1,4 @@
+import React from "react";
 import { useResponsive } from "@/hooks/useResponsive";
 import { TouchableOpacity, Image } from "react-native";
 import { View } from "@/components/ui/view";
@@ -8,6 +9,12 @@ import { useColor } from "@/hooks/useColor";
 import { formatTime } from "@/utils/format";
 import { useState } from "react";
 import PlayListPlayModal from "./PlayListPlayModal";
+import { Trash2 } from "lucide-react-native";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deletePlaylist } from "@/services/PlaylistServices";
+import { Alert } from "react-native";
+import { useToast } from "@/components/ui/toast";
+import { useThemeModeContext } from "@/providers/theme-provider";
 
 type Playlist = {
 	id: number;
@@ -21,17 +28,55 @@ type Playlist = {
 	mood?: string[];
 	song_cover_urls?: string[]; // İlk 4 şarkının cover_url'leri
   };
-export default function PlaylistListItem({ playlist }: { playlist: Playlist }) {
+export default React.memo(function PlaylistListItem({ playlist }: { playlist: Playlist }) {
 	const  [isModalVisible, setIsModalVisible] = useState(false);
 	const { wp, fontSize, radius } = useResponsive();
 	const cardBg = useColor("card");
 	const borderColor = useColor("border");
 	const textPrimary = useColor("authPrimaryText");
 	const textSecondary = useColor("authSecondaryText");
+  const { palette: colors } = useThemeModeContext();
   const songCount = playlist?.song_count ?? 0;
   const duration = playlist?.duration ?? 0;
   const durationString = formatTime(Number(duration));
   const mood = playlist?.mood?.slice(0, 3);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const deleteMutation = useMutation({
+    mutationFn: (id: number | string) => deletePlaylist(id),
+    onSuccess: () => {
+      toast({
+        title: "Başarılı",
+        description: "Playlist başarıyla silindi",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Playlist silinirken bir hata oluştu",
+        variant: "error",
+      });
+    },
+  });
+
+  const handleDelete = (e: any) => {
+    e.stopPropagation();
+    Alert.alert(
+      "Playlist'i Sil",
+      "Bu playlist'i ve içindeki tüm şarkı bağlantılarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      [
+        { text: "İptal", style: "cancel" },
+        {
+          text: "Sil",
+          style: "destructive",
+          onPress: () => deleteMutation.mutate(playlist.id)
+        },
+      ]
+    );
+  };
+
 	return (
 	  <TouchableOpacity
 		activeOpacity={0.9}
@@ -188,6 +233,18 @@ export default function PlaylistListItem({ playlist }: { playlist: Playlist }) {
 			</View>
 		  </View>
 		</View>
+ 
+    <TouchableOpacity
+      onPress={handleDelete}
+      disabled={deleteMutation.isPending}
+      style={{
+        padding: wp(2),
+        borderRadius: radius(8),
+        backgroundColor: "rgba(239, 68, 68, 0.1)",
+      }}
+    >
+      <Icon name={Trash2} size={wp(5)} color={colors.red || "#ef4444"} />
+    </TouchableOpacity>
 
 		<PlayListPlayModal 
 			visible={isModalVisible} 
@@ -196,4 +253,4 @@ export default function PlaylistListItem({ playlist }: { playlist: Playlist }) {
 		/>
 	  </TouchableOpacity>
 	);
-  }
+  });

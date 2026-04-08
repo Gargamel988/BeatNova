@@ -8,7 +8,7 @@ import { router } from "expo-router";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
 
-export default function AIBanner() {
+export function AIBannerComponent() {
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
   const handlePress = () => {
@@ -137,4 +137,7 @@ export default function AIBanner() {
     </TouchableOpacity>
   );
 }
+
+export default React.memo(AIBannerComponent);
+
 

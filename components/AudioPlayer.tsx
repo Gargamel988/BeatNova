@@ -1,14 +1,9 @@
 import { Modal, TouchableOpacity } from "react-native";
-import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { useAudioPlayerContext } from "@/providers/player-context";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useAudioPlayerContext, useAudioPositionContext } from "@/providers/player-context";
 import {
   ChevronDown,
-  MoreHorizontal,
   Music,
-  SkipBack,
-  SkipForward,
-  Moon,
-  Clock,
 } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -51,7 +46,6 @@ export default function AudioPlayer({
     isPlaying,
     resume,
     handleSeek,
-    position,
     shuffle,
     playlist: hookPlaylist,
     loopMode,
@@ -61,6 +55,8 @@ export default function AudioPlayer({
     setSleepTimer,
     loop,
   } = useAudioPlayerContext();
+
+  const { position } = useAudioPositionContext();
   const [songsWithCovers, setSongsState] = useState<Song[]>([]);
   const [sleepTimerModalVisible, setSleepTimerModalVisible] = useState(false);
   const { loadSongs, loadCoversInBackground } = useSongsService();
@@ -72,11 +68,14 @@ export default function AudioPlayer({
   const [activeSegment, setActiveSegment] = useState<
     "controls" | "queue" | "details" | "notes"
   >("controls");
-  const [notesBySong, setNotesBySong] = useState<Record<string, string>>({});
+
   const status = useAudioPlayerStatus(audioPlayer);
 
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
+  const isHandlingFinishRef = useRef(false);
+
+
 
   useEffect(() => {
     if (songsData.length) {
@@ -106,40 +105,47 @@ export default function AudioPlayer({
 
   // Şarkı bittiğinde sonraki şarkıya geç
   useEffect(() => {
-    if (!status?.didJustFinish || !activeSong) return;
+    if (status?.didJustFinish) {
+      if (!isHandlingFinishRef.current) {
+        // Kapıyı kilitle: didJustFinish false olana kadar bir daha buraya girme
+        isHandlingFinishRef.current = true;
 
-    if (loopMode === "one") {
-      // Tek şarkı modu - aynı şarkıyı tekrar çal
-      audioPlayer.seekTo(0);
-      audioPlayer.play();
-      return;
-    }
 
-    if (loopMode === "all" && activeSong) {
-      const currentIndex = playlist.findIndex(
-        (song) => song.id === activeSong.id
-      );
-      if (currentIndex === playlist.length - 1) {
-        // Playlist'in başına dön
-        const firstSong = playlist[0];
-        if (firstSong) {
-          play(firstSong, playlist);
+        if (loopMode === "one") {
+          // Tek şarkı modu - aynı şarkıyı tekrar çal
+          audioPlayer.seekTo(0);
+          audioPlayer.play();
+        } else if (loopMode === "all" && activeSong) {
+          const currentIndex = playlist.findIndex(
+            (song) => song.id === activeSong.id
+          );
+          if (currentIndex === playlist.length - 1) {
+            // Playlist'in başına dön
+            const firstSong = playlist[0];
+            if (firstSong) {
+              play(firstSong, playlist);
+            }
+          } else {
+            next(playlist, isShuffled, false);
+          }
+        } else {
+          // Normal durumda sonraki şarkıya geç
+          next(playlist, isShuffled, false);
         }
-        return;
       }
+    } else {
+      // didJustFinish false olduğunda (yeni şarkı yüklemeye başlayınca) kilidi aç
+      isHandlingFinishRef.current = false;
     }
-
-    // Normal durumda sonraki şarkıya geç
-    next(playlist, isShuffled);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.didJustFinish, activeSong, loopMode]);
+  }, [status?.didJustFinish, activeSong?.id, loopMode]);
 
   const currentSong = (hydratedActiveSong ?? selectedSong ?? activeSong) as
     | Song
     | undefined;
 
   const durationSeconds =
-    (audioPlayer?.isLoaded && audioPlayer?.duration) ||
+    (audioPlayer?.isLoaded && audioPlayer?.duration ? audioPlayer.duration : 0) ||
     currentSong?.metadata?.duration ||
     activeSong?.duration ||
     0;
@@ -227,8 +233,7 @@ export default function AudioPlayer({
     );
     return currentIndex >= 0 ? playlist.slice(currentIndex) : playlist;
   }, [playlist, activeSong]);
-  const songId = activeSong?.id ?? "unknown";
-  const currentNote = notesBySong[songId] ?? "";
+
 
   const handlePlayToggle = useCallback(() => {
     if (!activeSong) {
@@ -242,15 +247,6 @@ export default function AudioPlayer({
     }
   }, [activeSong, isPlaying, play, pause, resume, selectedSong]);
 
-  const handleSeekForward = useCallback(() => {
-    const newPosition = Math.min(position + 10, durationSeconds);
-    handleSeek(durationSeconds)(newPosition);
-  }, [position, durationSeconds, handleSeek]);
-
-  const handleSeekBackward = useCallback(() => {
-    const newPosition = Math.max(position - 10, 0);
-    handleSeek(durationSeconds)(newPosition);
-  }, [position, durationSeconds, handleSeek]);
 
   const handleLoopToggle = useCallback(() => {
     const modes: ("all" | "one" | "none")[] = ["all", "one", "none"];
@@ -294,12 +290,6 @@ export default function AudioPlayer({
     ]
   );
 
-  const handleNoteChange = useCallback(
-    (text: string) => {
-      setNotesBySong((prev) => ({ ...prev, [songId]: text }));
-    },
-    [songId]
-  );
 
   return (
     <Modal

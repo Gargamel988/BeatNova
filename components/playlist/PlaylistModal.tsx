@@ -71,7 +71,7 @@ export default function PlaylistModal({
     mutationFn: async (data: PlaylistCreatePayload) => {
       return createPlaylist(data);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast({
         title: "Playlist oluşturuldu",
         description: "Playlist başarıyla oluşturuldu",
@@ -119,7 +119,9 @@ export default function PlaylistModal({
     };
 
     createPlaylistMutation(payload, {
-      onSuccess: resetAndClose,
+      onSuccess: () => {
+        resetAndClose();
+      },
     });
   };
 
@@ -281,86 +283,6 @@ export default function PlaylistModal({
               )}
             />
           </View>
-
-          {/* Privacy Toggle */}
-          <Controller
-            control={control}
-            name="is_public"
-            render={({ field }) => (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => field.onChange(!field.value)}
-                style={{
-                  padding: hp(1.8),
-                  borderWidth: 1,
-                  borderColor: borderColorMuted,
-                  borderRadius: radius(16),
-                  backgroundColor: colors.card,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: wp(3),
-                  }}
-                >
-                  <View
-                    style={{
-                      width: wp(11),
-                      height: wp(11),
-                      borderRadius: radius(12),
-                      backgroundColor: field.value
-                        ? colors.primary + "22"
-                        : colors.background1,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Icon
-                      name={field.value ? Globe : Lock}
-                      size={20}
-                      color={field.value ? colors.primary : subtleTextColor}
-                    />
-                  </View>
-                  <View>
-                    <Text
-                      style={{
-                        color: colors.text,
-                        fontSize: fontSize(14),
-                        fontWeight: "700",
-                        marginBottom: 2,
-                      }}
-                    >
-                      {field.value ? "Herkese Açık" : "Gizli"}
-                    </Text>
-                    <Text
-                      style={{
-                        color: subtleTextColor,
-                        fontSize: fontSize(11),
-                      }}
-                    >
-                      {field.value
-                        ? "arkadaşlarınız da görebilir "
-                        : "Sadece sen görebilirsin"}
-                    </Text>
-                  </View>
-                </View>
-                <Switch
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  thumbColor={field.value ? colors.primary : borderColorMuted}
-                  trackColor={{
-                    false: borderColorMuted,
-                    true: colors.primary + "55",
-                  }}
-                />
-              </TouchableOpacity>
-            )}
-          />
 
           {/* Quick Tags */}
           <View style={{ gap: hp(1) }}>
