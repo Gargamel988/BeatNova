@@ -7,7 +7,7 @@ import {
   ScrollView,
   Alert,
   StyleSheet,
-} from "react-native";
+ Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -24,14 +24,14 @@ import {
   PlayCircle,
   Info,
   Clock,
-} from "lucide-react-native";
+ Music, ImageIcon, ExternalLink } from "lucide-react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAudioPlayerContext } from "@/providers/player-context";
 import * as MediaLibrary from "expo-media-library";
-import { Linking } from "react-native";
-import { Music, ImageIcon, ExternalLink } from "lucide-react-native";
+
+
 
 import { SleepTimerModal } from "@/components/settings/SleepTimerModal";
 

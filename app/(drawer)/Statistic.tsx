@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo , useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { View } from "@/components/ui/view";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -25,7 +25,6 @@ import { getAllSongsWithDetails } from "@/services/SongsService";
 import { getFavorites } from "@/services/PlaylistServices";
 import { LoadingState } from "@/components/ui/loading-state";
 import { useAds } from "@/providers/AdsProvider";
-import { useEffect } from "react";
 
 
 

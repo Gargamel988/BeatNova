@@ -13,13 +13,13 @@ interface UseUserActivityReturn {
  * @param inactiveThreshold Saniye cinsinden, bu süre geçerse kullanıcı pasif kabul edilir (varsayılan: 5 dakika)
  */
 export function useUserActivity(
-  inactiveThreshold: number = 5 * 60
+  inactiveThreshold: number = 5 * 60,
 ): UseUserActivityReturn {
   const [isUserActive, setIsUserActive] = useState(true);
   const [lastActiveTime, setLastActiveTime] = useState<Date | null>(new Date());
   const [inactiveDuration, setInactiveDuration] = useState(0);
   const appState = useRef<AppStateStatus>(AppState.currentState);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<any | null>(null);
   const lastActiveRef = useRef<Date>(new Date());
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function useUserActivity(
       if (appState.current === "active") {
         const now = new Date();
         const diff = Math.floor(
-          (now.getTime() - lastActiveRef.current.getTime()) / 1000
+          (now.getTime() - lastActiveRef.current.getTime()) / 1000,
         );
 
         if (diff >= inactiveThreshold) {
@@ -64,7 +64,7 @@ export function useUserActivity(
         // Arka plandayken süreyi hesapla
         const now = new Date();
         const diff = Math.floor(
-          (now.getTime() - lastActiveRef.current.getTime()) / 1000
+          (now.getTime() - lastActiveRef.current.getTime()) / 1000,
         );
         setInactiveDuration(diff);
         setIsUserActive(false);
@@ -85,4 +85,3 @@ export function useUserActivity(
     inactiveDuration,
   };
 }
-

@@ -1,18 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { useResponsive } from "@/hooks/useResponsive";
-import { TouchableOpacity, Image } from "react-native";
+import { TouchableOpacity, Image , Alert } from "react-native";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
-import { Music2, Clock } from "lucide-react-native";
+import { Music2, Clock , Trash2 } from "lucide-react-native";
 import { useColor } from "@/hooks/useColor";
 import { formatTime } from "@/utils/format";
-import { useState } from "react";
+
 import PlayListPlayModal from "./PlayListPlayModal";
-import { Trash2 } from "lucide-react-native";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deletePlaylist } from "@/services/PlaylistServices";
-import { Alert } from "react-native";
+
 import { useToast } from "@/components/ui/toast";
 import { useThemeModeContext } from "@/providers/theme-provider";
 

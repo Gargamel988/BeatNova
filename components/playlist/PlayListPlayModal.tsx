@@ -1,11 +1,11 @@
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
-import { Modal, TouchableOpacity, Image, FlatList } from "react-native";
+import { Modal, TouchableOpacity, Image, FlatList , Alert } from "react-native";
 import React, { useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeModeContext } from "@/providers/theme-provider";
-import { useQuery } from "@tanstack/react-query";
-import { getPlaylistSongs } from "@/services/PlaylistServices";
+import { useQuery , useMutation, useQueryClient } from "@tanstack/react-query";
+import { getPlaylistSongs , deletePlaylist } from "@/services/PlaylistServices";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { Icon } from "@/components/ui/icon";
@@ -15,9 +15,6 @@ import { formatTime } from "@/utils/format";
 import { LinearGradient } from "expo-linear-gradient";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deletePlaylist } from "@/services/PlaylistServices";
-import { Alert } from "react-native";
 import { useToast } from "@/components/ui/toast";
 
 export default function PlayListPlayModal({

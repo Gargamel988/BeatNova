@@ -22,6 +22,23 @@ const MODE_ICONS: Record<ThemeMode, IconName> = {
   system: Palette,
   aurora: Sunrise,
   sunset: Sunset,
+  ocean: Palette,
+  forest: Palette,
+  midnight: Palette,
+  rose: Palette,
+  amber: Palette,
+  lavender: Palette,
+  emerald: Palette,
+  ruby: Palette,
+  gold: Palette,
+  diamond: Palette,
+  mint: Palette,
+  royal: Palette,
+  cyber: Palette,
+  cyper: Palette,
+  coffee: Palette,
+  candy: Palette,
+  slate: Palette,
 };
 
 export const ModeToggle = ({ variant = "outline", size = "icon" }: Props) => {

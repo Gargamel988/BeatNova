@@ -69,11 +69,6 @@ export default function useAudioPlayerHook() {
     activeSongRef.current = activeSong;
   }, [activeSong]);
 
-  const { data: songs } = useQuery({
-    queryKey: ["songs"],
-    queryFn: () => getsongs(),
-  });
-
   // Ensure song exists in Supabase with its asset ID
   const ensureSongInDb = useCallback(
     async (asset: Song) => {
@@ -103,7 +98,11 @@ export default function useAudioPlayerHook() {
   );
 
   const saveListeningTime = useCallback(
-    (songId: string | null | undefined, isManual: boolean = false, forcePlayCount: number = 0) => {
+    (
+      songId: string | null | undefined,
+      isManual: boolean = false,
+      forcePlayCount: number = 0,
+    ) => {
       if (!songId) return;
 
       // Final remainder to save (total vs what we already saved)
@@ -112,7 +111,8 @@ export default function useAudioPlayerHook() {
         totalTimePlayed.current - lastSavedTime.current,
       );
       // Skip logic: 30 saniyeden az dinlenmişse ve henüz "oynatıldı" sayılmamışsa atlama kabul et
-      const isIntentionalSkip = isManual && totalTimePlayed.current < 30 && !playCounted.current;
+      const isIntentionalSkip =
+        isManual && totalTimePlayed.current < 30 && !playCounted.current;
 
       // Kaydedilecek anlamlı bir süre yoksa ve skip durumu değilse çık
       if (deltaToSave < 0.1 && !isIntentionalSkip) {
@@ -125,7 +125,6 @@ export default function useAudioPlayerHook() {
         return;
       }
 
-
       upsertListeningTimeRef.current({
         listeningTime: deltaToSave,
         songId: songId,
@@ -133,7 +132,7 @@ export default function useAudioPlayerHook() {
         playCount: forcePlayCount,
       });
 
-      lastSavedTime.current = totalTimePlayed.current; 
+      lastSavedTime.current = totalTimePlayed.current;
     },
     [],
   );
@@ -217,7 +216,7 @@ export default function useAudioPlayerHook() {
     if (status?.didJustFinish) {
       if (!statsHandlingRef.current && activeSong?.id) {
         statsHandlingRef.current = true;
-        
+
         // Şarkı bittiğinde henüz playCount gönderilmemişse 1 gönder
         const playCountToSend = playCounted.current ? 0 : 1;
         if (playCountToSend === 1) playCounted.current = true;
