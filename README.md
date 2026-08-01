@@ -1,213 +1,247 @@
-# BNA UI 🚀
+<p align="center">
+  <img src="./assets/images/beatnovalogo.jpeg" alt="BeatNova Logo" width="120" height="120" style="border-radius: 24px;" />
+</p>
 
-![BNA UI Header](https://bna-ui.s3.eu-north-1.amazonaws.com/bna-ui-header.png)
+<h1 align="center">🎵 BeatNova</h1>
 
-**B**uild **N**ative **A**pps - A powerful CLI for creating Expo React Native applications with a beautiful UI component library.
+<p align="center">
+  <strong>Akıllı Müzik Çalar & Yapay Zeka Destekli Müzik Asistanı</strong>
+</p>
 
-## ✨ Features
-
-- 🎨 **Beautiful UI Components** - Pre-built, customizable components with modern design
-- 🌙 **Theme Support** - Built-in light/dark mode with seamless transitions
-- 📱 **Expo Router Ready** - Complete navigation setup with tab and stack navigation
-- 🎯 **TypeScript First** - Full TypeScript support with excellent IntelliSense
-- 📦 **Flexible Package Manager** - Works with npm, yarn, or pnpm
-- 🚀 **Zero Configuration** - Get started in seconds with sensible defaults
-- 🔧 **Highly Customizable** - Easily customize colors, spacing, and components
-- 📲 **Cross-Platform** - Perfect compatibility across iOS and Android
-- ⚡ **Performance Optimized** - Lightweight and fast components
-- 🎭 **Animation Ready** - Smooth animations with React Native Reanimated
-
-## 📦 Installation
-
-```bash
-# The fastest way to set up BNA UI in your Expo project:
-npx bna-ui init
-
-# Navigate to your Expo project
-cd bna-app
-
-# Start the Convex backend
-npx convex dev
-
-# In a new terminal, start your Expo app
-npx expo start
-
-# Start adding components
-npx bna-ui add button
-npx bna-ui add card
-npx bna-ui add input
-```
-
-## 🚀 Quick Start
-
-### Starting Your Project
-
-1. **Initialize your project** (if you haven't already):
-
-   ```bash
-   npx bna-ui init
-   cd bna-app
-   ```
-
-2. **Start the Convex backend**:
-
-   ```bash
-   npx convex dev
-   ```
-
-   This will start the Convex development server and sync your backend functions.
-
-3. **Start your Expo app** (in a new terminal):
-
-   ```bash
-   npx expo start
-   ```
-
-### Backend Development
-
-The Convex backend runs alongside your Expo app and provides real-time data synchronization. Keep `npx convex dev` running in a terminal window while developing.
-
-## 🎨 Available Components
-
-| Component      | Description                       | Status         |
-| -------------- | --------------------------------- | -------------- |
-| `Button`       | Customizable button with variants | ✅ Available   |
-| `Card`         | Container component with shadow   | ✅ Available   |
-| `Input`        | Text input with validation        | ✅ Available   |
-| `Bottom Sheet` | Overlay modal component           | ✅ Available   |
-| `Spinner`      | Loading spinner and skeletons     | ✅ Available   |
-| `Avatar`       | User profile image component      | ✅ Available   |
-| `Badge`        | Small status indicator            | ✅ Available   |
-| `Date Picker`  | Date Picker component             | ✅ Available   |
-| `Switch`       | Toggle switch component           | ✅ Available   |
-| `Progress`     | Range progress component          | ✅ Available   |
-| `Charts`       | Charts components.                | 🔄 Coming Soon |
-
-## 🎯 Usage Example
-
-```tsx
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { View } from '@/components/ui/view';
-
-export default function HomeScreen() {
-  return (
-    <View style={{ flex: 1, padding: 20 }}>
-      <Card>
-        <Input placeholder='Enter your email' keyboardType='email-address' />
-        <Button
-          variant='success'
-          onPress={() => console.log('Button pressed!')}
-        >
-          Get Started
-        </Button>
-      </Card>
-    </View>
-  );
-}
-```
-
-## 🌙 Theme Configuration
-
-BNA UI comes with a flexible theming system:
-
-```tsx
-// theme/colors.ts
-export const lightTheme = {
-  colors: {
-    background: '#FFFFFF',
-    foreground: '#000000',
-    card: '#F2F2F7',
-    cardForeground: '#000000',
-    popover: '#F2F2F7',
-    popoverForeground: '#000000',
-    primary: '#18181b',
-    primaryForeground: '#FFFFFF',
-    secondary: '#F2F2F7',
-    secondaryForeground: '#18181b',
-    muted: '#78788033',
-    mutedForeground: '#71717a',
-    // ... more colors
-  },
-};
-
-export const darkTheme = {
-  colors: {
-    background: '#000000',
-    foreground: '#FFFFFF',
-    card: '#1C1C1E',
-    cardForeground: '#FFFFFF',
-    popover: '#18181b',
-    popoverForeground: '#FFFFFF',
-    primary: '#e4e4e7',
-    primaryForeground: '#18181b',
-    secondary: '#1C1C1E',
-    secondaryForeground: '#FFFFFF',
-    muted: '#78788033',
-    mutedForeground: '#a1a1aa',
-    // ... more colors
-  },
-};
-```
-
-## 📱 Platform Support
-
-- ✅ **iOS** - Full native iOS support
-- ✅ **Android** - Full native Android support
-- ✅ **Web** - Responsive web support
-- ✅ **Expo Go** - Development with Expo Go
-- ✅ **EAS Build** - Production builds with EAS
-
-## 🛠️ Development
-
-```bash
-# Clone the repository
-git clone https://github.com/ahmedbna/bna-ui.git
-cd bna-ui
-
-# Install dependencies
-npm install
-
-# Build for production
-npm run build
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
-- 📚 **Documentation**: [https://ui.ahmedbna.com](https://ui.ahmedbna.com)
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/ahmedbna/ui/issues)
-- 💬 **Linkedin**: [@ahmedbna](https://www.linkedin.com/in/ahmedbna/)
-- 𝕏 **X**: [@ahmedbnaa](https://x.com/ahmedbnaa)
-
-## ⭐ Support
-
-If you find BNA UI helpful, please consider giving it a star on GitHub! It helps us a lot.
-
-[![GitHub stars](https://img.shields.io/github/stars/ahmedbna/ui?style=social)](https://github.com/ahmedbna/ui)
-
-## 📈 Stats
-
-![GitHub package.json version](https://img.shields.io/github/package-json/v/ahmedbna/ui)
-![npm](https://img.shields.io/npm/v/bna-ui)
-![npm](https://img.shields.io/npm/dm/bna-ui)
-![GitHub](https://img.shields.io/github/license/ahmedbna/ui)
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white" alt="Android" />
+  <img src="https://img.shields.io/badge/Framework-Expo-000020?logo=expo&logoColor=white" alt="Expo" />
+  <img src="https://img.shields.io/badge/Language-TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/AI-Gemini-4285F4?logo=google&logoColor=white" alt="Gemini AI" />
+  <img src="https://img.shields.io/badge/Version-1.0.1-blueviolet" alt="Version" />
+</p>
 
 ---
 
-Made with ❤️ by [Ahmed BNA](https://github.com/ahmedbna)
+## 📖 Proje Hakkında
+
+**BeatNova**, cihazınızdaki müzik dosyalarını otomatik olarak tarayan, güçlü bir arka plan oynatıcısıyla dinlemenizi sağlayan ve yapay zeka destekli müzik asistanıyla yeni şarkılar keşfetmenize yardımcı olan modern bir Android müzik çalar uygulamasıdır.
+
+YouTube'dan indirilen şarkıların kapak resimlerini dosya adındaki video kimliğinden otomatik olarak çeker, internet bağlantısı olmadığında bile kesintisiz müzik deneyimi sunar ve şık, özelleştirilebilir temasıyla göz zevkinize hitap eder.
+
+---
+
+## ✨ Öne Çıkan Özellikler
+
+### 🎶 Müzik Çalar
+- 📂 Cihazınızdaki tüm müzik dosyalarını otomatik tarama (`expo-media-library`)
+- ▶️ Arka planda kesintisiz müzik çalma (`react-native-track-player v5`)
+- 🔀 Karıştırma, tekrarlama ve sıra yönetimi
+- 🎨 Otomatik kapak resmi çekme (YouTube thumbnail & iTunes/Deezer API)
+- 📊 İlerleme çubuğu ile şarkı kontrolü
+
+### 🤖 Yapay Zeka Müzik Asistanı
+- 💬 Google Gemini AI ile kişiselleştirilmiş müzik önerileri
+- 🔍 Web araması entegrasyonu ile güncel müzik trendleri (Tavily API)
+- ⚡ Hızlı erişim butonları — "Enerjik playlist", "Odaklanma müziği", "Popüler trendler"
+- 📋 Detaylı playlist bilgileri (enerji seviyesi, ruh hali, süre, tür)
+
+### 🎨 Temalar & Kişiselleştirme
+- 🌙 Karanlık / Aydınlık mod desteği
+- 🎭 Birden fazla renk paleti (Neon, Pastel, Gün Batımı ve daha fazlası)
+- 📐 Özelleştirilebilir yazı tipi boyutu
+
+### 📊 İstatistikler & Takip
+- ⏱️ Toplam dinleme süresi
+- 🏆 En çok dinlenen şarkılar
+- 📈 Dinleme alışkanlıkları grafiği
+
+### ❤️ Favoriler & Playlistler
+- 💾 Favori şarkılarınızı kaydedin
+- 📋 Kendi playlistlerinizi oluşturun
+- 📱 Veriler cihazda güvenle saklanır
+
+### 🌐 Çevrimdışı Destek
+- 📡 İnternet bağlantısı kontrolü (`NetInfo`)
+- ✈️ Çevrimdışıyken müzik dinlemeye devam edin
+- ⚠️ Uyarılı mod — Kullanıcıyı bilgilendirerek sorunsuz deneyim
+
+---
+
+## 🏗️ Teknoloji Yığını
+
+| Katman | Teknoloji |
+|---|---|
+| **Framework** | [Expo](https://expo.dev) (SDK 54) + React Native 0.81 |
+| **Dil** | TypeScript |
+| **Navigasyon** | Expo Router v6 (Drawer + Tabs + Stack) |
+| **Stil** | NativeWind v4 (TailwindCSS) |
+| **Müzik Çalar** | React Native Track Player v5 (`@rntp/player`) |
+| **Yapay Zeka** | Google Gemini 2.5 Flash (AI SDK) |
+| **Web Araması** | Tavily API |
+| **Medya Erişimi** | Expo Media Library |
+| **Durum Yönetimi** | React Context + TanStack Query |
+| **Ağ Kontrolü** | @react-native-community/netinfo |
+| **Reklamlar** | Google Mobile Ads (AdMob) |
+| **Animasyonlar** | React Native Reanimated |
+| **Build & Deploy** | EAS Build + EAS Submit |
+
+---
+
+## 📁 Proje Yapısı
+
+```
+BeatNova/
+├── app/                          # Expo Router sayfaları
+│   ├── (auth)/                   # Giriş / Kayıt ekranları
+│   ├── (drawer)/                 # Drawer menüsü
+│   │   ├── (tabs)/               # Alt sekme navigasyonu
+│   │   │   ├── index.tsx         # 🏠 Ana Sayfa
+│   │   │   ├── songs.tsx         # 🎵 Şarkı Listesi
+│   │   │   ├── MusicAssistant.tsx # 🤖 AI Müzik Asistanı
+│   │   │   ├── PlayList.tsx      # 📋 Playlistler
+│   │   │   └── settings.tsx      # ⚙️ Ayarlar
+│   │   ├── Favorite.tsx          # ❤️ Favoriler
+│   │   ├── Statistic.tsx         # 📊 İstatistikler
+│   │   └── Theme.tsx             # 🎨 Tema Seçimi
+│   └── api/
+│       └── object+api.ts         # 🧠 AI Backend (Gemini API)
+├── components/
+│   ├── AudioPlayer.tsx           # 🎧 Mini Oynatıcı Bileşeni
+│   ├── ProgressSection.tsx       # 📊 İlerleme Çubuğu
+│   └── songs/
+│       └── songsService.tsx      # 🔧 Şarkı Yükleme & Kapak Resmi Servisi
+├── hooks/
+│   └── useAudioPlayer.ts         # 🎵 Müzik Çalar Hook'u
+├── providers/
+│   └── player-context.tsx        # 🔄 Global Çalar Durumu
+├── services/
+│   ├── playbackService.ts        # ▶️ Arka Plan Oynatma Servisi
+│   ├── PlaylistServices.ts       # 📋 Playlist Yönetimi
+│   └── StatisticServices.ts      # 📈 İstatistik Servisi
+├── lib/
+│   └── tools/
+│       └── webSearch.ts          # 🔍 Tavily Web Araması
+├── theme/                        # 🎨 Tema & Renk Paletleri
+├── schemes/                      # 📐 Zod Şemaları
+└── assets/                       # 🖼️ Görseller & Fontlar
+```
+
+---
+
+## 🚀 Kurulum
+
+### Ön Gereksinimler
+
+- [Node.js](https://nodejs.org/) (v18+)
+- [Expo CLI](https://docs.expo.dev/get-started/installation/)
+- Android Studio (fiziksel cihaz veya emülatör için)
+- Google Gemini API Anahtarı ([AI Studio](https://aistudio.google.com/app/apikey))
+
+### Adımlar
+
+```bash
+# 1. Projeyi klonla
+git clone https://github.com/Gargamel988/BeatNova.git
+cd BeatNova
+
+# 2. Bağımlılıkları yükle
+npm install
+
+# 3. Ortam değişkenlerini ayarla
+cp .env.local.example .env.local
+# .env.local dosyasını düzenleyerek API anahtarlarını gir
+
+# 4. Android build al ve çalıştır
+npx expo run:android
+```
+
+### Ortam Değişkenleri
+
+`.env.local` dosyasında aşağıdaki değişkenleri tanımlayın:
+
+```env
+# Yapay Zeka (Zorunlu — Asistan için)
+GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
+
+# Web Araması (Opsiyonel — Güncel trend bilgileri için)
+TAVILY_API_KEY=your_tavily_api_key
+
+# Google Reklamlar (Opsiyonel — AdMob)
+EXPO_PUBLIC_AD_UNIT_ID_BANNER_HOME=your_ad_unit_id
+EXPO_PUBLIC_AD_UNIT_ID_BANNER_ASSISTANT=your_ad_unit_id
+# ... diğer reklam birimleri
+```
+
+---
+
+## 📱 Ekran Görüntüleri
+
+> *Yakında eklenecek*
+
+---
+
+## 🔧 Geliştirme Komutları
+
+```bash
+# Geliştirme sunucusu
+npx expo start --clear
+
+# Android'de çalıştır
+npx expo run:android
+
+# TypeScript denetimi
+npx tsc --noEmit
+
+# Lint kontrolü
+npx expo lint
+
+# Üretim build'i (EAS)
+eas build --platform android --profile production
+
+# Google Play Store'a gönder
+eas submit --platform android --profile production --latest
+```
+
+---
+
+## 🎯 Yol Haritası
+
+- [x] Cihazdan müzik okuma ve çalma
+- [x] Arka plan oynatma desteği
+- [x] YouTube thumbnail ile otomatik kapak resmi
+- [x] AI müzik asistanı (Gemini)
+- [x] Tema ve kişiselleştirme
+- [x] Favoriler ve playlistler
+- [x] İstatistik sayfası
+- [x] Çevrimdışı mod desteği
+- [ ] iOS desteği
+- [ ] Ekolayzer (Equalizer)
+- [ ] Şarkı sözleri gösterimi
+- [ ] Sosyal paylaşım özellikleri
+- [ ] Widget desteği
+
+---
+
+## 🤝 Katkıda Bulunma
+
+Katkılarınızı memnuniyetle karşılıyoruz!
+
+1. Projeyi fork edin
+2. Yeni bir branch oluşturun (`git checkout -b feature/yeni-ozellik`)
+3. Değişikliklerinizi commit edin (`git commit -m 'feat: yeni özellik eklendi'`)
+4. Branch'i push edin (`git push origin feature/yeni-ozellik`)
+5. Bir Pull Request açın
+
+---
+
+## 📄 Lisans
+
+Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
+
+---
+
+## 👨‍💻 Geliştirici
+
+**Gargamel** — [@Gargamel988](https://github.com/Gargamel988)
+
+---
+
+<p align="center">
+  BeatNova ile müziğin tadını çıkarın 🎧✨
+</p>
