@@ -22,7 +22,6 @@
 
 **BeatNova**, cihazınızdaki müzik dosyalarını otomatik olarak tarayan, güçlü bir arka plan oynatıcısıyla dinlemenizi sağlayan ve yapay zeka destekli müzik asistanıyla yeni şarkılar keşfetmenize yardımcı olan modern bir Android müzik çalar uygulamasıdır.
 
-YouTube'dan indirilen şarkıların kapak resimlerini dosya adındaki video kimliğinden otomatik olarak çeker, internet bağlantısı olmadığında bile kesintisiz müzik deneyimi sunar ve şık, özelleştirilebilir temasıyla göz zevkinize hitap eder.
 
 ---
 
@@ -124,51 +123,6 @@ BeatNova/
 
 ---
 
-## 🚀 Kurulum
-
-### Ön Gereksinimler
-
-- [Node.js](https://nodejs.org/) (v18+)
-- [Expo CLI](https://docs.expo.dev/get-started/installation/)
-- Android Studio (fiziksel cihaz veya emülatör için)
-- Google Gemini API Anahtarı ([AI Studio](https://aistudio.google.com/app/apikey))
-
-### Adımlar
-
-```bash
-# 1. Projeyi klonla
-git clone https://github.com/Gargamel988/BeatNova.git
-cd BeatNova
-
-# 2. Bağımlılıkları yükle
-npm install
-
-# 3. Ortam değişkenlerini ayarla
-cp .env.local.example .env.local
-# .env.local dosyasını düzenleyerek API anahtarlarını gir
-
-# 4. Android build al ve çalıştır
-npx expo run:android
-```
-
-### Ortam Değişkenleri
-
-`.env.local` dosyasında aşağıdaki değişkenleri tanımlayın:
-
-```env
-# Yapay Zeka (Zorunlu — Asistan için)
-GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
-
-# Web Araması (Opsiyonel — Güncel trend bilgileri için)
-TAVILY_API_KEY=your_tavily_api_key
-
-# Google Reklamlar (Opsiyonel — AdMob)
-EXPO_PUBLIC_AD_UNIT_ID_BANNER_HOME=your_ad_unit_id
-EXPO_PUBLIC_AD_UNIT_ID_BANNER_ASSISTANT=your_ad_unit_id
-# ... diğer reklam birimleri
-```
-
----
 
 ## 📱 Ekran Görüntüleri
 
@@ -176,69 +130,22 @@ EXPO_PUBLIC_AD_UNIT_ID_BANNER_ASSISTANT=your_ad_unit_id
 
 ---
 
-## 🔧 Geliştirme Komutları
 
-```bash
-# Geliştirme sunucusu
-npx expo start --clear
-
-# Android'de çalıştır
-npx expo run:android
-
-# TypeScript denetimi
-npx tsc --noEmit
-
-# Lint kontrolü
-npx expo lint
-
-# Üretim build'i (EAS)
-eas build --platform android --profile production
-
-# Google Play Store'a gönder
-eas submit --platform android --profile production --latest
-```
-
----
-
-## 🎯 Yol Haritası
-
-- [x] Cihazdan müzik okuma ve çalma
-- [x] Arka plan oynatma desteği
-- [x] YouTube thumbnail ile otomatik kapak resmi
-- [x] AI müzik asistanı (Gemini)
-- [x] Tema ve kişiselleştirme
-- [x] Favoriler ve playlistler
-- [x] İstatistik sayfası
-- [x] Çevrimdışı mod desteği
-- [ ] iOS desteği
-- [ ] Ekolayzer (Equalizer)
-- [ ] Şarkı sözleri gösterimi
-- [ ] Sosyal paylaşım özellikleri
-- [ ] Widget desteği
-
----
-
-## 🤝 Katkıda Bulunma
-
-Katkılarınızı memnuniyetle karşılıyoruz!
-
-1. Projeyi fork edin
-2. Yeni bir branch oluşturun (`git checkout -b feature/yeni-ozellik`)
-3. Değişikliklerinizi commit edin (`git commit -m 'feat: yeni özellik eklendi'`)
-4. Branch'i push edin (`git push origin feature/yeni-ozellik`)
-5. Bir Pull Request açın
-
----
 
 ## 📄 Lisans
 
-Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
+Bu proje özel (proprietary) bir yazılımdır. Tüm hakları saklıdır.
+
+Kaynak kodun kopyalanması, değiştirilmesi, dağıtılması veya ticari kullanımı
+yazarın (Hatayazılım) yazılı izni olmadan yasaktır.
+
+© 2025-2026 Hatayazılım. Tüm hakları saklıdır.
 
 ---
 
 ## 👨‍💻 Geliştirici
 
-**Gargamel** — [@Gargamel988](https://github.com/Gargamel988)
+**Hatayazılım** — [@Hatayazilim](https://hatayyazilim.com/)
 
 ---
 
