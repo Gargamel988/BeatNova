@@ -9,11 +9,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { formatTime } from "@/utils/format";
+import { useActiveMediaItem } from "@rntp/player";
 
 //expo
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
-import { useAudioPlayerStatus } from "expo-audio";
 import { BlurView } from "expo-blur";
 
 //components
@@ -26,7 +26,6 @@ import PlayerControls from "@/components/segmenttabs/PlayerControls";
 import ProgressSection from "@/components/ProgressSection";
 import SegmentTabs, { SEGMENTS } from "@/components/SegmentTabs";
 import useSongsService, { Song } from "@/components/songs/songsService";
-
 export default function AudioPlayer({
   visible,
   onClose,
@@ -57,6 +56,7 @@ export default function AudioPlayer({
   } = useAudioPlayerContext();
 
   const { position } = useAudioPositionContext();
+  const activeMediaItem = useActiveMediaItem();
   const [songsWithCovers, setSongsState] = useState<Song[]>([]);
   const [sleepTimerModalVisible, setSleepTimerModalVisible] = useState(false);
   const { loadSongs, loadCoversInBackground } = useSongsService();
@@ -69,12 +69,10 @@ export default function AudioPlayer({
     "controls" | "queue" | "details" | "notes"
   >("controls");
 
-  const status = useAudioPlayerStatus(audioPlayer);
+
 
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
-  const isHandlingFinishRef = useRef(false);
-
 
 
   useEffect(() => {
@@ -103,42 +101,7 @@ export default function AudioPlayer({
     }
   }, [visible, selectedSong, activeSong, play, playlist]);
 
-  // Şarkı bittiğinde sonraki şarkıya geç
-  useEffect(() => {
-    if (status?.didJustFinish) {
-      if (!isHandlingFinishRef.current) {
-        // Kapıyı kilitle: didJustFinish false olana kadar bir daha buraya girme
-        isHandlingFinishRef.current = true;
 
-
-        if (loopMode === "one") {
-          // Tek şarkı modu - aynı şarkıyı tekrar çal
-          audioPlayer.seekTo(0);
-          audioPlayer.play();
-        } else if (loopMode === "all" && activeSong) {
-          const currentIndex = playlist.findIndex(
-            (song) => song.id === activeSong.id
-          );
-          if (currentIndex === playlist.length - 1) {
-            // Playlist'in başına dön
-            const firstSong = playlist[0];
-            if (firstSong) {
-              play(firstSong, playlist);
-            }
-          } else {
-            next(playlist, isShuffled, false);
-          }
-        } else {
-          // Normal durumda sonraki şarkıya geç
-          next(playlist, isShuffled, false);
-        }
-      }
-    } else {
-      // didJustFinish false olduğunda (yeni şarkı yüklemeye başlayınca) kilidi aç
-      isHandlingFinishRef.current = false;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.didJustFinish, activeSong?.id, loopMode]);
 
   const currentSong = (hydratedActiveSong ?? selectedSong ?? activeSong) as
     | Song
@@ -152,17 +115,15 @@ export default function AudioPlayer({
   const progress = durationSeconds > 0 ? (position / durationSeconds) * 100 : 0;
 
   const CoverArt = useMemo(() => {
-    const cover =
-      hydratedActiveSong?.metadata?.coverUri ||
-      selectedSong?.metadata?.coverUri ||
-      activeSong?.metadata?.coverUri;
+    const coverUri = activeMediaItem?.artworkUrl || currentSong?.metadata?.coverUri;
 
-    if (cover) {
+    if (coverUri) {
       return (
         <Image
-          source={{ uri: cover }}
+          source={{ uri: coverUri as string }}
           style={{
             width: wp(90),
+
             height: hp(40),
             borderRadius: radius(28),
             marginVertical: hp(3),
@@ -173,6 +134,7 @@ export default function AudioPlayer({
 
     const placeholderLetter =
       (
+        activeMediaItem?.title ||
         hydratedActiveSong?.metadata?.title ||
         activeSong?.filename ||
         selectedSong?.metadata?.title ||
@@ -212,6 +174,8 @@ export default function AudioPlayer({
       </LinearGradient>
     );
   }, [
+    activeMediaItem?.artworkUrl,
+    activeMediaItem?.title,
     hydratedActiveSong?.metadata?.coverUri,
     hydratedActiveSong?.metadata?.title,
     selectedSong?.metadata?.coverUri,
@@ -268,11 +232,11 @@ export default function AudioPlayer({
       },
       {
         label: "Albüm",
-        value: currentSong?.metadata?.album ?? "Bilinmeyen Albüm",
+        value: activeMediaItem?.albumTitle ?? currentSong?.metadata?.album ?? "Bilinmeyen Albüm",
       },
       {
         label: "Sanatçı",
-        value: currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı",
+        value: activeMediaItem?.artist ?? currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı",
       },
       {
         label: "Oluşturulma",
@@ -287,6 +251,8 @@ export default function AudioPlayer({
       durationSeconds,
       currentSong?.metadata?.album,
       currentSong?.metadata?.artist,
+      activeMediaItem?.albumTitle,
+      activeMediaItem?.artist,
     ]
   );
 
@@ -302,10 +268,10 @@ export default function AudioPlayer({
       <View className="flex-1">
         {/* Dynamic Blurred Background */}
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden" }}>
-          {currentSong?.metadata?.coverUri ? (
+          {(activeMediaItem?.artworkUrl || currentSong?.metadata?.coverUri) ? (
             <>
               <Image
-                source={{ uri: currentSong.metadata.coverUri }}
+                source={{ uri: (activeMediaItem?.artworkUrl as string) || currentSong?.metadata?.coverUri }}
                 style={{ width: "100%", height: "100%" }}
                 contentFit="cover"
               />
@@ -379,7 +345,7 @@ export default function AudioPlayer({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı"}
+                {activeMediaItem?.artist ?? currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı"}
               </Text>
             </View>
 
@@ -411,8 +377,7 @@ export default function AudioPlayer({
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {currentSong?.metadata?.title ??
-                    activeSong?.filename ??
+                  {activeMediaItem?.title ?? currentSong?.metadata?.title ??
                     "Şarkı"}
                 </Text>
                 <Text
@@ -423,7 +388,7 @@ export default function AudioPlayer({
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı"}
+                  {activeMediaItem?.artist ?? currentSong?.metadata?.artist}
                 </Text>
               </View>
 

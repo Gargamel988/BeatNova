@@ -17,7 +17,6 @@ export default function ProgressSection({
 	duration,
 	position,
 	formatTime,
-	handleSeek,
 }: ProgressSectionProps) {
 	const { palette: colors } = useThemeModeContext();
 	const { fontSize } = useResponsive();
@@ -25,7 +24,7 @@ export default function ProgressSection({
 		<View style={{ gap: 12 }}>
 			<Progress
 				value={progress}
-				interactive={false}
+				interactive={true}
 				height={fontSize(6)}
 			/>
 			<View className="flex-row justify-between">

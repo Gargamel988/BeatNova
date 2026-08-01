@@ -6,7 +6,6 @@ import React, {
 } from "react";
 import { Song } from "@/components/songs/songsService";
 import useAudioPlayerHook from "@/hooks/useAudioPlayer";
-import { AudioPlayer } from "expo-audio";
 
 type AudioPlayerContextValue = {
   play: (asset: Song, playlist?: Song[]) => void;
@@ -14,7 +13,7 @@ type AudioPlayerContextValue = {
   resume: () => void;
   activeSong: Song | null;
   isPlaying: boolean;
-  audioPlayer: AudioPlayer;
+  audioPlayer: any;
   next: (data: Song[], useShuffle?: boolean, isManual?: boolean) => void;
   previous: (data: Song[], useShuffle?: boolean, isManual?: boolean) => void;
   handleSeek: (durationSeconds: number) => (value: number) => void;

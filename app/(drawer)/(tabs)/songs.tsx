@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import useSongsService, { Song } from "@/components/songs/songsService";
 import { usePlaylistContext } from "@/providers/playlist-context";
-import { useAudioPlayerContext, useAudioPositionContext } from "@/providers/player-context";
+import { useAudioPlayerContext } from "@/providers/player-context";
 import { useResponsive } from "@/hooks/useResponsive";
 import { getFavorites } from "@/services/PlaylistServices";
 
@@ -133,28 +133,28 @@ export default function Songs() {
 
   const displayedSongs = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    
+
     let filtered = songs.filter((song) => {
       if (!song?.metadata?.title) return false;
-      
+
       const title = (song.metadata.title || "").toLowerCase();
       const artist = (song.metadata.artist || "").toLowerCase();
       const album = (song.metadata.album || "").toLowerCase();
       const genre = (song.genre || "").toLowerCase();
       const energy = (song.energy_level || "").toLowerCase();
       const moods = (song.mood || []).map(m => m.toLowerCase());
-      
-      return title.includes(query) || 
-             artist.includes(query) || 
-             album.includes(query) || 
-             genre.includes(query) ||
-             energy.includes(query) ||
-             moods.some(m => m.includes(query));
+
+      return title.includes(query) ||
+        artist.includes(query) ||
+        album.includes(query) ||
+        genre.includes(query) ||
+        energy.includes(query) ||
+        moods.some(m => m.includes(query));
     });
 
     // Apply filters
     const activeFilters = Object.entries(filtersState).filter(([_, isActive]) => isActive);
-    
+
     if (activeFilters.length > 0) {
       filtered = filtered.filter((song) => {
         return activeFilters.every(([filterKey]) => {
@@ -202,7 +202,7 @@ export default function Songs() {
     }
   }, [displayedSongs, setSortedPlaylist]);
 
-  
+
 
   const handleSongUpdate = useCallback((updatedSong: Song) => {
     setSongs((prevSongs) =>
@@ -300,7 +300,7 @@ export default function Songs() {
           onRefresh={refetch}
           ListEmptyComponent={
             displayedSongs.length === 0 ? (
-              <EmptyState 
+              <EmptyState
                 title="Şarkı Bulunamadı"
                 message={searchQuery ? `"${searchQuery}" için sonuç bulunamadı` : "Henüz şarkı bulunamadı"}
                 icon="music"
@@ -309,7 +309,7 @@ export default function Songs() {
           }
         />
       ) : (
-        <EmptyState 
+        <EmptyState
           title="Henüz Şarkı Bulunamadı"
           message="Cihazınızda müzik dosyası bulunmuyor"
           icon="music"

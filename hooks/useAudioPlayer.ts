@@ -1,32 +1,91 @@
 import { Song } from "@/components/songs/songsService";
-import { getsongs, insertSong } from "@/services/SongsService";
-import {
-  useAudioPlayer,
-  useAudioPlayerStatus,
-  setAudioModeAsync,
-} from "expo-audio";
+import { insertSong } from "@/services/SongsService";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useProfile } from "./useProfil";
-import { UpsertListeningTimeMutation } from "@/mutation/statictics";
+import { upsertlisteningtime } from "@/services/StatisticServices";
+
 import { useAds } from "@/providers/AdsProvider";
+import TrackPlayer, {
+  Event,
+  PlaybackState,
+  RepeatMode,
+  PlayerCommand,
+  useIsPlaying,
+  usePlaybackState,
+  useProgress,
+} from "@rntp/player";
 
 type LoopMode = "all" | "one" | "none";
 
+let isPlayerSetup = false;
+let setupPromise: Promise<void> | null = null;
+
+async function ensureTrackPlayerSetup() {
+  if (isPlayerSetup) return;
+  if (!setupPromise) {
+    setupPromise = (async () => {
+      try {
+        TrackPlayer.setupPlayer({
+          contentType: "music",
+          handleAudioBecomingNoisy: true,
+          audioMixing: "exclusive",
+          android: {
+            wakeMode: "network",
+            skipSilenceEnabled: true,
+            taskRemovedBehavior: "stop",
+
+            notification: {
+              channelId: "beatnova-player",
+              channelName: "BeatNova Oynatıcı",
+              smallIcon: "ic_notification",
+            },
+          },
+        });
+
+        // Bildirim paneli ve kilit ekranı butonlarını ayarla
+        TrackPlayer.setCommands({
+          capabilities: [
+            PlayerCommand.PlayPause,
+            PlayerCommand.Next,
+            PlayerCommand.Previous,
+            PlayerCommand.Stop,
+            PlayerCommand.Seek,
+            PlayerCommand.SkipForward,
+            PlayerCommand.SkipBackward,
+          ],
+          handling: "native",
+          forwardInterval: 10,
+          backwardInterval: 10,
+        });
+      } catch (e) {
+        if (!String((e as Error)?.message ?? e).includes("already")) {
+          console.error("TrackPlayer setup error:", e);
+        }
+      } finally {
+        isPlayerSetup = true;
+      }
+    })();
+  }
+  return setupPromise;
+}
+
 export default function useAudioPlayerHook() {
   const queryClient = useQueryClient();
-  const audioPlayer = useAudioPlayer();
-  const status = useAudioPlayerStatus(audioPlayer);
+  const { position: currentPositionSec, duration: currentDurationSec } =
+    useProgress(0.5);
   const { mutateUpdateCurrentSong: mutateUpdateCurrentSongMutation } =
     useProfile();
 
+  // @rntp/player hooks — doğrudan native player state'ini yansıtır
+  const isPlaying = useIsPlaying();
+  const playbackState = usePlaybackState();
+
   const [activeSong, setActiveSong] = useState<Song | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const positionShared = useSharedValue(0);
-  const [isSeeking, setIsSeeking] = useState(false);
   const [nextCount, setNextCount] = useState(0);
   const { showInterstitial } = useAds();
   const [shuffledPlaylist, setShuffledPlaylist] = useState<Song[] | null>(null);
@@ -37,48 +96,67 @@ export default function useAudioPlayerHook() {
 
   // Sleep Timer States
   const [sleepTimerRemaining, setSleepTimerRemaining] = useState<number | null>(
-    null,
+    null
   );
   const [isSleepTimerActive, setIsSleepTimerActive] = useState(false);
   const sleepTimerEndTime = useRef<number | null>(null);
 
-  const upsertListeningTimeMutation = UpsertListeningTimeMutation();
-  const upsertListeningTimeRef = useRef(upsertListeningTimeMutation);
 
   const mutateUpdateCurrentSongRef = useRef(
-    mutateUpdateCurrentSongMutation.mutate,
+    mutateUpdateCurrentSongMutation.mutate
   );
 
-  const totalTimePlayed = useRef(0);
-  const lastSavedTime = useRef(0); // Tracking what we've already sent to Supabase
-  const prevTime = useRef(0);
-  const wasInBackground = useRef(false);
   const activeSongRef = useRef(activeSong);
-  const playCounted = useRef(false);
-  const statsHandlingRef = useRef(false);
-  const prevActiveSongId = useRef<string | null>(null);
+
   const syncingSongs = useRef<Set<string>>(new Set());
 
-  // Update refs every render to keep them current without triggering re-renders of effects
+  // Ref'ler: event listener'larının stale closure sorunu yaşamaması için
+  const loopModeRef = useRef(loopMode);
+  const isShuffledRef = useRef(isShuffled);
+  const playlistRef = useRef(playlist);
+  const shuffledPlaylistRef = useRef(shuffledPlaylist);
+
+  useEffect(() => { loopModeRef.current = loopMode; }, [loopMode]);
+  useEffect(() => { isShuffledRef.current = isShuffled; }, [isShuffled]);
+  useEffect(() => { playlistRef.current = playlist; }, [playlist]);
+  useEffect(() => { shuffledPlaylistRef.current = shuffledPlaylist; }, [shuffledPlaylist]);
+
+  // Setup @rntp/player on hook init
   useEffect(() => {
-    upsertListeningTimeRef.current = upsertListeningTimeMutation;
+    ensureTrackPlayerSetup();
+  }, []);
+
+  // Loading state'ini playbackState'e göre güncelle
+  useEffect(() => {
+    if (playbackState === PlaybackState.Buffering) {
+      setIsLoading(true);
+    } else {
+      setIsLoading(false);
+    }
+  }, [playbackState]);
+
+  // Sync progress
+  useEffect(() => {
+    if (typeof currentPositionSec === "number") {
+      positionShared.value = currentPositionSec;
+      setPosition(currentPositionSec);
+    }
+  }, [currentPositionSec, positionShared]);
+
+  useEffect(() => {
     mutateUpdateCurrentSongRef.current = mutateUpdateCurrentSongMutation.mutate;
-  }, [upsertListeningTimeMutation, mutateUpdateCurrentSongMutation.mutate]);
+  }, [mutateUpdateCurrentSongMutation.mutate]);
 
   useEffect(() => {
     activeSongRef.current = activeSong;
   }, [activeSong]);
 
-  // Ensure song exists in Supabase with its asset ID
   const ensureSongInDb = useCallback(
     async (asset: Song) => {
-      // Prevent concurrent syncs for the same song
       if (syncingSongs.current.has(asset.id)) return asset.id;
 
-      // Small optimization: if we have it in our cache, skip DB check
-      const { data: existingSongs } = (queryClient.getQueryData([
-        "songs",
-      ]) as any) || { data: [] };
+      const { data: existingSongs } =
+        (queryClient.getQueryData(["songs"]) as any) || { data: [] };
       const exists = existingSongs?.some((s: any) => s.id === asset.id);
 
       if (!exists) {
@@ -94,325 +172,223 @@ export default function useAudioPlayerHook() {
       }
       return asset.id;
     },
-    [queryClient],
+    [queryClient]
   );
 
-  const saveListeningTime = useCallback(
-    (
-      songId: string | null | undefined,
-      isManual: boolean = false,
-      forcePlayCount: number = 0,
-    ) => {
-      if (!songId) return;
 
-      // Final remainder to save (total vs what we already saved)
-      const deltaToSave = Math.max(
-        0,
-        totalTimePlayed.current - lastSavedTime.current,
-      );
-      // Skip logic: 30 saniyeden az dinlenmişse ve henüz "oynatıldı" sayılmamışsa atlama kabul et
-      const isIntentionalSkip =
-        isManual && totalTimePlayed.current < 30 && !playCounted.current;
 
-      // Kaydedilecek anlamlı bir süre yoksa ve skip durumu değilse çık
-      if (deltaToSave < 0.1 && !isIntentionalSkip) {
-        return;
-      }
-
-      // Eğer doğal bitiş (heartbeat veya finish efekti) zaten süreyi kaydettiyse,
-      // manuel skip çağrısı 0 saniye kaydederek mükerrer kayıt oluşturmasın.
-      if (isIntentionalSkip && deltaToSave < 0.1 && lastSavedTime.current > 0) {
-        return;
-      }
-
-      upsertListeningTimeRef.current({
-        listeningTime: deltaToSave,
-        songId: songId,
-        skipCount: isIntentionalSkip ? 1 : 0,
-        playCount: forcePlayCount,
-      });
-
-      lastSavedTime.current = totalTimePlayed.current;
-    },
-    [],
-  );
-
-  const compareSongIds = useCallback(
-    (
-      id1: string | null | undefined,
-      id2: string | null | undefined,
-    ): boolean => {
-      if (!id1 || !id2) return false;
-      return id1 === id2;
-    },
-    [],
-  );
-
-  // Statistics & Listening Time Trace
+  // ── Event Listeners ──
   useEffect(() => {
-    // Check if everything is there
-    if (!activeSong?.id || typeof status?.currentTime !== "number") return;
+    let fgActiveSongId: string | null = null;
+    let fgPlayStartTime: number | null = null;
+    let fgAccumulatedTime = 0;
+    let fgSessionTime = 0;
+    let fgHasCountedPlay = false;
 
-    const currentPos = status.currentTime; // expo-audio uses seconds
-
-    // Initialize prevTime on first status update of a song to avoid huge initial delta
-    if (prevTime.current === 0 && currentPos > 0) {
-      prevTime.current = currentPos;
-      return;
-    }
-
-    const delta = currentPos - prevTime.current;
-    if (delta > 0) {
-      // If delta is huge (> 5s), it's a seek or first load, sync but don't accumulate
-      if (delta < 5 || wasInBackground.current) {
-        totalTimePlayed.current += delta;
-        wasInBackground.current = false;
+    const saveFgStats = async (songId: string, playCountDelta: number = 0, skipCountDelta: number = 0) => {
+      let timeToSave = fgAccumulatedTime;
+      fgAccumulatedTime = 0;
+      if (timeToSave >= 1 || playCountDelta > 0 || skipCountDelta > 0) {
+        console.log(`[FOREGROUND STATS] 🚀 VERİTABANINA KAYDEDİLİYOR: songId=${songId}, süre=${timeToSave.toFixed(1)}s, play=${playCountDelta}, skip=${skipCountDelta}`);
+        try {
+          await upsertlisteningtime(timeToSave, songId, skipCountDelta, playCountDelta);
+          console.log(`[FOREGROUND STATS] ✅ Kayıt Başarılı!`);
+        } catch (e) {
+          console.log(`[FOREGROUND STATS] ❌ Kayıt Hatası:`, e);
+        }
+      } else {
+        console.log(`[FOREGROUND STATS] ⚠️ Süre kısa (${timeToSave.toFixed(1)}s), es geçildi.`);
       }
-    }
+    };
 
-    // Heartbeat & Play Count: update stats periodically (30s)
-    const currentDeltaSinceLastSave =
-      totalTimePlayed.current - lastSavedTime.current;
-    if (currentDeltaSinceLastSave >= 30) {
-      let playCountToSend = 0;
-      if (!playCounted.current && totalTimePlayed.current >= 30) {
-        playCountToSend = 1;
-        playCounted.current = true;
+    const trackTransitionSub = TrackPlayer.addEventListener(
+      Event.MediaItemTransition,
+      async (e) => {
+        console.log(`[FOREGROUND STATS] MediaItemTransition -> Yeni Şarkı: ${e.item?.mediaId}`);
+        if (fgActiveSongId) {
+          if (fgPlayStartTime !== null) {
+            const played = (Date.now() - fgPlayStartTime) / 1000;
+            fgAccumulatedTime += played;
+            fgSessionTime += played;
+            console.log(`[FOREGROUND STATS] Şarkı değişiyor. Eklenen süre: ${played.toFixed(1)}s`);
+            fgPlayStartTime = null;
+          }
+          
+          let skipDelta = 0;
+          if (!fgHasCountedPlay && fgSessionTime > 0 && fgSessionTime < 30) {
+            skipDelta = 1;
+          }
+          await saveFgStats(fgActiveSongId, 0, skipDelta);
+        }
+
+        fgActiveSongId = e.item?.mediaId ?? null;
+        fgAccumulatedTime = 0;
+        fgSessionTime = 0;
+        fgHasCountedPlay = false;
+        fgPlayStartTime = Date.now();
+        console.log(`[FOREGROUND STATS] Zamanlayıcı sıfırlandı. Yeni fgActiveSongId: ${fgActiveSongId}`);
+
+        if (e.item && typeof e.item.mediaId === "string") {
+          const list = playlistRef.current || [];
+          const foundSong = list.find((s) => s.id === e.item?.mediaId);
+          if (foundSong) {
+            setActiveSong(foundSong);
+            mutateUpdateCurrentSongRef.current(foundSong.id);
+          }
+        }
       }
+    );
 
-      upsertListeningTimeRef.current({
-        listeningTime: currentDeltaSinceLastSave,
-        songId: activeSong.id,
-        skipCount: 0,
-        playCount: playCountToSend,
-      });
-      lastSavedTime.current = totalTimePlayed.current;
-    }
-
-    prevTime.current = currentPos;
-  }, [activeSong?.id, status?.currentTime]);
-
-  useEffect(() => {
-    // Şarkı değiştiğinde:
-    // 1. Eskiden kalan süre varsa eski şarkıya kaydet
-    if (
-      prevActiveSongId.current &&
-      prevActiveSongId.current !== activeSong?.id
-    ) {
-      saveListeningTime(prevActiveSongId.current, false);
-    }
-
-    // 2. Yeni şarkı için sayaçları sıfırla
-    prevTime.current = 0;
-    totalTimePlayed.current = 0;
-    lastSavedTime.current = 0;
-    playCounted.current = false;
-
-    // 3. Güncel ID'yi kaydet
-    prevActiveSongId.current = activeSong?.id || null;
-  }, [activeSong?.id]);
-
-  useEffect(() => {
-    if (status?.didJustFinish) {
-      if (!statsHandlingRef.current && activeSong?.id) {
-        statsHandlingRef.current = true;
-
-        // Şarkı bittiğinde henüz playCount gönderilmemişse 1 gönder
-        const playCountToSend = playCounted.current ? 0 : 1;
-        if (playCountToSend === 1) playCounted.current = true;
-
-        saveListeningTime(activeSong.id, false, playCountToSend);
+    const isPlayingChangedSub = TrackPlayer.addEventListener(
+      Event.IsPlayingChanged,
+      async (e) => {
+        const { playing } = e;
+        console.log(`[FOREGROUND STATS] IsPlayingChanged -> playing: ${playing}`);
+        if (playing) {
+          if (fgPlayStartTime === null) {
+            fgPlayStartTime = Date.now();
+            console.log(`[FOREGROUND STATS] Zamanlayıcı başlatıldı: ${fgPlayStartTime}`);
+          }
+        } else {
+          if (fgPlayStartTime !== null) {
+            const played = (Date.now() - fgPlayStartTime) / 1000;
+            fgAccumulatedTime += played;
+            fgSessionTime += played;
+            console.log(`[FOREGROUND STATS] Duraklatıldı. Eklenen süre: ${played.toFixed(1)}s`);
+            fgPlayStartTime = null;
+          }
+          if (fgActiveSongId && fgAccumulatedTime >= 5) {
+            let playDelta = 0;
+            if (!fgHasCountedPlay && fgSessionTime >= 30) {
+              playDelta = 1;
+              fgHasCountedPlay = true;
+            }
+            await saveFgStats(fgActiveSongId, playDelta, 0);
+          }
+        }
       }
-    } else {
-      statsHandlingRef.current = false;
-    }
-  }, [status?.didJustFinish, activeSong?.id, saveListeningTime]);
+    );
 
-  useEffect(() => {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: true,
-      interruptionModeAndroid: "duckOthers",
-      interruptionMode: "mixWithOthers",
-    });
+    const playbackStateSub = TrackPlayer.addEventListener(
+      Event.PlaybackStateChanged,
+      async (e) => {
+        if (e.state === PlaybackState.Ended) {
+          console.log(`[FOREGROUND STATS] Şarkı bitti (Ended state).`);
+          if (fgPlayStartTime !== null) {
+            const played = (Date.now() - fgPlayStartTime) / 1000;
+            fgAccumulatedTime += played;
+            fgSessionTime += played;
+            fgPlayStartTime = null;
+          }
+          if (fgActiveSongId) {
+            let playDelta = 0;
+            if (!fgHasCountedPlay && fgSessionTime >= 30) {
+              playDelta = 1;
+              fgHasCountedPlay = true;
+            }
+            await saveFgStats(fgActiveSongId, playDelta, 0);
+          }
+        }
+      }
+    );
+
+    return () => {
+      trackTransitionSub.remove();
+      isPlayingChangedSub.remove();
+      playbackStateSub.remove();
+    };
   }, []);
 
-  const isLoadingSong = useMemo(() => isLoading, [isLoading]);
-
-  // Audio Control Methods
-  const play = async (asset: Song, playlist?: Song[]) => {
+  // ── play fonksiyonu ──
+  const play = useCallback(async (asset: Song, newPlaylist?: Song[]) => {
     setIsLoading(true);
     try {
-      if (activeSong?.id && activeSong.id !== asset.id) {
-        // Switching songs manually from a list
-        saveListeningTime(activeSong.id, true);
-      }
+      await ensureTrackPlayerSetup();
+
       setActiveSong(asset);
-      if (playlist) setPlaylist(playlist);
-      audioPlayer.replace(asset.uri);
-      audioPlayer.play();
-      setIsPlaying(true);
+      const targetPlaylist = newPlaylist || playlistRef.current || [asset];
+      if (newPlaylist) setPlaylist(newPlaylist);
 
-      // Update UI/Profile immediately, then ensure sync in background
+      const mediaItems = targetPlaylist.map((s) => ({
+        mediaId: s.id,
+        url: s.uri,
+        title: s.metadata?.title || s.filename || "Bilinmeyen Şarkı",
+        artist: s.metadata?.artist || "Bilinmeyen Sanatçı",
+        albumTitle: s.metadata?.album || "Bilinmeyen Albüm",
+        artworkUrl: s.metadata?.coverUri || undefined,
+        duration: s.duration || s.metadata?.duration || undefined,
+      }));
+
+      const startIndex = targetPlaylist.findIndex(s => s.id === asset.id);
+      const safeIndex = startIndex >= 0 ? startIndex : 0;
+
+      await TrackPlayer.setMediaItems(mediaItems, safeIndex);
+      await TrackPlayer.play();
+
       mutateUpdateCurrentSongRef.current(asset.id);
-
       await ensureSongInDb(asset);
+    } catch (e) {
+      console.error("TrackPlayer play error:", e);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [ensureSongInDb]);
 
   const pause = useCallback(async () => {
-    if (activeSong?.id) saveListeningTime(activeSong.id, false);
-    audioPlayer.pause();
-    setIsPlaying(false);
+    await TrackPlayer.pause();
     mutateUpdateCurrentSongRef.current(null);
-  }, [audioPlayer, activeSong?.id, saveListeningTime]);
+  }, []);
 
-  const stop = useCallback(() => {
-    if (activeSong?.id) saveListeningTime(activeSong.id, false);
-    audioPlayer.pause();
-    setIsPlaying(false);
+  const stop = useCallback(async () => {
+    await TrackPlayer.stop();
+    await TrackPlayer.clear();
     setActiveSong(null);
     mutateUpdateCurrentSongRef.current(null);
-  }, [audioPlayer, activeSong?.id, saveListeningTime]);
+  }, []);
 
   const resume = useCallback(async () => {
-    audioPlayer.play();
-    setIsPlaying(true);
+    await TrackPlayer.play();
     if (activeSong) {
       const songId = await ensureSongInDb(activeSong);
       mutateUpdateCurrentSongRef.current(songId);
     }
-  }, [audioPlayer, activeSong, ensureSongInDb]);
+  }, [activeSong, ensureSongInDb]);
 
-  const next = useCallback(
-    async (
-      data: Song[],
-      useShuffle: boolean = false,
-      isManual: boolean = true,
-    ) => {
-      setIsLoading(true);
-      try {
-        if (activeSong?.id) saveListeningTime(activeSong.id, isManual);
-        const nextPlaylist =
-          useShuffle && shuffledPlaylist
-            ? shuffledPlaylist
-            : (playlist ?? data);
-        if (!nextPlaylist) return;
-        const currentIndex = nextPlaylist.findIndex((s) =>
-          compareSongIds(s.id, activeSong?.id),
-        );
-        if (currentIndex === -1) return;
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < nextPlaylist.length) {
-          const nextSong = nextPlaylist[nextIndex];
-          setActiveSong(nextSong);
-          audioPlayer.replace(nextSong.uri);
-          audioPlayer.play();
-          setIsPlaying(true);
+  const next = useCallback(async () => {
+    try {
+      await TrackPlayer.skipToNext();
 
-          mutateUpdateCurrentSongRef.current(nextSong.id);
-          await ensureSongInDb(nextSong);
-
-          // Show Interstitial every few skips
-          const newCount = nextCount + 1;
-          if (newCount >= 5) {
-            showInterstitial("SKIPS");
-            setNextCount(0);
-          } else {
-            setNextCount(newCount);
-          }
-        } else if (useShuffle && shuffledPlaylist) {
-          const nextSong = shuffledPlaylist[0];
-          setActiveSong(nextSong);
-          audioPlayer.replace(nextSong.uri);
-          audioPlayer.play();
-          setIsPlaying(true);
-          mutateUpdateCurrentSongRef.current(nextSong.id);
-          await ensureSongInDb(nextSong);
-        }
-      } finally {
-        setIsLoading(false);
+      const newCount = nextCount + 1;
+      if (newCount >= 5) {
+        showInterstitial("SKIPS");
+        setNextCount(0);
+      } else {
+        setNextCount(newCount);
       }
-    },
-    [
-      activeSong,
-      audioPlayer,
-      playlist,
-      shuffledPlaylist,
-      ensureSongInDb,
-      compareSongIds,
-      saveListeningTime,
-      nextCount,
-      showInterstitial,
-    ],
-  );
-
-  const previous = useCallback(
-    async (
-      data: Song[],
-      useShuffle: boolean = false,
-      isManual: boolean = true,
-    ) => {
-      setIsLoading(true);
-      try {
-        if (activeSong?.id) saveListeningTime(activeSong.id, isManual);
-        const prevPlaylist =
-          useShuffle && shuffledPlaylist
-            ? shuffledPlaylist
-            : (playlist ?? data);
-        if (!prevPlaylist) return;
-        const currentIndex = prevPlaylist.findIndex((s) =>
-          compareSongIds(s.id, activeSong?.id),
-        );
-        if (currentIndex === -1) return;
-        const prevIndex = currentIndex - 1;
-        if (prevIndex >= 0) {
-          const prevSong = prevPlaylist[prevIndex];
-          setActiveSong(prevSong);
-          audioPlayer.replace(prevSong.uri);
-          audioPlayer.play();
-          setIsPlaying(true);
-
-          mutateUpdateCurrentSongRef.current(prevSong.id);
-          await ensureSongInDb(prevSong);
-
-          // Show Interstitial every few skips
-          const newCount = nextCount + 1;
-          if (newCount >= 5) {
-            showInterstitial("SKIPS");
-            setNextCount(0);
-          } else {
-            setNextCount(newCount);
-          }
-        } else if (useShuffle && shuffledPlaylist) {
-          const prevSong = prevPlaylist[prevPlaylist.length - 1];
-          setActiveSong(prevSong);
-          audioPlayer.replace(prevSong.uri);
-          audioPlayer.play();
-          setIsPlaying(true);
-          mutateUpdateCurrentSongRef.current(prevSong.id);
-          await ensureSongInDb(prevSong);
-        }
-      } finally {
-        setIsLoading(false);
+    } catch (error) {
+      if (loopModeRef.current === "all") {
+        await TrackPlayer.skipToIndex(0);
       }
-    },
-    [
-      activeSong,
-      audioPlayer,
-      playlist,
-      shuffledPlaylist,
-      ensureSongInDb,
-      compareSongIds,
-      saveListeningTime,
-      nextCount,
-      showInterstitial,
-    ],
-  );
+    }
+  }, [nextCount, showInterstitial]);
 
-  // Sleep Timer Logic (Timestamp BASED for Background Support)
+  const previous = useCallback(async () => {
+    try {
+      await TrackPlayer.skipToPrevious();
+
+      const newCount = nextCount + 1;
+      if (newCount >= 5) {
+        showInterstitial("SKIPS");
+        setNextCount(0);
+      } else {
+        setNextCount(newCount);
+      }
+    } catch (error) {
+      // Ignore, already at beginning
+    }
+  }, [nextCount, showInterstitial]);
+
+  // Sleep Timer Logic
   useEffect(() => {
     let interval: any;
 
@@ -426,20 +402,18 @@ export default function useAudioPlayerHook() {
       const now = Date.now();
       const remainingSeconds = Math.max(
         0,
-        Math.floor((sleepTimerEndTime.current - now) / 1000),
+        Math.floor((sleepTimerEndTime.current - now) / 1000)
       );
-
       setSleepTimerRemaining(remainingSeconds);
 
       if (remainingSeconds <= 0) {
         pause();
-        audioPlayer.volume = 1.0;
+        TrackPlayer.setVolume(1.0);
         setIsSleepTimerActive(false);
         sleepTimerEndTime.current = null;
         if (interval) clearInterval(interval);
       } else if (remainingSeconds <= 120) {
-        // Volume Fading (Last 2 minutes)
-        audioPlayer.volume = remainingSeconds / 120;
+        TrackPlayer.setVolume(remainingSeconds / 120);
       }
     };
 
@@ -448,26 +422,25 @@ export default function useAudioPlayerHook() {
       interval = setInterval(tick, 1000);
     }
 
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      console.log(`[APP STATE] 🔄 Uygulama durumu değişti: ${nextAppState}`);
       if (nextAppState === "active") {
+        console.log(`[APP STATE] 📱 Uygulamaya geri dönüldü! Arka plan senkronizasyonu başlatılıyor...`);
         if (isSleepTimerActive) tick();
-        wasInBackground.current = true;
-      } else if (nextAppState === "background" || nextAppState === "inactive") {
-        // Use activeSongRef instead of activeSong state to avoid loop
-        const currentActiveSong = activeSongRef.current;
-        if (currentActiveSong?.id && totalTimePlayed.current > 0) {
-          const deltaToSave = Math.max(
-            0,
-            totalTimePlayed.current - lastSavedTime.current,
-          );
-          if (deltaToSave > 0) {
-            upsertListeningTimeRef.current({
-              listeningTime: deltaToSave,
-              songId: currentActiveSong.id,
-              skipCount: 0,
-              playCount: 0,
-            });
-            lastSavedTime.current = totalTimePlayed.current;
+        
+        // Arka plandan dönerken senkronizasyonu sağla (uygulama uyurken event'i kaçırmış olabilir)
+        const currentTrack = await TrackPlayer.getActiveMediaItem();
+        console.log(`[APP STATE] 🎵 Aktif track kontrol ediliyor: ${currentTrack?.mediaId || 'Yok'}`);
+        if (currentTrack?.mediaId) {
+          const list = playlistRef.current || [];
+          const foundSong = list.find((s) => s.id === currentTrack.mediaId);
+          console.log(`[APP STATE] 🔎 Bulunan şarkı: ${foundSong?.filename || 'Bulunamadı'} (ID: ${foundSong?.id})`);
+          if (foundSong && foundSong.id !== activeSongRef.current?.id) {
+            console.log(`[APP STATE] ⚠️ Şarkı değişmiş! UI güncelleniyor: ${activeSongRef.current?.id} -> ${foundSong.id}`);
+            setActiveSong(foundSong);
+            mutateUpdateCurrentSongRef.current(foundSong.id);
+          } else {
+            console.log(`[APP STATE] ✅ Şarkı aynı, değişiklik yapılmadı.`);
           }
         }
       }
@@ -475,119 +448,71 @@ export default function useAudioPlayerHook() {
 
     const subscription = AppState.addEventListener(
       "change",
-      handleAppStateChange,
+      handleAppStateChange
     );
 
     return () => {
       if (interval) clearInterval(interval);
       subscription.remove();
     };
-  }, [isSleepTimerActive, audioPlayer, pause]);
+  }, [isSleepTimerActive, pause]);
 
-  const updateSleepTimer = useCallback(
-    (minutes: number | null) => {
-      if (minutes === null) {
-        sleepTimerEndTime.current = null;
-        setSleepTimerRemaining(null);
-        setIsSleepTimerActive(false);
-        audioPlayer.volume = 1.0;
-      } else {
-        const endTime = Date.now() + minutes * 60 * 1000;
-        sleepTimerEndTime.current = endTime;
-        setSleepTimerRemaining(minutes * 60);
-        setIsSleepTimerActive(true);
-      }
-    },
-    [audioPlayer],
-  );
-
-  useEffect(() => {
-    if (!status || isSeeking) return;
-    if (typeof status.currentTime === "number") {
-      const positionInSeconds = status.currentTime;
-      positionShared.value = positionInSeconds;
-      setPosition(positionInSeconds);
+  const updateSleepTimer = useCallback((minutes: number | null) => {
+    if (minutes === null) {
+      sleepTimerEndTime.current = null;
+      setSleepTimerRemaining(null);
+      setIsSleepTimerActive(false);
+      TrackPlayer.setVolume(1.0);
+    } else {
+      const endTime = Date.now() + minutes * 60 * 1000;
+      sleepTimerEndTime.current = endTime;
+      setSleepTimerRemaining(minutes * 60);
+      setIsSleepTimerActive(true);
     }
-    if (typeof status.playing === "boolean") setIsPlaying(status.playing);
-  }, [status, isSeeking, positionShared]);
+  }, []);
 
   const handleSeek = useCallback(
     (durationSeconds: number) => (value: number) => {
-      if (durationSeconds <= 0 || !audioPlayer) return;
+      if (durationSeconds <= 0) return;
       const nextPositionSeconds = (value / 100) * durationSeconds;
-      audioPlayer.seekTo(nextPositionSeconds);
+      TrackPlayer.seekTo(nextPositionSeconds);
       setPosition(nextPositionSeconds);
     },
-    [audioPlayer],
+    []
   );
 
-  const updateLoopMode = useCallback(
-    (mode: LoopMode) => {
-      setLoopMode(mode);
-      audioPlayer.loop = mode === "one";
-    },
-    [audioPlayer],
-  );
+  const updateLoopMode = useCallback((mode: LoopMode) => {
+    setLoopMode(mode);
+    if (mode === "one") {
+      TrackPlayer.setRepeatMode(RepeatMode.One);
+    } else if (mode === "all") {
+      TrackPlayer.setRepeatMode(RepeatMode.All);
+    } else {
+      TrackPlayer.setRepeatMode(RepeatMode.Off);
+    }
+  }, []);
 
   const shuffle = useCallback(
-    (enable: boolean) => {
+    async (enable: boolean) => {
       setIsShuffled(enable);
-      const sourcePlaylist = playlist ?? [];
-      if (enable && sourcePlaylist.length > 0) {
-        const otherSongs = activeSong
-          ? sourcePlaylist.filter((s) => !compareSongIds(s.id, activeSong.id))
-          : [...sourcePlaylist];
-        const shuffled = [...otherSongs].sort(() => Math.random() - 0.5);
-        const newPlaylist = activeSong ? [activeSong, ...shuffled] : shuffled;
-        setShuffledPlaylist(newPlaylist);
-      } else {
-        setShuffledPlaylist(null);
-      }
+      TrackPlayer.setShuffleEnabled(enable);
     },
-    [activeSong, playlist, compareSongIds],
+    []
   );
 
-  useEffect(() => {
-    if (!audioPlayer) return;
-    // @ts-expect-error - Commands missing from type definition
-    const playSub = audioPlayer.addListener("playCommand", () => resume());
-    // @ts-expect-error
-    const pauseSub = audioPlayer.addListener("pauseCommand", () => pause());
-    // @ts-expect-error
-    const nextSub = audioPlayer.addListener("nextCommand", () =>
-      next(playlist || [], isShuffled),
-    );
-    // @ts-expect-error
-    const prevSub = audioPlayer.addListener("previousCommand", () =>
-      previous(playlist || [], isShuffled),
-    );
-    return () => {
-      playSub.remove();
-      pauseSub.remove();
-      nextSub.remove();
-      prevSub.remove();
+  // Player object compatible with components using audioPlayer properties
+  const audioPlayerAdapter = useMemo(() => {
+    return {
+      isLoaded: !!activeSong,
+      duration: currentDurationSec || activeSong?.duration || 0,
+      currentTime: position,
+      playing: isPlaying,
+      seekTo: (sec: number) => TrackPlayer.seekTo(sec),
+      play: () => TrackPlayer.play(),
+      pause: () => TrackPlayer.pause(),
+      volume: 1.0,
     };
-  }, [audioPlayer, resume, pause, next, previous, playlist, isShuffled]);
-
-  useEffect(() => {
-    if (!activeSong) {
-      audioPlayer.setActiveForLockScreen(false);
-      return;
-    }
-    const metadata = {
-      title:
-        activeSong.metadata?.title || activeSong.filename || "Bilinmeyen Şarkı",
-      artist: activeSong.metadata?.artist || "Bilinmeyen Sanatçı",
-      albumTitle: activeSong.metadata?.album || "Bilinmeyen Albüm",
-      artworkUrl: activeSong.metadata?.coverUri || undefined,
-    };
-    audioPlayer.setActiveForLockScreen(true, metadata, {
-      showSeekBackward: true,
-      showSeekForward: true,
-      showNextTrack: true,
-      showPreviousTrack: true,
-    } as any);
-  }, [audioPlayer, activeSong, isPlaying]);
+  }, [activeSong, currentDurationSec, position, isPlaying]);
 
   return {
     play,
@@ -600,14 +525,14 @@ export default function useAudioPlayerHook() {
     shuffle,
     loop: updateLoopMode,
     activeSong,
-    audioPlayer,
+    audioPlayer: audioPlayerAdapter,
     isPlaying,
     position,
     positionShared,
     loopMode,
     isShuffled,
     playlist,
-    isLoading: isLoadingSong,
+    isLoading,
     sleepTimerRemaining,
     isSleepTimerActive,
     setSleepTimer: updateSleepTimer,

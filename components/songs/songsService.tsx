@@ -124,10 +124,27 @@ export default function useSongsService() {
     return { title: name, artist: "Bilinmeyen Sanatçı" };
   };
 
+  // Dosya adından Youtube ID'sini çıkarmayı dener: örn "Şarkı Adı(_pBakog-A3PU_).m4a" -> "pBakog-A3PU"
+  const extractYoutubeId = (filename: string): string | null => {
+    // 1. `(_ID_)` formatı (kullanıcının ağırlıklı formatı)
+    let match = filename.match(/\(_([a-zA-Z0-9_-]{11})_\)/);
+    if (match) return match[1];
+
+    // 2. `[ID]` formatı
+    match = filename.match(/\[([a-zA-Z0-9_-]{11})\]/);
+    if (match) return match[1];
+
+    // 3. `-ID.uzantı` veya `(ID)` formatları
+    match = filename.match(/[-(]([a-zA-Z0-9_-]{11})[)\.]/);
+    if (match) return match[1];
+
+    return null;
+  };
+
   const loadSongs = async (): Promise<Song[]> => {
     try {
       const { status } = await MediaLibrary.getPermissionsAsync();
-      
+
       // Eğer izin yoksa sessizce boş dön
       if (status !== "granted") {
         return [];
@@ -150,8 +167,11 @@ export default function useSongsService() {
               const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
               uri = assetInfo.localUri || assetInfo.uri || uri;
             } catch (e) {
+              console.error("Asset info error:", e);
             }
           }
+
+
 
           return {
             ...asset,
@@ -204,17 +224,27 @@ export default function useSongsService() {
         if (!song?.metadata) continue;
 
         const { title, artist } = song.metadata;
-        if (!title || !artist || title === "Bilinmeyen Şarkı" || artist === "Bilinmeyen Sanatçı") {
-          continue;
-        }
+        const isUnknown = !title || !artist || title === "Bilinmeyen Şarkı" || artist === "Bilinmeyen Sanatçı";
 
         try {
           // Pre-check if it already has a cover to avoid redundant fetching
           if (song.metadata.coverUri) continue;
 
-          let coverUrl = await fetchCoverFromiTunes(title, artist);
-          if (!coverUrl) {
-            coverUrl = await fetchCoverFromDeezer(title, artist);
+          // 1. Önce Youtube ID'si var mı diye dosya ismine bakalım (Mükemmel eşleşme sağlar)
+          const youtubeId = extractYoutubeId(song.filename);
+          let coverUrl = youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null;
+
+          // 2. Eğer Youtube ID yoksa internetten aramaya geç (İnternet varsa ve isim biliniyorsa)
+          if (!coverUrl && !isUnknown) {
+            coverUrl = await fetchCoverFromiTunes(title, artist);
+            if (!coverUrl) {
+              coverUrl = await fetchCoverFromDeezer(title, artist);
+            }
+          }
+
+          if (!coverUrl && isUnknown) {
+            // Şarkı bilinmiyor ve Youtube ID de yoksa boşuna beklemeye gerek yok
+            continue;
           }
 
           if (coverUrl) {

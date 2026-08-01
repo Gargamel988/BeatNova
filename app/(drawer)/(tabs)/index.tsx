@@ -169,13 +169,7 @@ export default function Index() {
       })
       .filter((song): song is NonNullable<typeof song> => song !== null);
   }, [listeningHistory.data, songsDetails.data]);
-  const isLoading =
-    permissionStatus === "loading" ||
-    songsDetails.isLoading ||
-    (permissionStatus === "granted" && deviceSongs.isLoading) ||
-    favorites.isLoading ||
-    listeningHistory.isLoading ||
-    playlists.isLoading;
+  const isPermissionLoading = permissionStatus === "loading";
 
   const handlePlaySong = (assetId: string) => {
     if (!deviceSongs.data) return;
@@ -190,7 +184,7 @@ export default function Index() {
     setPlaylist(playlist);
   };
 
-  if (isLoading) {
+  if (isPermissionLoading) {
     return (
       <SafeAreaView style={{ flex: 1 }}>
         <LoadingState message="Yükleniyor..." fullScreen />

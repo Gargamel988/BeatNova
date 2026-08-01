@@ -12,6 +12,13 @@ const upsertlisteningtime = async (
       return null;
     }
 
+    const safeListeningDelta = Math.max(0, Math.round(listeningTime));
+    const safeSkipDelta = Math.max(0, Math.round(skipCount));
+    const safePlayCount = Math.max(0, Math.round(playCount));
+
+    if (safeListeningDelta === 0 && safeSkipDelta === 0 && safePlayCount === 0) {
+      return null;
+    }
 
     const user = await getUser();
     if (!user?.id) {
@@ -29,10 +36,6 @@ const upsertlisteningtime = async (
       throw selectError;
     }
 
-    const safeListeningDelta = Math.max(0, Math.round(listeningTime));
-    const safeSkipDelta = Math.max(0, Math.round(skipCount));
-    const safePlayCount = Math.max(0, Math.round(playCount));
-
     const finalPayload = {
       user_id: user.id,
       song_id: songId,
@@ -40,12 +43,6 @@ const upsertlisteningtime = async (
       skip_count: safeSkipDelta + (existing?.skip_count ?? 0),
       play_count: safePlayCount + (existing?.play_count ?? 0),
     };
-
-
-    // Eğer hiçbir değer yoksa kayıt yapma
-    if (safeListeningDelta === 0 && safeSkipDelta === 0 && safePlayCount === 0) {
-      return existing ?? null;
-    }
 
     const { data, error } = await supabase
       .from("listening_history")
@@ -67,10 +64,13 @@ const upsertlisteningtime = async (
     return null;
   }
 };
- const getlisteninghistory = async () => {
+
+const getlisteninghistory = async () => {
   try {
     const user = await getUser();
     if (!user?.id) {
+      // Çevrimdışı kullanıcılar için history'i local'den okuyup harmanlayabiliriz
+      // Ancak şu anlık en azından boş dönelim (hata patlamasın)
       return [];
     }
     const { data, error } = await supabase
@@ -87,7 +87,6 @@ const upsertlisteningtime = async (
     if (error?.message?.includes("session missing")) return [];
     return [];
   }
- }
- 
+}
 
 export { upsertlisteningtime, getlisteninghistory };

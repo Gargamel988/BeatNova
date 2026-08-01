@@ -7,7 +7,8 @@ import {
   ScrollView,
   Alert,
   StyleSheet,
- Linking } from "react-native";
+  Linking
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -24,14 +25,14 @@ import {
   PlayCircle,
   Info,
   Clock,
- Music, ImageIcon, ExternalLink } from "lucide-react-native";
+  Music, ImageIcon
+} from "lucide-react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAudioPlayerContext } from "@/providers/player-context";
 import * as MediaLibrary from "expo-media-library";
-
-
+import { supabase } from "@/lib/supabase";
 
 import { SleepTimerModal } from "@/components/settings/SleepTimerModal";
 
@@ -55,6 +56,19 @@ export default function Settings() {
 
   const [notifications, setNotifications] = useState(true);
   const [isSleepTimerModalVisible, setIsSleepTimerModalVisible] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const formatTimer = useCallback((seconds: number | null) => {
     if (seconds === null || seconds <= 0) return "Kapalı";
@@ -170,9 +184,9 @@ export default function Settings() {
     isDangerous?: boolean;
   }) => (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={showToggle && onToggleChange ? () => onToggleChange(!toggleValue) : onPress}
       activeOpacity={0.7}
-      disabled={showToggle || isLoggingOut}
+      disabled={isLoggingOut}
       style={{
         backgroundColor: cardBg,
         borderRadius: radius(16),
@@ -258,20 +272,24 @@ export default function Settings() {
         <SettingItem icon={Info} title="Hakkında" subtitle="BeatNova v1.0.0" onPress={() => Alert.alert("BeatNova Hakkında", "BeatNova v1.0.0\n\nYapay zeka destekli müzik asistanı ile müzik keşfetmeyin.\n\n© 2024 BeatNova")} />
 
         <Text style={{ fontSize: fontSize(16), fontWeight: "600", color: textPrimary, marginBottom: hp(1.5), marginTop: hp(2) }}>İzinler</Text>
-        <SettingItem 
-          icon={Music} 
-          title="Müzik Kitaplığı" 
-          subtitle={musicStatus === 'granted' ? "Erişim Verildi" : "Erişim Yok (Ayarlara Git)"} 
-          onPress={() => Linking.openSettings()} 
+        <SettingItem
+          icon={Music}
+          title="Müzik Kitaplığı"
+          subtitle={musicStatus === 'granted' ? "Erişim Verildi" : "Erişim Yok (Ayarlara Git)"}
+          onPress={() => Linking.openSettings()}
         />
-        <SettingItem 
-          icon={ImageIcon} 
-          title="Fotoğraf Kitaplığı" 
-          subtitle={photoStatus === 'granted' ? "Erişim Verildi" : "Erişim Yok (Ayarlara Git)"} 
-          onPress={() => Linking.openSettings()} 
+        <SettingItem
+          icon={ImageIcon}
+          title="Fotoğraf Kitaplığı"
+          subtitle={photoStatus === 'granted' ? "Erişim Verildi" : "Erişim Yok (Ayarlara Git)"}
+          onPress={() => Linking.openSettings()}
         />
 
-        <SettingItem icon={LogOut} title="Çıkış Yap" isDangerous onPress={handleLogout} />
+        {isAuthenticated ? (
+          <SettingItem icon={LogOut} title="Çıkış Yap" isDangerous onPress={handleLogout} />
+        ) : (
+          <SettingItem icon={LogOut} title="Giriş Yap / Kayıt Ol" onPress={() => router.replace("/(auth)/login")} />
+        )}
       </ScrollView>
       <SleepTimerModal
         visible={isSleepTimerModalVisible}

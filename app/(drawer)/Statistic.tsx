@@ -1,4 +1,4 @@
-import React, { useMemo , useEffect } from "react";
+import React, { useMemo, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { View } from "@/components/ui/view";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -6,7 +6,7 @@ import { useThemeModeContext } from "@/providers/theme-provider";
 import { useColor } from "@/hooks/useColor";
 import { Headphones, Activity, Clock, ArrowLeft } from "lucide-react-native";
 import { router } from "expo-router";
-import { TouchableOpacity } from "react-native";
+import { RefreshControl, TouchableOpacity } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { ScrollView } from "@/components/ui/scroll-view";
@@ -15,7 +15,6 @@ import { formathour, formatDailyAverage } from "@/utils/format";
 import { SummaryCard } from "@/components/statistics/SummaryCard";
 import { WeeklyChart } from "@/components/statistics/WeeklyChart";
 import { MostPlayedSongs } from "@/components/statistics/MostPlayedSongs";
-import { QuickInsights } from "@/components/statistics/QuickInsights";
 import { HourlyChart } from "@/components/statistics/HourlyChart";
 import { GenreChart } from "@/components/statistics/GenreChart";
 import { PlaybackHabits } from "@/components/statistics/PlaybackHabits";
@@ -37,7 +36,6 @@ export default function Statistic() {
   const { showInterstitial } = useAds();
 
   useEffect(() => {
-    // Show an interstitial ad when entering Statistics for a premium feel
     showInterstitial('STATS_ENTRY');
   }, []);
 
@@ -59,60 +57,62 @@ export default function Statistic() {
     ],
   });
 
-  const formatday = (day: string) => {
-    return new Date(day).toLocaleDateString("tr-TR", { weekday: "long" });
-  };
+  const { totalListeningTime, mostActiveDay, summaryCards } = useMemo(() => {
+    const totalListeningTime =
+      listeninghistory?.data?.reduce((acc, item) => acc + item.total_seconds, 0) || 0;
 
-  const totalListeningTime =
-    listeninghistory?.data?.reduce((acc, item) => acc + item.total_seconds, 0) || 0;
+    const mostActiveDay = listeninghistory?.data?.reduce(
+      (
+        max: { created_at: string; total_seconds: number } | null,
+        item: { created_at: string; total_seconds: number }
+      ) => {
+        if (!max || (item.total_seconds || 0) > (max.total_seconds || 0)) {
+          return item;
+        }
+        return max;
+      },
+      null
+    );
 
-  const mostActiveDay = listeninghistory?.data?.reduce(
-    (
-      max: { created_at: string; total_seconds: number } | null,
-      item: { created_at: string; total_seconds: number }
-    ) => {
-      if (!max || (item.total_seconds || 0) > (max.total_seconds || 0)) {
-        return item;
-      }
-      return max;
-    },
-    null
-  );
+    const playedSongs = listeninghistory?.data?.reduce((acc: number, item: any) => acc + (item.play_count || 0), 0) || 0;
 
-  const summaryCards = [
-    {
-      id: "total",
-      label: "Toplam Dinleme",
-      value: formathour(totalListeningTime),
-      subLabel: "Bu ay",
-      delta: "+12%",
-      icon: Headphones,
-    },
-    {
-      id: "playedSongs",
-      label: "Çalınan Şarkı",
-      value: listeninghistory?.data?.reduce((acc: number, item: any) => acc + (item.play_count || 0), 0) || 0,
-      subLabel: "Bu ay",
-      delta: "+4%",
-      icon: Activity,
-    },
-    {
-      id: "mostActiveDay",
-      label: "En Aktif Gün",
-      value: mostActiveDay?.created_at ? formatday(mostActiveDay.created_at) : "-",
-      subLabel: "Bu hafta",
-      delta: "+8%",
-      icon: Clock,
-    },
-    {
-      id: "daily",
-      label: "Günlük Ortalama",
-      value: formatDailyAverage([totalListeningTime]),
-      subLabel: "Bu ay",
-      delta: "+15%",
-      icon: Activity,
-    },
-  ] as const;
+    const summaryCards = [
+      {
+        id: "total",
+        label: "Toplam Dinleme",
+        value: formathour(totalListeningTime),
+        subLabel: "Bu ay",
+        delta: "+12%",
+        icon: Headphones,
+      },
+      {
+        id: "playedSongs",
+        label: "Çalınan Şarkı",
+        value: playedSongs,
+        subLabel: "Bu ay",
+        delta: "+4%",
+        icon: Activity,
+      },
+      {
+        id: "mostActiveDay",
+        label: "En Aktif Gün",
+        value: mostActiveDay?.created_at ? new Date(mostActiveDay.created_at).toLocaleDateString("tr-TR", { weekday: "long" }) : "-",
+        subLabel: "Bu hafta",
+        delta: "+8%",
+        icon: Clock,
+      },
+      {
+        id: "daily",
+        label: "Günlük Ortalama",
+        value: formatDailyAverage([totalListeningTime]),
+        subLabel: "Bu ay",
+        delta: "+15%",
+        icon: Activity,
+      },
+    ] as const;
+
+    return { totalListeningTime, mostActiveDay, summaryCards };
+  }, [listeninghistory?.data]);
 
   const weeklyListeningData = useMemo(() => {
     if (!listeninghistory?.data || listeninghistory?.data?.length === 0) return [];
@@ -171,71 +171,26 @@ export default function Statistic() {
       id: song.id,
       title: song.title || "Bilinmeyen Şarkı",
       artist: song.artist || "Bilinmeyen Sanatçı",
-      plays: 0, // Component içinde hesaplanacak
+      plays: 0,
       duration: song.duration || 0,
       cover: song.cover_url || null,
     }));
   }, [songs?.data]);
 
-  const activeDaysCount = useMemo(() => {
-    if (!listeninghistory?.data) return 0;
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const uniqueDays = new Set(
-      listeninghistory.data
-        .filter((item: any) => new Date(item.created_at) >= thirtyDaysAgo)
-        .map((item: any) => new Date(item.created_at).toISOString().split('T')[0])
-    );
 
-    return uniqueDays.size;
+  const hourlyListeningData = useMemo(() => {
+    const buckets = Array.from({ length: 24 }, (_, hour) => ({ hour, value: 0 }));
+    listeninghistory?.data?.forEach((item: any) => {
+      const hour = new Date(item.created_at).getHours();
+      buckets[hour].value += item.total_seconds || 0;
+    });
+    return buckets;
   }, [listeninghistory?.data]);
 
-  const quickInsights = [
-    {
-      id: "favorites",
-      label: "Favoriler",
-      value: (favorites?.data?.length || 0).toString(),
-      hint: (favorites?.data?.length || 0) > 0 ? "Koleksiyonun büyüyor" : "Henüz favori yok",
-    },
-    {
-      id: "activeDays",
-      label: "Aktif Günler",
-      value: `${activeDaysCount}/30`,
-      hint: activeDaysCount > 20 ? "Harika gidiyorsun!" : "Daha fazla müzik dinle!",
-    },
-  ];
-
-  const hourlyListeningData = [
-    { hour: 0, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 0).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 1, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 1).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 2, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 2).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 3, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 3).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 4, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 4).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 5, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 5).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 6, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 6).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 7, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 7).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 8, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 8).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 9, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 9).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 10, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 10).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 11, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 11).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 12, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 12).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 13, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 13).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 14, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 14).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 15, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 15).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 16, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 16).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 17, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 17).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 18, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 18).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 19, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 19).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 20, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 20).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 21, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 21).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 22, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 22).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-    { hour: 23, value: listeninghistory?.data?.filter((item: any) => new Date(item.created_at).getHours() === 23).reduce((acc: number, item: any) => acc + (item.total_seconds || 0), 0) || 0 },
-  ];
-
   // Genre tahmin fonksiyonu (artist'e göre basit bir tahmin)
-  const getGenreFromArtist = (artist: string): string => {
+  const getGenreFromArtist = React.useCallback((artist: string): string => {
     if (!artist) return "Diğer";
     const artistLower = artist.toLowerCase();
 
@@ -276,7 +231,7 @@ export default function Statistic() {
     }
 
     return "Diğer";
-  };
+  }, []);
 
 
 
@@ -341,7 +296,7 @@ export default function Statistic() {
     return genres.length > 0 ? genres : [
       { genre: "Veri Yok", value: 100, color: colors.textMuted },
     ];
-  }, [listeninghistory?.data, songs?.data, colors]);
+  }, [listeninghistory?.data, songs?.data, colors, getGenreFromArtist]);
 
   // Oynatma alışkanlığı verilerini hesapla
   const playbackHabitsData = useMemo(() => {
@@ -463,9 +418,10 @@ export default function Statistic() {
   const mostSkippedSongs = playbackHabitsData.mostSkippedSongs;
 
   const replayScores = useMemo(() => {
+    const songMap = new Map(songs?.data?.map((s) => [s.id, s]) ?? []);
     return listeninghistory?.data?.reduce((acc, item) => {
       if (item.play_count) {
-        const song = songs?.data?.find((song) => song.id === item.song_id);
+        const song = songMap.get(item.song_id);
         if (song) {
           acc.push({ title: song.title || "Bilinmeyen Şarkı", artist: song.artist || "Bilinmeyen Sanatçı", replayCount: item.play_count });
         }
@@ -488,6 +444,18 @@ export default function Statistic() {
           gap: hp(2.5),
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={listeninghistory?.isRefetching || songs?.isRefetching || favorites?.isRefetching}
+            onRefresh={() => {
+              listeninghistory?.refetch();
+              songs?.refetch();
+              favorites?.refetch();
+            }}
+            colors={[colors.primary]}
+            tintColor={colors.accentForeground}
+          />
+        }
       >
         {/* Header with Back Button */}
         <View

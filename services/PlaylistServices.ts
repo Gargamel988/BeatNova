@@ -12,7 +12,16 @@ const getPlaylists = async () => {
 
     const { data: playlists, error: playlistsError } = await supabase
       .from("playlists")
-      .select("*")
+      .select(`
+        *,
+        playlist_songs (
+          song_duration,
+          songs (
+            cover_url,
+            duration
+          )
+        )
+      `)
       .order("created_at", { ascending: false })
       .eq("user_id", user.id);
 
@@ -24,102 +33,47 @@ const getPlaylists = async () => {
       return [];
     }
 
-    // Her playlist için şarkı sayısını ve toplam süreyi al
-    const playlistsWithCounts = await Promise.all(
-      playlists.map(async (playlist) => {
-        // Şarkı sayısını al
-        const { count, error: countError } = await supabase
-          .from("playlist_songs")
-          .select("*", { count: "exact", head: true })
-          .eq("playlist_id", playlist.id);
-
-        const songCount = countError ? 0 : count || 0;
-
-        // Duration'ları al ve ilk 4 şarkının cover_url'lerini al
-        let totalDuration = 0;
-        let songCoverUrls: string[] = [];
-
-        if (songCount > 0) {
-          // İlk 4 şarkıyı al (cover_url için)
-          const { data: firstPlaylistSongs, error: firstSongError } =
-            await supabase
-              .from("playlist_songs")
-              .select("song_id, songs(cover_url)")
-              .eq("playlist_id", playlist.id)
-              .order("id", { ascending: true })
-              .limit(4);
-
-          if (
-            !firstSongError &&
-            firstPlaylistSongs &&
-            firstPlaylistSongs.length > 0
-          ) {
-            songCoverUrls = firstPlaylistSongs
-              .map((item: any) => {
-                // songs bir array olabilir veya tek obje olabilir
-                let songsData = item.songs;
-
-                // Eğer array ise ilk elemanı al
-                if (Array.isArray(songsData) && songsData.length > 0) {
-                  songsData = songsData[0];
-                }
-
-                if (
-                  songsData &&
-                  typeof songsData === "object" &&
-                  songsData !== null
-                ) {
-                  const coverUrl = songsData.cover_url;
-                  if (
-                    coverUrl &&
-                    typeof coverUrl === "string" &&
-                    coverUrl.trim() !== ""
-                  ) {
-                    return coverUrl;
-                  }
-                }
-                return null;
-              })
-              .filter((url): url is string => url !== null);
-          }
-
-          // Tüm şarkıların duration'larını topla
-          const { data: playlistSongs, error: durationError } = await supabase
-            .from("playlist_songs")
-            .select("song_duration, songs(duration)")
-            .eq("playlist_id", playlist.id);
-
-          if (!durationError && playlistSongs && playlistSongs.length > 0) {
-            totalDuration = playlistSongs.reduce((acc, item) => {
-              // Önce song_duration alanını kontrol et, yoksa songs.duration kullan
-              const duration =
-                item.song_duration ??
-                (typeof item.songs === "object" &&
-                item.songs !== null &&
-                "duration" in item.songs
-                  ? (item.songs as any).duration
-                  : 0);
-              return acc + (Number(duration) || 0);
-            }, 0);
+    // Tek sorguda gelen verileri yerel olarak (istemcide) işle (N+1 sorununu çözer)
+    const playlistsWithCounts = playlists.map((playlist: any) => {
+      const pSongs = playlist.playlist_songs || [];
+      const songCount = pSongs.length;
+      
+      let totalDuration = 0;
+      const songCoverUrls: string[] = [];
+      
+      pSongs.forEach((ps: any, index: number) => {
+        // Süre hesaplama
+        let duration = ps.song_duration;
+        if (duration == null) {
+          const songsObj = Array.isArray(ps.songs) ? ps.songs[0] : ps.songs;
+          duration = songsObj?.duration || 0;
+        }
+        totalDuration += Number(duration) || 0;
+        
+        // İlk 4 şarkının kapak resmini al
+        if (songCoverUrls.length < 4) {
+          const songsObj = Array.isArray(ps.songs) ? ps.songs[0] : ps.songs;
+          const coverUrl = songsObj?.cover_url;
+          if (coverUrl && typeof coverUrl === "string" && coverUrl.trim() !== "") {
+            songCoverUrls.push(coverUrl.trim());
           }
         }
+      });
 
-        // PlaylistListItem'ın beklediği formata dönüştür
-        return {
-          ...playlist,
-          song_count: songCount,
-          songCount: songCount, // PlaylistListItem için
-          duration: totalDuration, // Toplam süre (saniye cinsinden)
-          cover_url: (playlist as any).cover_url || "", // Playlist'teki cover_url
-          cover: (playlist as any).cover_url || "", // PinnedPlaylistCard için
-          song_cover_urls: songCoverUrls, // İlk 4 şarkının cover_url'leri
-          isPinned: (playlist as any).isPinned || false, // Eğer yoksa false
-          mood: (playlist as any).mood || playlist.tags || [], // İlk tag'i mood olarak kullan
-          gradient: (playlist as any).gradient || ["#a855f7", "#ec4899"] as [string, string], // PinnedPlaylistCard için fallback gradient
-          playlist_songs: [], // Boş array
-        };
-      })
-    );
+      return {
+        ...playlist,
+        song_count: songCount,
+        songCount: songCount,
+        duration: totalDuration,
+        cover_url: playlist.cover_url || "",
+        cover: playlist.cover_url || "",
+        song_cover_urls: songCoverUrls,
+        isPinned: playlist.isPinned || false,
+        mood: playlist.mood || playlist.tags || [],
+        gradient: playlist.gradient || ["#a855f7", "#ec4899"],
+        playlist_songs: [],
+      };
+    });
 
     return playlistsWithCounts;
   } catch (error) {
@@ -265,10 +219,13 @@ const getPlaylistSongs = async (playlistId: number | string) => {
       return [];
     }
 
-    // Önce playlist_songs tablosundan song_id'leri al
+    // Tek sorguda playlist şarkılarını ve song detaylarını getir
     const { data: playlistSongs, error: playlistSongsError } = await supabase
       .from("playlist_songs")
-      .select("song_id, id")
+      .select(`
+        id,
+        songs (*)
+      `)
       .eq("playlist_id", playlistId)
       .order("id", { ascending: true });
 
@@ -276,34 +233,19 @@ const getPlaylistSongs = async (playlistId: number | string) => {
       throw playlistSongsError;
     }
 
-    // song_id'leri çıkar
-    const songIds = playlistSongs
-      .map((item: any) => item.song_id)
-      .filter((id: any) => id !== null && id !== undefined);
-
-    // songs tablosundan bu ID'lere göre şarkıları çek
-    const { data: songs, error: songsError } = await supabase
-      .from("songs")
-      .select("*")
-      .in("id", songIds);
-
-    if (songsError) {
-      throw songsError;
-    }
-
-    // Eğer songs boşsa veya null ise
-    if (!songs || songs.length === 0) {
+    if (!playlistSongs || playlistSongs.length === 0) {
       return [];
     }
 
-    // Şarkıları playlist_songs'daki sıraya göre sırala
+    // Gelen veriden songs objelerini çıkart
     const orderedSongs = playlistSongs
-      .map((playlistSong: any) => {
-        return songs.find((song: any) => song.id === playlistSong.song_id);
+      .map((item: any) => {
+        const songObj = Array.isArray(item.songs) ? item.songs[0] : item.songs;
+        return songObj;
       })
       .filter((song: any) => song !== null && song !== undefined);
 
-    return orderedSongs || [];
+    return orderedSongs;
   } catch {
     return [];
   }
