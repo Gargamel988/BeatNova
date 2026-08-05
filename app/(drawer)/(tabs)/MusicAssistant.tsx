@@ -45,18 +45,18 @@ export default function MusicAssistant() {
   const handleSuggestion = (suggestion: string) => {
     const trimmedInput = (suggestion || input).trim();
     if (!trimmedInput) return;
-    // if (!isRewardedLoaded('ASSISTANT')) {
-    //   alert("Reklam henüz hazır değil, lütfen biraz bekleyin.");
-    //   return;
-    // }
+    if (!isRewardedLoaded('ASSISTANT')) {
+      alert("Reklam henüz hazır değil, lütfen biraz bekleyin.");
+      return;
+    }
 
     // AI isteğini arka planda başlat
     submit({ input: trimmedInput });
     setInput("");
 
     // Reklamı paralel olarak göster
-    // showRewarded('ASSISTANT', () => {
-    // });
+    showRewarded('ASSISTANT', () => {
+    });
   };
 
   const formatDuration = (seconds?: number) => {

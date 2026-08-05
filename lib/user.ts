@@ -5,5 +5,7 @@ export const getUser = async () => {
     if (error) {
         return null;
     }
-    return data.user;
+
+    const user = data?.user;
+    return user;
 }

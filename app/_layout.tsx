@@ -8,7 +8,6 @@ import { setBackgroundColorAsync } from "expo-system-ui";
 import React, { useEffect, useMemo, useState } from "react";
 import { Platform, View, Text, TouchableOpacity, Linking, Alert, BackHandler } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import NetInfo from "@react-native-community/netinfo";
 import "../global.css";
 import { LinearGradient } from "expo-linear-gradient";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -23,7 +22,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { AnimatedLogoSplash } from "@/components/AnimatedLogoSplash";
 import { AdsProvider } from "@/providers/AdsProvider";
 import * as MediaLibrary from "expo-media-library";
-import { Music, ShieldAlert } from "lucide-react-native";
+import { ShieldAlert } from "lucide-react-native";
 import TrackPlayer from "@rntp/player";
 import { PlaybackService } from "@/services/playbackService";
 
@@ -79,31 +78,6 @@ function RootContent({ colorScheme }: RootContentProps) {
     }
   };
 
-  useEffect(() => {
-    requestMediaPermission();
-    
-    // İnternet kontrolü
-    NetInfo.fetch().then(state => {
-      if (!state.isConnected) {
-        Alert.alert(
-          "İnternet Bağlantısı Yok",
-          "İnternet bağlantınız bulunamadı. Sadece indirdiğiniz veya cihazınızdaki şarkıları dinleyebilirsiniz. Başka bir işlem yapamazsınız.\n\nDevam etmek istiyor musunuz?",
-          [
-            { 
-              text: "Çık", 
-              onPress: () => BackHandler.exitApp(),
-              style: "cancel"
-            },
-            { 
-              text: "Evet", 
-              style: "default" 
-            }
-          ],
-          { cancelable: false }
-        );
-      }
-    });
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -149,25 +123,13 @@ function RootContent({ colorScheme }: RootContentProps) {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
-    const isLoginSuccess = segments[1] === "login-success";
 
-    if (isLoginSuccess) return;
-
-    // Kullanıcı giriş yapmamışsa anasayfada uyarı ver (Sadece bir kere gösterilmesi için setTimeout ile)
     if (!isAuthenticated && !inAuthGroup) {
-      setTimeout(() => {
-        Alert.alert(
-          "Çevrimdışı / Kayıtsız Mod",
-          "Şu anda giriş yapmadığınız için çevrimdışı/anonim moddasınız.\n\nYapay zeka özelliklerini kullanamazsınız. Müzik dinleyebilirsiniz ancak verileriniz cihazınızda geçici olarak saklanır.\n\nİstatistiklerinizin kaybolmaması için lütfen giriş yapın.",
-          [{ text: "Tamam", style: "default" }]
-        );
-      }, 500);
-      // Artık router.replace("/(auth)/login") YAPMIYORUZ!
-      // İsterlerse ayarlar sayfasından giriş yapabilirler.
+      router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace("/(auth)/login-success");
+      router.replace("/(drawer)/(tabs)");
     }
-  }, [isAuthenticated, segments, isLoading]);
+  }, [isAuthenticated, isLoading, segments]);
 
   useEffect(() => {
     if (Platform.OS === "android") {

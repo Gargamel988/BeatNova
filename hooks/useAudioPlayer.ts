@@ -189,31 +189,25 @@ export default function useAudioPlayerHook() {
       let timeToSave = fgAccumulatedTime;
       fgAccumulatedTime = 0;
       if (timeToSave >= 1 || playCountDelta > 0 || skipCountDelta > 0) {
-        console.log(`[FOREGROUND STATS] 🚀 VERİTABANINA KAYDEDİLİYOR: songId=${songId}, süre=${timeToSave.toFixed(1)}s, play=${playCountDelta}, skip=${skipCountDelta}`);
         try {
           await upsertlisteningtime(timeToSave, songId, skipCountDelta, playCountDelta);
-          console.log(`[FOREGROUND STATS] ✅ Kayıt Başarılı!`);
         } catch (e) {
           console.log(`[FOREGROUND STATS] ❌ Kayıt Hatası:`, e);
         }
-      } else {
-        console.log(`[FOREGROUND STATS] ⚠️ Süre kısa (${timeToSave.toFixed(1)}s), es geçildi.`);
       }
     };
 
     const trackTransitionSub = TrackPlayer.addEventListener(
       Event.MediaItemTransition,
       async (e) => {
-        console.log(`[FOREGROUND STATS] MediaItemTransition -> Yeni Şarkı: ${e.item?.mediaId}`);
         if (fgActiveSongId) {
           if (fgPlayStartTime !== null) {
             const played = (Date.now() - fgPlayStartTime) / 1000;
             fgAccumulatedTime += played;
             fgSessionTime += played;
-            console.log(`[FOREGROUND STATS] Şarkı değişiyor. Eklenen süre: ${played.toFixed(1)}s`);
             fgPlayStartTime = null;
           }
-          
+
           let skipDelta = 0;
           if (!fgHasCountedPlay && fgSessionTime > 0 && fgSessionTime < 30) {
             skipDelta = 1;
@@ -226,7 +220,6 @@ export default function useAudioPlayerHook() {
         fgSessionTime = 0;
         fgHasCountedPlay = false;
         fgPlayStartTime = Date.now();
-        console.log(`[FOREGROUND STATS] Zamanlayıcı sıfırlandı. Yeni fgActiveSongId: ${fgActiveSongId}`);
 
         if (e.item && typeof e.item.mediaId === "string") {
           const list = playlistRef.current || [];
@@ -243,18 +236,15 @@ export default function useAudioPlayerHook() {
       Event.IsPlayingChanged,
       async (e) => {
         const { playing } = e;
-        console.log(`[FOREGROUND STATS] IsPlayingChanged -> playing: ${playing}`);
         if (playing) {
           if (fgPlayStartTime === null) {
             fgPlayStartTime = Date.now();
-            console.log(`[FOREGROUND STATS] Zamanlayıcı başlatıldı: ${fgPlayStartTime}`);
           }
         } else {
           if (fgPlayStartTime !== null) {
             const played = (Date.now() - fgPlayStartTime) / 1000;
             fgAccumulatedTime += played;
             fgSessionTime += played;
-            console.log(`[FOREGROUND STATS] Duraklatıldı. Eklenen süre: ${played.toFixed(1)}s`);
             fgPlayStartTime = null;
           }
           if (fgActiveSongId && fgAccumulatedTime >= 5) {
@@ -273,7 +263,6 @@ export default function useAudioPlayerHook() {
       Event.PlaybackStateChanged,
       async (e) => {
         if (e.state === PlaybackState.Ended) {
-          console.log(`[FOREGROUND STATS] Şarkı bitti (Ended state).`);
           if (fgPlayStartTime !== null) {
             const played = (Date.now() - fgPlayStartTime) / 1000;
             fgAccumulatedTime += played;
@@ -423,24 +412,15 @@ export default function useAudioPlayerHook() {
     }
 
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      console.log(`[APP STATE] 🔄 Uygulama durumu değişti: ${nextAppState}`);
       if (nextAppState === "active") {
-        console.log(`[APP STATE] 📱 Uygulamaya geri dönüldü! Arka plan senkronizasyonu başlatılıyor...`);
         if (isSleepTimerActive) tick();
-        
-        // Arka plandan dönerken senkronizasyonu sağla (uygulama uyurken event'i kaçırmış olabilir)
         const currentTrack = await TrackPlayer.getActiveMediaItem();
-        console.log(`[APP STATE] 🎵 Aktif track kontrol ediliyor: ${currentTrack?.mediaId || 'Yok'}`);
         if (currentTrack?.mediaId) {
           const list = playlistRef.current || [];
           const foundSong = list.find((s) => s.id === currentTrack.mediaId);
-          console.log(`[APP STATE] 🔎 Bulunan şarkı: ${foundSong?.filename || 'Bulunamadı'} (ID: ${foundSong?.id})`);
           if (foundSong && foundSong.id !== activeSongRef.current?.id) {
-            console.log(`[APP STATE] ⚠️ Şarkı değişmiş! UI güncelleniyor: ${activeSongRef.current?.id} -> ${foundSong.id}`);
             setActiveSong(foundSong);
             mutateUpdateCurrentSongRef.current(foundSong.id);
-          } else {
-            console.log(`[APP STATE] ✅ Şarkı aynı, değişiklik yapılmadı.`);
           }
         }
       }
