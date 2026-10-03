@@ -25,6 +25,7 @@ import * as MediaLibrary from "expo-media-library";
 import { ShieldAlert } from "lucide-react-native";
 import TrackPlayer from "@rntp/player";
 import { PlaybackService } from "@/services/playbackService";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Arka plan müzik servisi (İstatistik ve background event'ler için)
 TrackPlayer.registerBackgroundEventHandler(() => PlaybackService);
@@ -62,6 +63,7 @@ function RootContent({ colorScheme }: RootContentProps) {
 
   const segments = useSegments();
   const { hp, wp, fontSize, radius } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   const requestMediaPermission = async () => {
     try {
@@ -146,7 +148,6 @@ function RootContent({ colorScheme }: RootContentProps) {
   const primaryColor = useColor("primary");
 
   const isDrawerPage = segments[0] === "(drawer)" && segments[1] === "(tabs)";
-  const bottomOffset = isDrawerPage ? hp(12.5) : 0;
 
   if (isLoading) {
     return <AnimatedLogoSplash message="MüzikBox Hazırlanıyor..." />;
@@ -294,7 +295,7 @@ function RootContent({ colorScheme }: RootContentProps) {
                 </Stack>
                 {isAuthenticated && (
                   <>
-                    <GlobalMiniPlayer bottomOffset={bottomOffset} />
+                    <GlobalMiniPlayer hasTabBar={isDrawerPage} />
                   </>
                 )}
               </LinearGradient>

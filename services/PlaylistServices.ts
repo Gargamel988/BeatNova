@@ -37,10 +37,10 @@ const getPlaylists = async () => {
     const playlistsWithCounts = playlists.map((playlist: any) => {
       const pSongs = playlist.playlist_songs || [];
       const songCount = pSongs.length;
-      
+
       let totalDuration = 0;
       const songCoverUrls: string[] = [];
-      
+
       pSongs.forEach((ps: any, index: number) => {
         // Süre hesaplama
         let duration = ps.song_duration;
@@ -49,7 +49,7 @@ const getPlaylists = async () => {
           duration = songsObj?.duration || 0;
         }
         totalDuration += Number(duration) || 0;
-        
+
         // İlk 4 şarkının kapak resmini al
         if (songCoverUrls.length < 4) {
           const songsObj = Array.isArray(ps.songs) ? ps.songs[0] : ps.songs;
@@ -150,6 +150,18 @@ const deletePlaylist = async (id: number | string) => {
     return null;
   }
 };
+// Playlistteki bir sonraki sıra numarası (en sona eklemek için)
+const getNextPosition = async (playlistId: number | string): Promise<number> => {
+  const { data } = await supabase
+    .from("playlist_songs")
+    .select("position")
+    .eq("playlist_id", playlistId)
+    .order("position", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  return typeof data?.position === "number" ? data.position + 1 : 0;
+};
+
 const addSongToPlaylist = async (assetId: string, playlistId: number) => {
   try {
     const user = await getUser();
@@ -157,39 +169,39 @@ const addSongToPlaylist = async (assetId: string, playlistId: number) => {
       return null;
     }
 
-    // Önce songs tablosundan ID ile eşleşen kaydı bul (duration'ı almak için)
-    const { data: songData, error: songError } = await supabase
-      .from("songs")
-      .select("id, duration")
-      .eq("id", assetId)
-      .eq("users_id", user.id)
-      .single();
+    // Paralel sorgular: şarkı bilgisi + duplikat kontrolü aynı anda
+    const [songResult, existingResult] = await Promise.all([
+      supabase
+        .from("songs")
+        .select("id, duration")
+        .eq("id", assetId)
+        .eq("users_id", user.id)
+        .single(),
+      supabase
+        .from("playlist_songs")
+        .select("id")
+        .eq("song_id", assetId)
+        .eq("playlist_id", playlistId)
+        .maybeSingle(),
+    ]);
 
-    if (songError || !songData) {
+    if (songResult.error || !songResult.data) {
       throw new Error("Şarkı bulunamadı. Lütfen önce şarkıyı senkronize edin.");
     }
 
-    const songUuid = songData.id;
-
-    // Şarkının zaten playlist'te olup olmadığını kontrol et
-    const { data: existing } = await supabase
-      .from("playlist_songs")
-      .select("*")
-      .eq("song_id", songUuid)
-      .eq("playlist_id", playlistId)
-      .single();
-
-    if (existing) {
+    if (existingResult.data) {
       throw new Error("Bu şarkı zaten playlist'te");
     }
 
-    // Şarkıyı playlist'e ekle
+    const position = await getNextPosition(playlistId);
+
     const { data, error } = await supabase
       .from("playlist_songs")
       .insert({
-        song_id: songUuid,
+        song_id: songResult.data.id,
         playlist_id: playlistId,
-        song_duration: songData.duration, // Duration'ı playlist_songs'a kaydet
+        song_duration: songResult.data.duration,
+        position,
       })
       .select()
       .single();
@@ -227,7 +239,7 @@ const getPlaylistSongs = async (playlistId: number | string) => {
         songs (*)
       `)
       .eq("playlist_id", playlistId)
-      .order("id", { ascending: true });
+      .order("position", { ascending: true });
 
     if (playlistSongsError) {
       throw playlistSongsError;
@@ -262,8 +274,8 @@ const addSongToFavorites = async (songId: string) => {
       if (!favorites.includes(songId)) {
         favorites.push(songId);
         await AsyncStorage.setItem("favorites", JSON.stringify(favorites));
-      }else {
-        return{
+      } else {
+        return {
           success: false,
           message: "Bu şarkı zaten favorilerde",
         };
@@ -319,6 +331,190 @@ const getFavorites = async () => {
     return [];
   }
 };
+const removeSongFromPlaylist = async (songId: string, playlistId: number | string) => {
+  try {
+    const user = await getUser();
+    if (!user?.id) throw new Error("Kullanıcı bulunamadı");
+
+    const { error } = await supabase
+      .from("playlist_songs")
+      .delete()
+      .eq("song_id", songId)
+      .eq("playlist_id", playlistId);
+
+    if (error) throw error;
+    return true;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+const reorderPlaylistSongs = async (playlistId: number | string, songIds: string[]) => {
+  const user = await getUser();
+  if (!user?.id) throw new Error("Kullanıcı bulunamadı");
+
+  const { data: existingSongs, error: fetchError } = await supabase
+    .from("playlist_songs")
+    .select("song_id, song_duration")
+    .eq("playlist_id", playlistId);
+
+  if (fetchError) throw fetchError;
+
+  const durationMap = new Map<string, number>(
+    (existingSongs ?? []).map((s: any) => [s.song_id, s.song_duration])
+  );
+
+  const rows = songIds.map((songId, index) => ({
+    playlist_id: playlistId,
+    song_id: songId,
+    song_duration: durationMap.get(songId) ?? 0,
+    position: index,
+  }));
+
+  const { error } = await supabase
+    .from("playlist_songs")
+    .upsert(rows, { onConflict: "playlist_id,song_id" });
+
+  if (error) throw error;
+  return true;
+};
+
+const clonePlaylist = async (playlistId: number | string) => {
+  try {
+    const user = await getUser();
+    if (!user?.id) throw new Error("Kullanıcı bulunamadı");
+
+    // Orijinal playlist'i al
+    const { data: original, error: fetchError } = await supabase
+      .from("playlists")
+      .select("*")
+      .eq("id", playlistId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError || !original) throw new Error("Playlist bulunamadı");
+
+    // Yeni playlist oluştur
+    const { data: newPlaylist, error: createError } = await supabase
+      .from("playlists")
+      .insert({
+        name: `${original.name} (Kopya)`,
+        description: original.description || "",
+        is_public: original.is_public || false,
+        tags: original.tags || [],
+        user_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (createError || !newPlaylist) throw new Error("Playlist kopyalanamadı");
+
+    // Orijinal şarkıları yeni playlist'e kopyala
+    const { data: songs, error: songsError } = await supabase
+      .from("playlist_songs")
+      .select("song_id, song_duration, position")
+      .eq("playlist_id", playlistId)
+      .order("position", { ascending: true });
+
+    if (!songsError && songs && songs.length > 0) {
+      const inserts = songs.map((s: any, index: number) => ({
+        song_id: s.song_id,
+        playlist_id: newPlaylist.id,
+        song_duration: s.song_duration,
+        position: index,
+      }));
+      await supabase.from("playlist_songs").insert(inserts);
+    }
+
+    return newPlaylist;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+const addMultipleSongsToPlaylist = async (songIds: string[], playlistId: number) => {
+  try {
+    const user = await getUser();
+    if (!user?.id) throw new Error("Kullanıcı bulunamadı");
+
+    // Paralel: şarkı bilgileri + mevcut şarkı kontrolü
+    const [songsResult, existingResult] = await Promise.all([
+      supabase
+        .from("songs")
+        .select("id, duration")
+        .in("id", songIds)
+        .eq("users_id", user.id),
+      supabase
+        .from("playlist_songs")
+        .select("song_id")
+        .eq("playlist_id", playlistId)
+        .in("song_id", songIds),
+    ]);
+
+    if (songsResult.error) throw songsResult.error;
+
+    const existingIds = new Set(existingResult.data?.map((e: any) => e.song_id));
+    const durationMap = new Map<string, number>();
+    songsResult.data?.forEach((s: any) => durationMap.set(s.id, s.duration));
+
+    const newSongIds = songIds.filter((id) => !existingIds.has(id));
+
+    if (newSongIds.length === 0) {
+      return { added: 0, skipped: songIds.length };
+    }
+
+    const startPosition = await getNextPosition(playlistId);
+    const inserts = newSongIds.map((songId, index) => ({
+      song_id: songId,
+      playlist_id: playlistId,
+      song_duration: durationMap.get(songId) || 0,
+      position: startPosition + index,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("playlist_songs")
+      .insert(inserts);
+
+    if (insertError) throw insertError;
+    return { added: newSongIds.length, skipped: existingIds.size };
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+const getPlaylistShareData = async (playlistId: number | string) => {
+  try {
+    const [playlistResult, songsResult] = await Promise.all([
+      supabase.from("playlists").select("*").eq("id", playlistId).single(),
+      supabase
+        .from("playlist_songs")
+        .select("songs(title, artist, duration)")
+        .eq("playlist_id", playlistId)
+        .order("position", { ascending: true }),
+    ]);
+
+    if (playlistResult.error || !playlistResult.data)
+      throw new Error("Playlist bulunamadı");
+
+    const playlist = playlistResult.data;
+    const songs = songsResult.data || [];
+
+    const songList = songs
+      .map((item: any, index: number) => {
+        const song = Array.isArray(item.songs) ? item.songs[0] : item.songs;
+        return `${index + 1}. ${song?.title || "Bilinmeyen"} - ${song?.artist || "Bilinmeyen"}`;
+      })
+      .join("\n");
+
+    return {
+      title: playlist.name,
+      text: `🎵 ${playlist.name}\n${playlist.description ? `📝 ${playlist.description}\n` : ""}\n🎶 ${songs.length} şarkı\n\n${songList}\n\n📱 BeatNova ile paylaşıldı`,
+    };
+  } catch (error: any) {
+    throw error;
+  }
+};
+
 export {
   getPlaylists,
   createPlaylist,
@@ -329,4 +525,9 @@ export {
   addSongToFavorites,
   removeSongFromFavorites,
   getFavorites,
+  removeSongFromPlaylist,
+  reorderPlaylistSongs,
+  clonePlaylist,
+  addMultipleSongsToPlaylist,
+  getPlaylistShareData,
 };

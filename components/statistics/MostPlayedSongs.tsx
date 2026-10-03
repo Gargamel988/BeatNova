@@ -24,87 +24,84 @@ interface ListeningHistoryItem {
   play_count?: number;
 }
 
+interface ListeningDailyRow {
+  song_id: string;
+  day: string;
+  play_count: number;
+  seconds: number;
+}
+
 interface MostPlayedSongsProps {
   songs: readonly Song[];
   listeningHistory?: ListeningHistoryItem[];
+  dailyRows?: ListeningDailyRow[];
 }
 
-export function MostPlayedSongs({ songs, listeningHistory = [] }: MostPlayedSongsProps) {
+export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }: MostPlayedSongsProps) {
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("week");
-  // Tarih filtresine göre listening history'yi filtrele
-  const filteredHistory = React.useMemo(() => {
-    if (!listeningHistory || listeningHistory.length === 0) return [];
-    
-    const now = new Date();
-    let startDate: Date;
+  const filteredSongs = React.useMemo(() => {
+    if (!songs || songs.length === 0) return [];
 
-    switch (timeFilter) {
-      case "week":
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case "month":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "all":
-      default:
-        return listeningHistory;
+    const historyBySongId: Record<string, { seconds: number; plays: number }> = {};
+
+    if (timeFilter === "all") {
+      listeningHistory.forEach((h) => {
+        if (!historyBySongId[h.song_id]) historyBySongId[h.song_id] = { seconds: 0, plays: 0 };
+        historyBySongId[h.song_id].seconds += h.total_seconds || 0;
+        historyBySongId[h.song_id].plays += h.play_count || 0;
+      });
+    } else {
+      const now = new Date();
+      let startStr = "";
+      if (timeFilter === "week") {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        startStr = `${y}-${m}-${dd}`;
+      } else {
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        startStr = `${y}-${m}-01`;
+      }
+
+      dailyRows.forEach((r) => {
+        if (r.day >= startStr) {
+          if (!historyBySongId[r.song_id]) historyBySongId[r.song_id] = { seconds: 0, plays: 0 };
+          historyBySongId[r.song_id].seconds += r.seconds || 0;
+          historyBySongId[r.song_id].plays += r.play_count || 0;
+        }
+      });
     }
 
-    return listeningHistory.filter((item) => {
-      const itemDate = new Date(item.created_at);
-      return itemDate >= startDate;
-    });
-  }, [listeningHistory, timeFilter]);
-
-  // Filtrelenmiş verilere göre şarkıları yeniden hesapla
-  const filteredSongs = React.useMemo(() => {
-    if (!songs || songs.length === 0 || filteredHistory.length === 0) return [];
-
-    // Filtrelenmiş history'yi song_id'ye göre grupla
-    const historyBySongId = filteredHistory.reduce(
-      (acc, item) => {
-        if (!acc[item.song_id]) {
-          acc[item.song_id] = {
-            total_seconds: 0,
-            play_count: 0,
-          };
-        }
-        acc[item.song_id].total_seconds += item.total_seconds || 0;
-        acc[item.song_id].play_count += item.play_count || 0;
-        return acc;
-      },
-      {} as Record<string, { total_seconds: number; play_count: number }>
-    );
-
-    // Şarkıları history ile birleştir ve çalınma sayısını hesapla
     return songs
       .map((song) => {
-        const history = historyBySongId[String(song.id)];
-        if (!history || history.total_seconds === 0) return null;
+        const stats = historyBySongId[String(song.id)];
+        if (!stats) return { ...song, plays: 0 };
 
-        const playCount =
+        const computedPlays =
           song.duration > 0
-            ? Math.round(history.total_seconds / song.duration)
-            : history.play_count || 0;
+            ? Math.round(stats.seconds / song.duration)
+            : stats.plays;
 
         return {
           ...song,
-          plays: playCount,
+          plays: computedPlays > 0 ? computedPlays : stats.plays,
         };
       })
-      .filter((song): song is Song => song !== null)
+      .filter((song) => song.plays > 0)
       .sort((a, b) => b.plays - a.plays)
       .slice(0, 5);
-  }, [songs, filteredHistory]);
+  }, [songs, listeningHistory, dailyRows, timeFilter]);
 
   return (
     <ChartContainer
       title="En Çok Dinlenen Şarkılar"
       description="Son dönemde en sık açtığın parçalar"
-      style={{ gap: hp(1.2) ,borderWidth: 1, borderColor: colors.overlay.white12}}
+      style={{ gap: hp(1.2), borderWidth: 1, borderColor: colors.overlay.white12 }}
     >
       <View
         style={{
@@ -136,8 +133,8 @@ export function MostPlayedSongs({ songs, listeningHistory = [] }: MostPlayedSong
               {filter === "week"
                 ? "Bu hafta"
                 : filter === "month"
-                ? "Bu ay"
-                : "Tüm zamanlar"}
+                  ? "Bu ay"
+                  : "Tüm zamanlar"}
             </Text>
           </TouchableOpacity>
         ))}

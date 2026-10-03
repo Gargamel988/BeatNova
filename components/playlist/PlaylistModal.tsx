@@ -1,5 +1,5 @@
-import React from "react";
-import { Switch, TouchableOpacity } from "react-native";
+import React, { useEffect } from "react";
+import { TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
@@ -11,24 +11,25 @@ import { useThemeModeContext } from "@/providers/theme-provider";
 import { useResponsive } from "@/hooks/useResponsive";
 import {
   X,
-  Lock,
-  Globe,
   Tag,
   Music,
   Sparkles,
   Plus,
+  Save,
+  Edit3,
 } from "lucide-react-native";
 import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createPlaylist } from "@/services/PlaylistServices";
+import { createPlaylist, updatePlaylist } from "@/services/PlaylistServices";
 import { useToast } from "@/components/ui/toast";
-import { PlaylistCreatePayload } from "@/type/PlaylistType";
+import { PlaylistCreatePayload, PlaylistType } from "@/type/PlaylistType";
 import { PlaylistScheme, PlaylistSchemeType } from "@/schemes/PlaylistScehem";
 
 type PlaylistModalProps = {
   visible: boolean;
   onClose: () => void;
+  editPlaylist?: PlaylistType | null;
 };
 
 const QUICK_TAGS = [
@@ -45,10 +46,13 @@ const QUICK_TAGS = [
 export default function PlaylistModal({
   visible,
   onClose,
+  editPlaylist,
 }: PlaylistModalProps) {
   const { toast } = useToast();
   const { palette: colors } = useThemeModeContext();
   const { wp, hp, fontSize, radius } = useResponsive();
+
+  const isEditMode = !!editPlaylist?.id;
 
   const {
     handleSubmit,
@@ -66,18 +70,32 @@ export default function PlaylistModal({
     },
     resolver: zodResolver(PlaylistScheme as any),
   });
+
+  // Edit modunda formu doldur
+  useEffect(() => {
+    if (editPlaylist && visible) {
+      reset({
+        name: editPlaylist.name || "",
+        description: editPlaylist.description || "",
+        is_public: editPlaylist.is_public || false,
+        tags: editPlaylist.tags || [],
+      });
+    }
+  }, [editPlaylist, visible, reset]);
+
   const queryClient = useQueryClient();
-  const { mutate: createPlaylistMutation, isPending } = useMutation({
+
+  const { mutate: createPlaylistMutation, isPending: isCreatePending } = useMutation({
     mutationFn: async (data: PlaylistCreatePayload) => {
       return createPlaylist(data);
     },
-    onSuccess: (response) => {
+    onSuccess: () => {
       toast({
         title: "Playlist oluşturuldu",
         description: "Playlist başarıyla oluşturuldu",
         variant: "success",
       });
-      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
     },
     onError: (error) => {
       toast({
@@ -87,6 +105,29 @@ export default function PlaylistModal({
       });
     },
   });
+
+  const { mutate: updatePlaylistMutation, isPending: isUpdatePending } = useMutation({
+    mutationFn: async (data: PlaylistType) => {
+      return updatePlaylist(data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Playlist güncellendi",
+        description: "Playlist başarıyla güncellendi",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["playlists"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "error",
+      });
+    },
+  });
+
+  const isPending = isCreatePending || isUpdatePending;
 
   const gradientColors = colors.gradient?.purplePink;
   const subtleTextColor = colors.textSecondary;
@@ -101,6 +142,7 @@ export default function PlaylistModal({
     });
     onClose();
   };
+
   const handleQuickTagToggle = (label: string) => {
     const normalizedTag = label.toLowerCase();
     const tags = watch("tags");
@@ -118,11 +160,22 @@ export default function PlaylistModal({
       tags: formValues.tags ?? [],
     };
 
-    createPlaylistMutation(payload, {
-      onSuccess: () => {
-        resetAndClose();
-      },
-    });
+    if (isEditMode && editPlaylist?.id) {
+      updatePlaylistMutation(
+        { ...payload, id: editPlaylist.id } as PlaylistType,
+        {
+          onSuccess: () => {
+            resetAndClose();
+          },
+        }
+      );
+    } else {
+      createPlaylistMutation(payload, {
+        onSuccess: () => {
+          resetAndClose();
+        },
+      });
+    }
   };
 
   return (
@@ -163,7 +216,7 @@ export default function PlaylistModal({
                   justifyContent: "center",
                 }}
               >
-                <Icon name={Music} size={20} color="#fff" />
+                <Icon name={isEditMode ? Edit3 : Music} size={20} color="#fff" />
               </View>
               <Text
                 style={{
@@ -172,7 +225,7 @@ export default function PlaylistModal({
                   fontWeight: "800",
                 }}
               >
-                Yeni Playlist
+                {isEditMode ? "Playlist Düzenle" : "Yeni Playlist"}
               </Text>
             </View>
             <TouchableOpacity
@@ -195,7 +248,9 @@ export default function PlaylistModal({
               fontSize: fontSize(13),
             }}
           >
-            Sevdiğin şarkıları bir araya getir ve paylaş
+            {isEditMode
+              ? "Playlist bilgilerini güncelle"
+              : "Sevdiğin şarkıları bir araya getir ve paylaş"}
           </Text>
         </LinearGradient>
 
@@ -466,13 +521,13 @@ export default function PlaylistModal({
             </Text>
           </Button>
           <Button
-            icon={Plus}
+            icon={isEditMode ? Save : Plus}
             onPress={handleSubmit(onSubmitForm)}
             style={{ flex: 1 }}
             disabled={isSubmitting || isPending}
           >
             <Text style={{ fontSize: fontSize(16), color: colors.text }}>
-              Oluştur
+              {isEditMode ? "Kaydet" : "Oluştur"}
             </Text>
           </Button>
         </View>

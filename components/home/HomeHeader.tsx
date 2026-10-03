@@ -24,51 +24,51 @@ export function HomeHeaderComponent() {
   };
 
   return (
-      <View 
+    <View
       className="flex-row items-center justify-between "
-        style={{
-          paddingBottom: hp(2.5),
-        }}
-      >
-        <View className="flex-1">
-          <Text
-            style={{
-              color: textSecondary,
-              fontSize: fontSize(14),
-              marginBottom: hp(0.5),
-            }}
-          >
-            {getGreeting()}
-          </Text>
-          <Text
-            style={{
-              color: textPrimary,
-              fontSize: fontSize(32),
-              fontWeight: "800",
-            }}
-          >
-            Müzik Keyfin Başlasın
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => {
-            // @ts-ignore
-            navigation.openDrawer?.();
-          }}
-          className="items-center justify-center"
+      style={{
+        paddingBottom: hp(2.5),
+      }}
+    >
+      <View className="flex-1">
+        <Text
           style={{
-            width: wp(12),
-            height: wp(12),
-            borderRadius: radius(12),
-            backgroundColor: cardBg,
-            borderWidth: 1,
-            borderColor,
+            color: textSecondary,
+            fontSize: fontSize(14),
+            marginBottom: hp(0.5),
           }}
-          activeOpacity={0.7}
         >
-          <Icon name={Menu} size={24} color={textPrimary} />
-        </TouchableOpacity>
+          {getGreeting()}
+        </Text>
+        <Text
+          style={{
+            color: textPrimary,
+            fontSize: fontSize(32),
+            fontWeight: "800",
+          }}
+        >
+          Müzik Keyfin Başlasın
+        </Text>
       </View>
+      <TouchableOpacity
+        onPress={() => {
+          // @ts-ignore
+          navigation.openDrawer?.();
+        }}
+        className="items-center justify-center"
+        style={{
+          width: wp(12),
+          height: wp(12),
+          borderRadius: radius(12),
+          backgroundColor: cardBg,
+          borderWidth: 1,
+          borderColor,
+        }}
+        activeOpacity={0.7}
+      >
+        <Icon name={Menu} size={24} color={textPrimary} />
+      </TouchableOpacity>
+    </View>
   );
 }
 

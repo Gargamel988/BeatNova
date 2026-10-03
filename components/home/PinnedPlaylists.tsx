@@ -54,7 +54,7 @@ export default function PinnedPlaylists({ playlists, onPlayPlaylist }: PinnedPla
               fontWeight: "800",
             }}
           >
-            Öne Çıkanlar
+            Playlistlerim
           </Text>
         </View>
         <TouchableOpacity

@@ -26,6 +26,7 @@ import { formatTime } from "@/utils/format";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { useAudioPlayerContext } from "@/providers/player-context";
 
 function SectionHeader({
   title,
@@ -42,6 +43,7 @@ function SectionHeader({
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
   const accent = useColor("accent");
+
 
   return (
     <View
@@ -102,6 +104,7 @@ export default function PlaylistsPage() {
   const borderColor = useColor("border");
   const accent = useColor("accent");
   const accentForeground = useColor("accentForeground");
+  const { isPlaying } = useAudioPlayerContext();
 
   const { data: playlists, isLoading: playlistsLoading, error: playlistsError, refetch: refetchPlaylists } = useQuery({
     queryKey: ["playlists"],
@@ -109,7 +112,14 @@ export default function PlaylistsPage() {
       const data = await getPlaylists();
       return data;
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
+
+  const randomPlaylistData = useMemo(
+    () => playlists?.find((p) => p.id === randomPlaylist),
+    [playlists, randomPlaylist]
+  );
 
   const totalSongs = useMemo(() => {
     const count = playlists?.reduce(
@@ -162,14 +172,14 @@ export default function PlaylistsPage() {
 
   const handleRandomPlaylist = useCallback(() => {
     const playlistsWithSongs = playlists?.filter((playlist) => (playlist.song_count ?? 0) > 0);
-    
+
     if (!playlistsWithSongs || playlistsWithSongs.length === 0) {
       return;
     }
-    
+
     const randomIndex = Math.floor(Math.random() * playlistsWithSongs.length);
     const randomPl = playlistsWithSongs[randomIndex];
-    
+
     setRandomPlaylist(randomPl.id);
     setIsRandomPlaylistModalVisible(true);
   }, [playlists]);
@@ -298,9 +308,9 @@ export default function PlaylistsPage() {
       />
     </View>
   ), [
-    playlists, totalSongs, searchQuery, libraryStats, 
+    playlists, totalSongs, searchQuery, libraryStats,
     pinnedPlaylists, isSearching, filteredPlaylists,
-    textPrimary, textSecondary, fontSize, cardBg, borderColor, 
+    textPrimary, textSecondary, fontSize, cardBg, borderColor,
     accent, accentForeground, wp, hp, radius, handleRandomPlaylist
   ]);
 
@@ -313,15 +323,15 @@ export default function PlaylistsPage() {
   const renderEmpty = useCallback(() => {
     if (playlistsLoading) return <LoadingState message="Playlistler yükleniyor..." />;
     if (playlistsError) return (
-      <ErrorState 
-        title="Playlistler Yüklenemedi" 
-        message="Bir hata oluştu." 
-        onRetry={() => refetchPlaylists()} 
+      <ErrorState
+        title="Playlistler Yüklenemedi"
+        message="Bir hata oluştu."
+        onRetry={() => refetchPlaylists()}
       />
     );
-    
+
     return (
-      <EmptyState 
+      <EmptyState
         title={isSearching ? "Playlist Bulunamadı" : "Henüz Playlist Yok"}
         message={isSearching ? `"${searchQuery}" için sonuç bulunamadı` : "İlk playlistini oluşturarak başla"}
         icon={isSearching ? "search" : "playlist"}
@@ -330,7 +340,7 @@ export default function PlaylistsPage() {
   }, [playlistsLoading, playlistsError, isSearching, searchQuery, refetchPlaylists]);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]} >
       <FlatList
         data={visiblePlaylists}
         renderItem={renderItem}
@@ -340,7 +350,7 @@ export default function PlaylistsPage() {
         contentContainerStyle={{
           paddingHorizontal: wp(5),
           paddingTop: hp(2),
-          paddingBottom: hp(12),
+          paddingBottom: isPlaying ? hp(20) : hp(10),
         }}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
@@ -356,6 +366,7 @@ export default function PlaylistsPage() {
         visible={isRandomPlaylistModalVisible}
         onClose={() => setIsRandomPlaylistModalVisible(false)}
         playlistId={randomPlaylist}
+        playlistData={randomPlaylistData}
         autoPlayShuffled={true}
       />
     </SafeAreaView>

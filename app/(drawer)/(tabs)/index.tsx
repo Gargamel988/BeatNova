@@ -193,12 +193,12 @@ export default function Index() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, }} edges={["bottom", "top"]}>
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: wp(5),
           paddingTop: hp(2),
-          paddingBottom: isPlaying ? hp(12) : hp(2),
+          paddingBottom: isPlaying ? hp(20) : hp(8),
         }}
         showsVerticalScrollIndicator={false}
       >

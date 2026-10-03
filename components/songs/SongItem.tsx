@@ -264,6 +264,8 @@ function SongItemComponent({
     queryKey: ["playlists"],
     queryFn: () => getPlaylists(),
     enabled: visibleAddToPlaylistModal,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const playlists = useMemo(() => playlistsData ?? [], [playlistsData]);

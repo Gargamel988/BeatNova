@@ -11,7 +11,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -44,7 +46,13 @@
       [
         "expo-media-library",
         {
-          "androidPermissions": ["android.permission.READ_MEDIA_AUDIO"]
+          "granularPermissions": [
+            "audio"
+          ],
+          "photosPermission": false,
+          "videoPermission": false,
+          "savePhotosPermission": false,
+          "isAccessMediaLocationEnabled": false
         }
       ],
       [

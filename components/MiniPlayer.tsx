@@ -25,6 +25,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import { useAudioPositionContext } from "@/providers/player-context";
+import { useTabBarLayout } from "@/hooks/useTabBarLayout";
 
 function MiniPlayerComponent({
   coverUri,
@@ -37,7 +38,7 @@ function MiniPlayerComponent({
   nextSound,
   previousSound,
   activeSong,
-  bottomOffset,
+  hasTabBar,
 }: {
   coverUri?: string;
   title?: string;
@@ -49,12 +50,13 @@ function MiniPlayerComponent({
   nextSound?: () => void;
   previousSound?: () => void;
   activeSong?: Song;
-  bottomOffset?: number;
+  hasTabBar?: boolean;
 }) {
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
   const { position } = useAudioPositionContext();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const { barWidth, miniPlayerBottom, miniPlayerHeight, bottom } = useTabBarLayout();
 
   const radiusValueBase = wp(5.5);
   const circumference = 2 * Math.PI * radiusValueBase;
@@ -124,13 +126,11 @@ function MiniPlayerComponent({
     <>
       <GestureDetector gesture={panGesture}>
         <Animated.View
-          className="absolute left-0 right-0"
+          className="absolute left-0 right-0 items-center"
+          pointerEvents="box-none"
           style={[
             {
-              bottom: bottomOffset !== undefined ? bottomOffset : hp(13),
-              borderTopWidth: 2,
-              borderTopColor: colors.border,
-              overflow: "hidden",
+              bottom: hasTabBar ? miniPlayerBottom : bottom,
             },
             animatedStyle,
           ]}
@@ -140,12 +140,16 @@ function MiniPlayerComponent({
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{
-              minHeight: hp(10),
+              width: barWidth,
+              height: miniPlayerHeight,
+              borderRadius: 20,
               paddingHorizontal: wp(4),
-              paddingVertical: hp(1.5),
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
+              borderWidth: 1,
+              borderColor: colors.border,
+              overflow: "hidden",
             }}
           >
             <TouchableOpacity

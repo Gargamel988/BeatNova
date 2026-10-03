@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
 import { BottomSheet } from '../ui/bottom-sheet';
 import { PlaylistType } from '@/type/PlaylistType';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -33,7 +33,6 @@ export default function AddToPlaylistModal({
 	const { wp, hp, fontSize, radius } = useResponsive();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
-	const [isLoading, setIsLoading] = useState(false);
 	const queryClient = useQueryClient();
 	const cardBg = useColor('card');
 	const borderColor = useColor('border');
@@ -43,6 +42,7 @@ export default function AddToPlaylistModal({
 	const accentForeground = useColor('accentForeground');
 	const muted = useColor('muted');
 	const { toast } = useToast();
+
 	// Filtrelenmiş playlistler
 	const filteredPlaylists = useMemo(() => {
 		if (!Array.isArray(playlists) || playlists.length === 0) return [];
@@ -55,11 +55,12 @@ export default function AddToPlaylistModal({
 				playlist?.tags?.some((tag) => tag?.toLowerCase().includes(query))
 		);
 	}, [playlists, searchQuery]);
-	const {mutate: addSongToPlaylistMutation} = useMutation({
+
+	const { mutate: addSongToPlaylistMutation, isPending } = useMutation({
 		mutationFn: async (playlistId: number) => {
 			return addSongToPlaylist(selectedSongId as string, playlistId);
 		},
-		onSuccess: (response) => {
+		onSuccess: () => {
 			toast({
 				title: "Playliste ekleme işlemi başarılı",
 				description: "Şarkı başarıyla playliste eklendi",
@@ -76,23 +77,15 @@ export default function AddToPlaylistModal({
 				description: error.message,
 				variant: "error",
 			});
+			setSelectedPlaylistId(null);
 		},
 	});
 
-	const handleSelectPlaylist = async (playlist: PlaylistType) => {
-		if (isLoading) return;
-		
+	const handleSelectPlaylist = useCallback((playlist: PlaylistType) => {
+		if (isPending) return;
 		setSelectedPlaylistId(playlist.id || null);
-		setIsLoading(true);
-
-		try {
-			// Şarkıyı playlist'e ekleme işlemi burada yapılacak
-			addSongToPlaylistMutation(playlist.id as number);
-		} catch (error) {
-			setIsLoading(false);
-			setSelectedPlaylistId(null);
-		}
-	};
+		addSongToPlaylistMutation(playlist.id as number);
+	}, [isPending, addSongToPlaylistMutation]);
 
 	// Modal görünür değilse hiç render etme
 	if (!isVisible) {
@@ -114,19 +107,18 @@ export default function AddToPlaylistModal({
 		);
 	}
 
-	const renderPlaylistItem = ({ item, index }: { item: PlaylistType; index?: number }) => {
+	const renderPlaylistItem = ({ item, index }: { item: PlaylistType; index: number }) => {
 		if (!item || !item.id) {
 			return <View key={`playlist-${index}`} style={{ height: 0 }} />;
 		}
 		const isSelected = selectedPlaylistId === item.id;
-		const isPublic = item.is_public;
 
 		return (
 			<TouchableOpacity
 				key={item.id}
 				activeOpacity={0.7}
 				onPress={() => handleSelectPlaylist(item)}
-				disabled={isLoading}
+				disabled={isPending}
 				style={{
 					flexDirection: 'row',
 					alignItems: 'center',
@@ -137,7 +129,7 @@ export default function AddToPlaylistModal({
 					borderWidth: 1,
 					borderColor: isSelected ? accent : borderColor,
 					gap: wp(3),
-					opacity: isLoading && !isSelected ? 0.6 : 1,
+					opacity: isPending && !isSelected ? 0.6 : 1,
 				}}
 			>
 				{/* Playlist Icon/Thumbnail */}
@@ -155,7 +147,7 @@ export default function AddToPlaylistModal({
 					{isSelected ? (
 						<Icon name={Check} size={wp(7)} color={accentForeground} />
 					) : (
-						<Icon name={ListMusic} size={wp(7)} color={isSelected ? accentForeground : textSecondary} />
+						<Icon name={ListMusic} size={wp(7)} color={textSecondary} />
 					)}
 				</View>
 
@@ -179,7 +171,6 @@ export default function AddToPlaylistModal({
 						>
 							{item.name}
 						</Text>
-						{/* Removed privacy badge section */}
 					</View>
 
 					{item.description ? (
@@ -194,6 +185,16 @@ export default function AddToPlaylistModal({
 						</Text>
 					) : null}
 
+					{/* Song count */}
+					<Text
+						style={{
+							color: textSecondary,
+							fontSize: fontSize(11),
+						}}
+					>
+						{item.song_count ?? item.songCount ?? 0} şarkı
+					</Text>
+
 					{/* Tags */}
 					{item.tags && item.tags.length > 0 ? (
 						<View
@@ -204,9 +205,9 @@ export default function AddToPlaylistModal({
 								marginTop: hp(0.3),
 							}}
 						>
-							{item.tags.slice(0, 3).map((tag, index) => (
+							{item.tags.slice(0, 3).map((tag, tagIndex) => (
 								<View
-									key={index}
+									key={tagIndex}
 									style={{
 										backgroundColor: accent + '20',
 										paddingHorizontal: wp(2),
@@ -240,7 +241,7 @@ export default function AddToPlaylistModal({
 				</View>
 
 				{/* Loading Indicator */}
-				{isLoading && isSelected && (
+				{isPending && isSelected && (
 					<ActivityIndicator size="small" color={accent} />
 				)}
 			</TouchableOpacity>
@@ -306,13 +307,18 @@ export default function AddToPlaylistModal({
 					</View>
 				)}
 
-				{/* Playlist List */}
+				{/* Playlist List - FlatList ile performanslı render */}
 				{filteredPlaylists.length > 0 ? (
-					<View style={{ flex: 1 }}>
-						{filteredPlaylists.map((playlist, index) => 
-							renderPlaylistItem({ item: playlist, index })
-						)}
-					</View>
+					<FlatList
+						data={filteredPlaylists}
+						renderItem={renderPlaylistItem}
+						keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+						showsVerticalScrollIndicator={false}
+						initialNumToRender={8}
+						maxToRenderPerBatch={8}
+						windowSize={5}
+						contentContainerStyle={{ paddingBottom: hp(4) }}
+					/>
 				) : (
 					<EmptyState 
 						title={searchQuery ? 'Playlist Bulunamadı' : 'Henüz Playlist Yok'}

@@ -26,13 +26,17 @@ import { ErrorState } from "@/components/ui/error-state";
 import { useAudioPlayerContext } from "@/providers/player-context";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AppBannerAd } from "@/components/AppBannerAd";
-
+import { useToast } from "@/components/ui/toast";
+import { getAllSongsWithDetails } from "@/services/SongsService";
+import { createPlaylist, addMultipleSongsToPlaylist } from "@/services/PlaylistServices";
 export default function MusicAssistant() {
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette } = useThemeModeContext();
   const { isPlaying } = useAudioPlayerContext();
   const { showRewarded, isRewardedLoaded } = useAds();
   const [input, setInput] = useState<string>("");
+  const { toast } = useToast();
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
 
   const apiUrl = generateAPIUrl("api/object");
 
@@ -57,6 +61,64 @@ export default function MusicAssistant() {
     // Reklamı paralel olarak göster
     showRewarded('ASSISTANT', () => {
     });
+  };
+
+  const handleCreatePlaylist = async () => {
+    if (!object?.songs || object.songs.length === 0) return;
+
+    try {
+      setIsCreatingPlaylist(true);
+
+      const localSongs = await getAllSongsWithDetails();
+      if (!localSongs || localSongs.length === 0) {
+        toast({ title: "Hata", description: "Kütüphanenizde şarkı bulunamadı", variant: "error" });
+        return;
+      }
+
+      const matchedSongIds: string[] = [];
+      for (const aiSong of object.songs) {
+        if (!aiSong?.name) continue;
+        const aiSongName = aiSong.name; // Type guarding
+        const match = localSongs.find(
+          (ls) => ls.title.toLowerCase().includes(aiSongName.toLowerCase()) ||
+            aiSongName.toLowerCase().includes(ls.title.toLowerCase())
+        );
+        if (match) {
+          matchedSongIds.push(match.id);
+        }
+      }
+
+      if (matchedSongIds.length === 0) {
+        toast({ title: "Hata", description: "Önerilen şarkılar kütüphanenizle eşleşmedi", variant: "error" });
+        return;
+      }
+
+      const playlistName = object.playlistInfo?.playlistName || "AI Önerisi";
+      const newPlaylist = await createPlaylist({
+        name: playlistName,
+        description: object.playlistInfo?.description || "AI Müzik Asistanı tarafından oluşturuldu",
+        is_public: false,
+        tags: (object.playlistInfo?.tags || []).filter((t): t is string => typeof t === 'string' && t.length > 0),
+      });
+
+      if (!newPlaylist) {
+        toast({ title: "Hata", description: "Playlist oluşturulamadı", variant: "error" });
+        return;
+      }
+
+      const result = await addMultipleSongsToPlaylist(matchedSongIds, newPlaylist.id);
+
+      toast({
+        title: "Başarılı",
+        description: `${result.added} şarkı "${playlistName}" listesine eklendi!`,
+        variant: "success"
+      });
+
+    } catch (error) {
+      toast({ title: "Hata", description: "İşlem sırasında bir hata oluştu", variant: "error" });
+    } finally {
+      setIsCreatingPlaylist(false);
+    }
   };
 
   const formatDuration = (seconds?: number) => {
@@ -116,13 +178,13 @@ export default function MusicAssistant() {
     },
   ];
   return (
-    <SafeAreaView className="flex-1" edges={["top"]}>
+    <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
           paddingHorizontal: wp(4),
           paddingTop: hp(2.5),
-          paddingBottom: isPlaying ? hp(10) : hp(0),
+          paddingBottom: isPlaying ? hp(20) : hp(10),
         }}
         showsVerticalScrollIndicator={false}
       >
@@ -391,15 +453,32 @@ export default function MusicAssistant() {
         {/* Results Section */}
         {object?.songs && object.songs.length > 0 && (
           <View className="mt-4">
-            <Text
-              style={{
-                fontSize: fontSize(18),
-                color: palette.text,
-              }}
-              className="font-bold mb-4"
-            >
-              Önerilen Şarkılar ({object.songs.length})
-            </Text>
+            <View className="flex-row justify-between items-center mb-4">
+              <Text
+                style={{
+                  fontSize: fontSize(18),
+                  color: palette.text,
+                }}
+                className="font-bold"
+              >
+                Önerilen Şarkılar ({object.songs.length})
+              </Text>
+              <TouchableOpacity
+                onPress={handleCreatePlaylist}
+                disabled={isCreatingPlaylist}
+                style={{
+                  backgroundColor: palette.purple,
+                  paddingHorizontal: wp(3),
+                  paddingVertical: hp(1),
+                  borderRadius: radius(8),
+                  opacity: isCreatingPlaylist ? 0.7 : 1
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: fontSize(13), fontWeight: '600' }}>
+                  {isCreatingPlaylist ? "Oluşturuluyor..." : "Playlist Yap"}
+                </Text>
+              </TouchableOpacity>
+            </View>
             {object.songs.map((song: any, index: number) => (
               <View
                 key={index}

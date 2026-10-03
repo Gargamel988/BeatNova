@@ -6,9 +6,9 @@ import useSongsService, { Song } from "./songs/songsService";
 import { useQuery } from "@tanstack/react-query";
 
 function GlobalMiniPlayerComponent({
-  bottomOffset,
+  hasTabBar = false,
 }: {
-  bottomOffset?: number;
+  hasTabBar?: boolean;
 } = {}) {
   const { activeSong, pause, isPlaying, resume, next, previous } =
     useAudioPlayerContext();
@@ -60,7 +60,7 @@ function GlobalMiniPlayerComponent({
       duration={
         hydratedActiveSong?.metadata.duration ?? activeSong.metadata.duration
       }
-      bottomOffset={bottomOffset}
+      hasTabBar={hasTabBar}
     />
   );
 }

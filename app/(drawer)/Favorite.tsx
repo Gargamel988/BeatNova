@@ -5,6 +5,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getFavorites } from "@/services/PlaylistServices";
+import { getlisteninghistory } from "@/services/StatisticServices";
 import useSongsService, { Song } from "@/components/songs/songsService";
 import FavoriteSongItem from "@/components/favorites/FavoriteSongItem";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -45,7 +46,7 @@ export default function Favorite() {
   const [sortOption, setSortOption] = useState<SortOption>("alphabetical");
 
   const { loadSongs } = useSongsService();
-  const [favoritesQuery, songsQuery] = useQueries({
+  const [favoritesQuery, songsQuery, historyQuery] = useQueries({
     queries: [
       {
         queryKey: ["favorites"],
@@ -55,10 +56,27 @@ export default function Favorite() {
         queryKey: ["songs"],
         queryFn: () => loadSongs(),
       },
+      {
+        queryKey: ["listeninghistory"],
+        queryFn: () => getlisteninghistory(),
+      },
     ],
   });
 
   const songs = useMemo(() => songsQuery.data ?? [], [songsQuery.data]);
+
+  // song_id -> { plays, seconds }
+  const popularityMap = useMemo(() => {
+    const map = new Map<string, { plays: number; seconds: number }>();
+    (historyQuery.data ?? []).forEach((item: any) => {
+      const prev = map.get(item.song_id) ?? { plays: 0, seconds: 0 };
+      map.set(item.song_id, {
+        plays: prev.plays + (item.play_count || 0),
+        seconds: prev.seconds + (item.total_seconds || 0),
+      });
+    });
+    return map;
+  }, [historyQuery.data]);
 
   const favorites = useMemo(() => {
     if (!favoritesQuery.data || !songs.length) return [];
@@ -91,14 +109,17 @@ export default function Favorite() {
     } else if (sortOption === "newest") {
       result.sort((a, b) => (b.creationTime || 0) - (a.creationTime || 0));
     } else if (sortOption === "popular") {
-      // Mock: sort by title for now (would need play count data)
-      result.sort((a, b) =>
-        (a.metadata?.title || "").localeCompare(b.metadata?.title || "", "tr")
-      );
+      result.sort((a, b) => {
+        const pa = popularityMap.get(a.id) ?? { plays: 0, seconds: 0 };
+        const pb = popularityMap.get(b.id) ?? { plays: 0, seconds: 0 };
+        if (pb.plays !== pa.plays) return pb.plays - pa.plays;
+        if (pb.seconds !== pa.seconds) return pb.seconds - pa.seconds;
+        return (a.metadata?.title || "").localeCompare(b.metadata?.title || "", "tr");
+      });
     }
 
     return result;
-  }, [favorites, searchQuery, sortOption]);
+  }, [favorites, searchQuery, sortOption, popularityMap]);
 
   if (favoritesQuery.isLoading || songsQuery.isLoading) {
     return <LoadingState message="Favoriler yükleniyor..." fullScreen />;

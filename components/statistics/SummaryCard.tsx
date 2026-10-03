@@ -79,7 +79,9 @@ export function SummaryCard({
         {!!delta && (
           <Text
             style={{
-              color: colors.green,
+              color: delta.startsWith("-")
+                ? colors.destructive
+                : colors.green,
               fontSize: fontSize(11),
               fontWeight: "600",
             }}

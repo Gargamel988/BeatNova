@@ -11,7 +11,7 @@ import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { ScrollView } from "@/components/ui/scroll-view";
 import { useQueries } from "@tanstack/react-query";
-import { formathour, formatDailyAverage } from "@/utils/format";
+import { formathour } from "@/utils/format";
 import { SummaryCard } from "@/components/statistics/SummaryCard";
 import { WeeklyChart } from "@/components/statistics/WeeklyChart";
 import { MostPlayedSongs } from "@/components/statistics/MostPlayedSongs";
@@ -19,11 +19,16 @@ import { HourlyChart } from "@/components/statistics/HourlyChart";
 import { GenreChart } from "@/components/statistics/GenreChart";
 import { PlaybackHabits } from "@/components/statistics/PlaybackHabits";
 import { ReplayScore } from "@/components/statistics/ReplayScore";
-import { getlisteninghistory } from "@/services/StatisticServices";
+import {
+  getlisteninghistory,
+  getListeningDaily,
+  toLocalDateString,
+} from "@/services/StatisticServices";
 import { getAllSongsWithDetails } from "@/services/SongsService";
-import { getFavorites } from "@/services/PlaylistServices";
 import { LoadingState } from "@/components/ui/loading-state";
 import { useAds } from "@/providers/AdsProvider";
+
+const WEEKDAY_SHORT = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
 
 
 
@@ -40,126 +45,177 @@ export default function Statistic() {
   }, []);
 
 
-  const [listeninghistory, songs, favorites] = useQueries({
+  // Tarih aralıkları (yerel saat)
+  const ranges = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const dayOfMonth = now.getDate();
+    const daysInLastMonth = new Date(y, m, 0).getDate();
+    const sevenDaysAgo = new Date(y, m, dayOfMonth - 6);
+    const fourteenDaysAgo = new Date(y, m, dayOfMonth - 13);
+    const startLastMonth = new Date(y, m - 1, 1);
+    return {
+      today: toLocalDateString(now),
+      dayOfMonth,
+      daysInLastMonth,
+      thisMonthStart: toLocalDateString(new Date(y, m, 1)),
+      lastMonthStart: toLocalDateString(startLastMonth),
+      // Geçen ayın "aynı dönemi" (1..bugünün günü)
+      lastMonthSamePeriodEnd: toLocalDateString(
+        new Date(y, m - 1, Math.min(dayOfMonth, daysInLastMonth))
+      ),
+      lastMonthEnd: toLocalDateString(new Date(y, m, 0)),
+      last7Start: toLocalDateString(sevenDaysAgo),
+      prev7Start: toLocalDateString(fourteenDaysAgo),
+      fetchFrom: startLastMonth < fourteenDaysAgo ? startLastMonth : fourteenDaysAgo,
+    };
+  }, []);
+
+  const [listeninghistory, songs, daily] = useQueries({
     queries: [
       {
         queryKey: ["listeninghistory"],
         queryFn: () => getlisteninghistory(),
       },
       {
-        queryKey: ["songs"],
+        queryKey: ["songs-details"],
         queryFn: () => getAllSongsWithDetails(),
       },
       {
-        queryKey: ["favorites"],
-        queryFn: () => getFavorites(),
+        queryKey: ["listening-daily", ranges.fetchFrom.toDateString()],
+        queryFn: () => getListeningDaily(ranges.fetchFrom),
       },
     ],
   });
 
-  const { totalListeningTime, mostActiveDay, summaryCards } = useMemo(() => {
-    const totalListeningTime =
-      listeninghistory?.data?.reduce((acc, item) => acc + item.total_seconds, 0) || 0;
+  const dailyRows = useMemo(() => daily.data ?? [], [daily.data]);
+  const hasDaily = dailyRows.length > 0;
 
-    const mostActiveDay = listeninghistory?.data?.reduce(
-      (
-        max: { created_at: string; total_seconds: number } | null,
-        item: { created_at: string; total_seconds: number }
-      ) => {
-        if (!max || (item.total_seconds || 0) > (max.total_seconds || 0)) {
-          return item;
-        }
-        return max;
-      },
-      null
+  const { summaryCards } = useMemo(() => {
+    const totalListeningTime =
+      listeninghistory.data?.reduce((acc, item) => acc + (item.total_seconds || 0), 0) || 0;
+
+    const sumWhere = (
+      pick: (r: (typeof dailyRows)[number]) => number,
+      from: string,
+      to: string
+    ) =>
+      dailyRows.reduce(
+        (acc, r) => (r.day >= from && r.day <= to ? acc + (pick(r) || 0) : acc),
+        0
+      );
+
+    const pctDelta = (cur: number, prev: number) => {
+      if (cur === 0 && prev === 0) return undefined;
+      if (prev === 0) return "Yeni";
+      const pct = Math.round(((cur - prev) / prev) * 100);
+      return `${pct >= 0 ? "+" : ""}${pct}%`;
+    };
+
+    const dayLabel = (iso: string) => {
+      const [yy, mm, dd] = iso.split("-").map(Number);
+      return new Date(yy, mm - 1, dd).toLocaleDateString("tr-TR", { weekday: "long" });
+    };
+
+    if (!hasDaily) {
+      // Günlük veri henüz yok: kümülatif (tüm zamanlar) değerleri göster, fark gösterme
+      const playedSongs =
+        listeninghistory.data?.reduce((acc: number, item: any) => acc + (item.play_count || 0), 0) || 0;
+      return {
+        summaryCards: [
+          { id: "total", label: "Toplam Dinleme", value: formathour(totalListeningTime), subLabel: "Tüm zamanlar", icon: Headphones },
+          { id: "playedSongs", label: "Çalınan Şarkı", value: playedSongs, subLabel: "Tüm zamanlar", icon: Activity },
+          { id: "mostActiveDay", label: "En Aktif Gün", value: "-", subLabel: "Veri toplanıyor", icon: Clock },
+          { id: "daily", label: "Günlük Ortalama", value: "-", subLabel: "Veri toplanıyor", icon: Activity },
+        ],
+      };
+    }
+
+    const r = ranges;
+    const secThisMonth = sumWhere((x) => x.seconds, r.thisMonthStart, r.today);
+    const secLastSame = sumWhere((x) => x.seconds, r.lastMonthStart, r.lastMonthSamePeriodEnd);
+    const secLastFull = sumWhere((x) => x.seconds, r.lastMonthStart, r.lastMonthEnd);
+    const playsThisMonth = sumWhere((x) => x.play_count, r.thisMonthStart, r.today);
+    const playsLastSame = sumWhere((x) => x.play_count, r.lastMonthStart, r.lastMonthSamePeriodEnd);
+    const secLast7 = sumWhere((x) => x.seconds, r.last7Start, r.today);
+    const secPrev7 = dailyRows.reduce(
+      (acc, x) => (x.day >= r.prev7Start && x.day < r.last7Start ? acc + (x.seconds || 0) : acc),
+      0
     );
 
-    const playedSongs = listeninghistory?.data?.reduce((acc: number, item: any) => acc + (item.play_count || 0), 0) || 0;
+    // Son 7 günde en çok dinlenen gün
+    const perDay = new Map<string, number>();
+    dailyRows.forEach((x) => {
+      if (x.day >= r.last7Start && x.day <= r.today) {
+        perDay.set(x.day, (perDay.get(x.day) ?? 0) + (x.seconds || 0));
+      }
+    });
+    let bestDay: string | null = null;
+    let maxSec = -1;
+    for (const [d, sec] of Array.from(perDay.entries())) {
+      if (sec > maxSec) {
+        bestDay = d;
+        maxSec = sec;
+      }
+    }
 
-    const summaryCards = [
-      {
-        id: "total",
-        label: "Toplam Dinleme",
-        value: formathour(totalListeningTime),
-        subLabel: "Bu ay",
-        delta: "+12%",
-        icon: Headphones,
-      },
-      {
-        id: "playedSongs",
-        label: "Çalınan Şarkı",
-        value: playedSongs,
-        subLabel: "Bu ay",
-        delta: "+4%",
-        icon: Activity,
-      },
-      {
-        id: "mostActiveDay",
-        label: "En Aktif Gün",
-        value: mostActiveDay?.created_at ? new Date(mostActiveDay.created_at).toLocaleDateString("tr-TR", { weekday: "long" }) : "-",
-        subLabel: "Bu hafta",
-        delta: "+8%",
-        icon: Clock,
-      },
-      {
-        id: "daily",
-        label: "Günlük Ortalama",
-        value: formatDailyAverage([totalListeningTime]),
-        subLabel: "Bu ay",
-        delta: "+15%",
-        icon: Activity,
-      },
-    ] as const;
+    const avgThisMonth = secThisMonth / r.dayOfMonth;
+    const avgLastMonth = secLastFull / r.daysInLastMonth;
 
-    return { totalListeningTime, mostActiveDay, summaryCards };
-  }, [listeninghistory?.data]);
+    return {
+      summaryCards: [
+        {
+          id: "total",
+          label: "Toplam Dinleme",
+          value: formathour(secThisMonth),
+          subLabel: "Bu ay • geçen ayın aynı dönemine göre",
+          delta: pctDelta(secThisMonth, secLastSame),
+          icon: Headphones,
+        },
+        {
+          id: "playedSongs",
+          label: "Çalınan Şarkı",
+          value: playsThisMonth,
+          subLabel: "Bu ay • geçen ayın aynı dönemine göre",
+          delta: pctDelta(playsThisMonth, playsLastSame),
+          icon: Activity,
+        },
+        {
+          id: "mostActiveDay",
+          label: "En Aktif Gün",
+          value: bestDay ? dayLabel(bestDay) : "-",
+          subLabel: "Son 7 gün • önceki 7 güne göre",
+          delta: pctDelta(secLast7, secPrev7),
+          icon: Clock,
+        },
+        {
+          id: "daily",
+          label: "Günlük Ortalama",
+          value: formathour(avgThisMonth),
+          subLabel: "Bu ay • geçen ay ortalamasına göre",
+          delta: pctDelta(avgThisMonth, avgLastMonth),
+          icon: Activity,
+        },
+      ],
+    };
+  }, [listeninghistory.data, dailyRows, hasDaily, ranges]);
 
   const weeklyListeningData = useMemo(() => {
-    if (!listeninghistory?.data || listeninghistory?.data?.length === 0) return [];
+    const order = [1, 2, 3, 4, 5, 6, 0]; // Pzt..Paz
+    const totals = new Array(7).fill(0);
 
-    const groupedByDay = listeninghistory?.data?.reduce(
-      (acc: Record<string, number>, d: { created_at: string; total_seconds: number }) => {
-        const day = new Date(d.created_at).toLocaleDateString("tr-TR", {
-          weekday: "long",
-        });
-        if (!acc[day]) {
-          acc[day] = 0;
-        }
-        acc[day] += d.total_seconds || 0;
-        return acc;
-      },
-      {}
-    );
+    if (hasDaily) {
+      // Son 7 günün gerçek verisi
+      dailyRows.forEach((x) => {
+        if (x.day < ranges.last7Start || x.day > ranges.today) return;
+        const [yy, mm, dd] = x.day.split("-").map(Number);
+        totals[new Date(yy, mm - 1, dd).getDay()] += x.seconds || 0;
+      });
+    }
 
-    const weekday = [
-      "Pazartesi",
-      "Salı",
-      "Çarşamba",
-      "Perşembe",
-      "Cuma",
-      "Cumartesi",
-      "Pazar",
-    ];
-    return weekday.map((day) => ({
-      day:
-        day === "Pazartesi"
-          ? "Pzt"
-          : day === "Salı"
-            ? "Sal"
-            : day === "Çarşamba"
-              ? "Çar"
-              : day === "Perşembe"
-                ? "Per"
-                : day === "Cuma"
-                  ? "Cum"
-                  : day === "Cumartesi"
-                    ? "Cmt"
-                    : day === "Pazar"
-                      ? "Paz"
-                      : day,
-      value: groupedByDay[day] || 0,
-    }));
-  }, [listeninghistory?.data]);
+    return order.map((idx) => ({ day: WEEKDAY_SHORT[idx], value: totals[idx] }));
+  }, [listeninghistory.data, dailyRows, hasDaily, ranges]);
 
 
 
@@ -175,71 +231,24 @@ export default function Statistic() {
       duration: song.duration || 0,
       cover: song.cover_url || null,
     }));
-  }, [songs?.data]);
+  }, [songs.data]);
 
 
 
 
   const hourlyListeningData = useMemo(() => {
     const buckets = Array.from({ length: 24 }, (_, hour) => ({ hour, value: 0 }));
-    listeninghistory?.data?.forEach((item: any) => {
-      const hour = new Date(item.created_at).getHours();
-      buckets[hour].value += item.total_seconds || 0;
-    });
+    if (hasDaily) {
+      dailyRows.forEach((x) => {
+        if (x.hour >= 0 && x.hour < 24) buckets[x.hour].value += x.seconds || 0;
+      });
+    }
     return buckets;
-  }, [listeninghistory?.data]);
-
-  // Genre tahmin fonksiyonu (artist'e göre basit bir tahmin)
-  const getGenreFromArtist = React.useCallback((artist: string): string => {
-    if (!artist) return "Diğer";
-    const artistLower = artist.toLowerCase();
-
-    // Türk sanatçılar
-    if (artistLower.includes("tarkan") || artistLower.includes("sezen") || artistLower.includes("sertab") ||
-      artistLower.includes("ajda") || artistLower.includes("hande") || artistLower.includes("ece")) {
-      return "Pop";
-    }
-    if (artistLower.includes("duman") || artistLower.includes("mor ve ötesi") || artistLower.includes("teoman") ||
-      artistLower.includes("şebnem") || artistLower.includes("pinhani") || artistLower.includes("yüksek sadakat")) {
-      return "Rock";
-    }
-    if (artistLower.includes("ceza") || artistLower.includes("sagopa") || artistLower.includes("ezhel") ||
-      artistLower.includes("gazapizm") || artistLower.includes("allame") || artistLower.includes("şanışer")) {
-      return "Hip-Hop";
-    }
-
-    // Yabancı sanatçılar
-    if (artistLower.includes("weeknd") || artistLower.includes("taylor swift") || artistLower.includes("ed sheeran") ||
-      artistLower.includes("dua lipa") || artistLower.includes("billie eilish") || artistLower.includes("post malone")) {
-      return "Pop";
-    }
-    if (artistLower.includes("imagine dragons") || artistLower.includes("coldplay") || artistLower.includes("linkin park") ||
-      artistLower.includes("foo fighters") || artistLower.includes("ac/dc") || artistLower.includes("metallica")) {
-      return "Rock";
-    }
-    if (artistLower.includes("drake") || artistLower.includes("kendrick") || artistLower.includes("eminem") ||
-      artistLower.includes("travis scott") || artistLower.includes("kanye")) {
-      return "Hip-Hop";
-    }
-    if (artistLower.includes("skrillex") || artistLower.includes("deadmau5") || artistLower.includes("avicii") ||
-      artistLower.includes("calvin harris") || artistLower.includes("martin garrix")) {
-      return "Electronic";
-    }
-    if (artistLower.includes("miles davis") || artistLower.includes("john coltrane") || artistLower.includes("ella fitzgerald") ||
-      artistLower.includes("louis armstrong") || artistLower.includes("bill evans")) {
-      return "Jazz";
-    }
-
-    return "Diğer";
-  }, []);
-
-
-
-
+  }, [listeninghistory.data, dailyRows, hasDaily]);
 
   // Dinleme geçmişinden genre istatistiklerini hesapla
   const genreData = useMemo(() => {
-    if (!listeninghistory?.data || !songs?.data) {
+    if (!listeninghistory.data || !songs.data) {
       return [
         { genre: "Pop", value: 0, color: colors.purpleLight },
         { genre: "Rock", value: 0, color: colors.accent },
@@ -254,7 +263,7 @@ export default function Statistic() {
     const songGenreMap = new Map(
       songs.data.map((song) => [
         song.id,
-        song.genre || getGenreFromArtist(song.artist || "")
+        song.genre || "Diğer"
       ])
     );
 
@@ -296,11 +305,11 @@ export default function Statistic() {
     return genres.length > 0 ? genres : [
       { genre: "Veri Yok", value: 100, color: colors.textMuted },
     ];
-  }, [listeninghistory?.data, songs?.data, colors, getGenreFromArtist]);
+  }, [listeninghistory.data, songs.data, colors]);
 
   // Oynatma alışkanlığı verilerini hesapla
   const playbackHabitsData = useMemo(() => {
-    if (!listeninghistory?.data || !songs?.data || listeninghistory.data.length === 0) {
+    if (!listeninghistory.data || !songs.data || listeninghistory.data.length === 0) {
       return {
         averageCompletionRate: 0,
         mostSkippedSongs: [],
@@ -368,10 +377,10 @@ export default function Statistic() {
     songStatsMap.forEach((stats) => {
       const totalPlays = stats.totalPlayCount + stats.totalSkipCount;
 
-      // Tamamlama oranı: dinlenen süre / (şarkı süresi * çalınma sayısı)
+      // Tamamlama oranı: dinlenen süre / (şarkı süresi * (çalınma + geçme sayısı))
       let completionRate = 0;
-      if (stats.totalPlayCount > 0 && stats.duration > 0) {
-        const expectedSeconds = stats.duration * stats.totalPlayCount;
+      if (totalPlays > 0 && stats.duration > 0) {
+        const expectedSeconds = stats.duration * totalPlays;
         completionRate = Math.min(100, Math.round((stats.totalSeconds / expectedSeconds) * 100));
       }
 
@@ -412,30 +421,103 @@ export default function Statistic() {
       averageCompletionRate,
       mostSkippedSongs,
     };
-  }, [listeninghistory?.data, songs?.data]);
+  }, [listeninghistory.data, songs.data]);
 
   const averageCompletionRate = playbackHabitsData.averageCompletionRate;
   const mostSkippedSongs = playbackHabitsData.mostSkippedSongs;
 
   const replayScores = useMemo(() => {
-    const songMap = new Map(songs?.data?.map((s) => [s.id, s]) ?? []);
-    return listeninghistory?.data?.reduce((acc, item) => {
-      if (item.play_count) {
-        const song = songMap.get(item.song_id);
-        if (song) {
-          acc.push({ title: song.title || "Bilinmeyen Şarkı", artist: song.artist || "Bilinmeyen Sanatçı", replayCount: item.play_count });
-        }
-      }
-      return acc;
-    }, [] as { title: string; artist: string; replayCount: number }[]);
-  }, [listeninghistory?.data, songs?.data]);
-  if (listeninghistory?.isLoading || songs?.isLoading || favorites?.isLoading) {
+    if (!listeninghistory.data || !songs.data) return [];
 
+    const songMap = new Map(songs.data.map((s) => [s.id, s]));
+    const aggregated = new Map<string, number>();
+
+    listeninghistory.data.forEach((item) => {
+      if (item.play_count) {
+        aggregated.set(item.song_id, (aggregated.get(item.song_id) || 0) + item.play_count);
+      }
+    });
+
+    return Array.from(aggregated.entries()).map(([songId, count]) => {
+      const song = songMap.get(songId);
+      return {
+        title: song?.title || "Bilinmeyen Şarkı",
+        artist: song?.artist || "Bilinmeyen Sanatçı",
+        replayCount: count
+      };
+    })
+      .sort((a, b) => b.replayCount - a.replayCount)
+      .slice(0, 5);
+  }, [listeninghistory.data, songs.data]);
+
+  if (listeninghistory.isLoading || songs.isLoading || daily.isLoading) {
     return <LoadingState message="İstatistikler yükleniyor..." fullScreen />;
   }
+
+  if (listeninghistory.isError || songs.isError || daily.isError) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: textPrimary, fontSize: fontSize(20), fontWeight: "700", marginBottom: hp(2) }}>Hata Oluştu</Text>
+        <Text style={{ color: colors.textMuted, textAlign: "center", paddingHorizontal: wp(10), marginBottom: hp(4) }}>
+          Veriler yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.
+        </Text>
+        <TouchableOpacity
+          onPress={() => {
+            listeninghistory.refetch();
+            songs.refetch();
+            daily.refetch();
+          }}
+          style={{ backgroundColor: colors.primary, paddingHorizontal: wp(6), paddingVertical: hp(1.5), borderRadius: radius(12) }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Tekrar Dene</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   return (
 
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+      {/* Header with Back Button (Sabit) */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: wp(5),
+          paddingTop: hp(2),
+          paddingBottom: hp(1),
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            width: wp(11),
+            height: wp(11),
+            borderRadius: radius(10),
+            backgroundColor: cardBg,
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: wp(3),
+            borderWidth: 1,
+            borderColor,
+          }}
+          activeOpacity={0.7}
+        >
+          <Icon name={ArrowLeft} size={22} color={textPrimary} />
+        </TouchableOpacity>
+        <Text
+          style={{
+            color: textPrimary,
+            fontSize: fontSize(28),
+            fontWeight: "900",
+            letterSpacing: -0.5,
+            flex: 1,
+          }}
+        >
+          İstatistikler
+        </Text>
+      </View>
+
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: wp(5),
@@ -446,56 +528,17 @@ export default function Statistic() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={listeninghistory?.isRefetching || songs?.isRefetching || favorites?.isRefetching}
+            refreshing={listeninghistory.isRefetching || songs.isRefetching || daily.isRefetching}
             onRefresh={() => {
-              listeninghistory?.refetch();
-              songs?.refetch();
-              favorites?.refetch();
+              listeninghistory.refetch();
+              songs.refetch();
+              daily.refetch();
             }}
             colors={[colors.primary]}
             tintColor={colors.accentForeground}
           />
         }
       >
-        {/* Header with Back Button */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: hp(2),
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              width: wp(11),
-              height: wp(11),
-              borderRadius: radius(10),
-              backgroundColor: cardBg,
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: wp(3),
-              borderWidth: 1,
-              borderColor,
-            }}
-            activeOpacity={0.7}
-          >
-            <Icon name={ArrowLeft} size={22} color={textPrimary} />
-          </TouchableOpacity>
-          <Text
-            style={{
-              color: textPrimary,
-              fontSize: fontSize(28),
-              fontWeight: "900",
-              letterSpacing: -0.5,
-              flex: 1,
-            }}
-          >
-            İstatistikler
-          </Text>
-
-
-        </View>
         {/* Summary cards */}
         <View
           style={{
@@ -517,7 +560,8 @@ export default function Statistic() {
         {/* En çok dinlenen şarkılar */}
         <MostPlayedSongs
           songs={songsForMostPlayed}
-          listeningHistory={listeninghistory?.data}
+          listeningHistory={listeninghistory.data}
+          dailyRows={dailyRows}
         />
 
         {/* En Aktif Dinleme Saatleri */}

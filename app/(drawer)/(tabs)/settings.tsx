@@ -52,6 +52,7 @@ export default function Settings() {
     sleepTimerRemaining,
     setSleepTimer,
     isSleepTimerActive,
+    isPlaying,
   } = useAudioPlayerContext();
 
   const [notifications, setNotifications] = useState(true);
@@ -62,7 +63,7 @@ export default function Settings() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
     });
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
     });
@@ -241,13 +242,13 @@ export default function Settings() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top", 'bottom']}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingHorizontal: wp(4),
           paddingTop: hp(2.5),
-          paddingBottom: hp(3),
+          paddingBottom: isPlaying ? hp(20) : hp(10),
         }}
         showsVerticalScrollIndicator={false}
       >

@@ -1,6 +1,57 @@
 import { supabase } from "@/lib/supabase";
 import { getUser } from "@/lib/user";
 
+export type ListeningDailyRow = {
+  song_id: string;
+  day: string; // YYYY-MM-DD (yerel saat)
+  hour: number; // 0-23
+  seconds: number;
+  play_count: number;
+  skip_count: number;
+};
+
+const toLocalDateString = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const fetchAll = async <T,>(build: () => any): Promise<T[]> => {
+  const PAGE = 1000;
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build().range(from, from + PAGE - 1);
+    if (error) throw error;
+    out.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+  return out;
+};
+
+// Gün + saat bazlı kayıt (listening_daily). Tablo henüz yoksa sessizce geçer.
+const logDailyListening = async (
+  songId: string,
+  seconds: number,
+  playCount: number,
+  skipCount: number
+) => {
+  try {
+    const now = new Date();
+    const { error } = await supabase.rpc("increment_listening_daily", {
+      p_song_id: songId,
+      p_day: toLocalDateString(now),
+      p_hour: now.getHours(),
+      p_seconds: seconds,
+      p_play: playCount,
+      p_skip: skipCount,
+    });
+    if (error) console.log("[STATS] listening_daily yazılamadı:", error.message);
+  } catch (e) {
+    console.log("[STATS] listening_daily hatası:", e);
+  }
+};
+
 const upsertlisteningtime = async (
   listeningTime: number,
   songId: string,
@@ -8,9 +59,7 @@ const upsertlisteningtime = async (
   playCount: number = 0,
 ) => {
   try {
-    if (!songId) {
-      return null;
-    }
+    if (!songId) return null;
 
     const safeListeningDelta = Math.max(0, Math.round(listeningTime));
     const safeSkipDelta = Math.max(0, Math.round(skipCount));
@@ -20,47 +69,21 @@ const upsertlisteningtime = async (
       return null;
     }
 
-    const user = await getUser();
-    if (!user?.id) {
-      return null;
-    }
+    const { error } = await supabase.rpc("increment_listening_history", {
+      p_song_id: songId,
+      p_seconds: safeListeningDelta,
+      p_play: safePlayCount,
+      p_skip: safeSkipDelta,
+    });
+    
+    if (error) throw error;
 
-    const { data: existing, error: selectError } = await supabase
-      .from("listening_history")
-      .select("id, total_seconds, skip_count, play_count")
-      .eq("user_id", user.id)
-      .eq("song_id", songId)
-      .maybeSingle();
+    await logDailyListening(songId, safeListeningDelta, safePlayCount, safeSkipDelta);
 
-    if (selectError && selectError.code !== "PGRST116") {
-      throw selectError;
-    }
-
-    const finalPayload = {
-      user_id: user.id,
-      song_id: songId,
-      total_seconds: safeListeningDelta + (existing?.total_seconds ?? 0),
-      skip_count: safeSkipDelta + (existing?.skip_count ?? 0),
-      play_count: safePlayCount + (existing?.play_count ?? 0),
-    };
-
-    const { data, error } = await supabase
-      .from("listening_history")
-      .upsert(
-        finalPayload,
-        {
-          onConflict: "user_id, song_id",
-        }
-      )
-      .select();
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return true;
   } catch (error: any) {
     if (error?.message?.includes("session missing")) return null;
+    console.log("[STATS] upsert error:", error);
     return null;
   }
 };
@@ -69,24 +92,37 @@ const getlisteninghistory = async () => {
   try {
     const user = await getUser();
     if (!user?.id) {
-      // Çevrimdışı kullanıcılar için history'i local'den okuyup harmanlayabiliriz
-      // Ancak şu anlık en azından boş dönelim (hata patlamasın)
       return [];
     }
-    const { data, error } = await supabase
-      .from("listening_history")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    if (error) {
-      throw error;
-    }
-    return data;
-  }
-  catch (error: any) {
+    return await fetchAll<any>(() => 
+      supabase
+        .from("listening_history")
+        .select("*")
+        .eq("user_id", user.id)
+    );
+  } catch (error: any) {
     if (error?.message?.includes("session missing")) return [];
     return [];
   }
 }
 
-export { upsertlisteningtime, getlisteninghistory };
+// Belirtilen tarihten (dahil) itibaren günlük kayıtlar
+const getListeningDaily = async (fromDate: Date): Promise<ListeningDailyRow[]> => {
+  try {
+    const user = await getUser();
+    if (!user?.id) return [];
+    
+    return await fetchAll<ListeningDailyRow>(() => 
+      supabase
+        .from("listening_daily")
+        .select("song_id, day, hour, seconds, play_count, skip_count")
+        .eq("user_id", user.id)
+        .gte("day", toLocalDateString(fromDate))
+        .order("day")
+    );
+  } catch {
+    return [];
+  }
+};
+
+export { upsertlisteningtime, getlisteninghistory, getListeningDaily, toLocalDateString };

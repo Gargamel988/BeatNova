@@ -40,6 +40,8 @@ export default function Songs() {
   const { hp } = useResponsive();
   const { toast } = useToast();
   const insertedSongIdsRef = useRef<Set<string>>(new Set());
+  const { isPlaying } = useAudioPlayerContext();
+
 
   const { mutate: insertSongMutation } = useMutation({
     mutationFn: (song: Song) => insertSong(song),
@@ -263,7 +265,7 @@ export default function Songs() {
   );
 
   return (
-    <SafeAreaView className="flex-1" edges={["top"]}>
+    <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
       <SearchAndFilterBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -294,7 +296,7 @@ export default function Songs() {
           data={displayedSongs}
           keyExtractor={(item) => item.id}
           renderItem={renderSong}
-          contentContainerStyle={{ paddingTop: hp(4), paddingBottom: hp(8) }}
+          contentContainerStyle={{ paddingTop: hp(4), paddingBottom: isPlaying ? hp(20) : hp(10) }}
           showsVerticalScrollIndicator={false}
           refreshing={isLoading}
           onRefresh={refetch}
