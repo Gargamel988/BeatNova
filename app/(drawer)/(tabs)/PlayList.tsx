@@ -350,7 +350,7 @@ export default function PlaylistsPage() {
         contentContainerStyle={{
           paddingHorizontal: wp(5),
           paddingTop: hp(2),
-          paddingBottom: isPlaying ? hp(20) : hp(10),
+          paddingBottom: isPlaying ? hp(20) : hp(8),
         }}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}

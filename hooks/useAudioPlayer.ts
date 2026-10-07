@@ -75,7 +75,7 @@ async function ensureTrackPlayerSetup() {
 export default function useAudioPlayerHook() {
   const queryClient = useQueryClient();
   const { position: currentPositionSec, duration: currentDurationSec } =
-    useProgress(0.5);
+    useProgress(1000);
   const { mutateUpdateCurrentSong: mutateUpdateCurrentSongMutation } =
     useProfile();
 
@@ -139,7 +139,12 @@ export default function useAudioPlayerHook() {
   useEffect(() => {
     if (typeof currentPositionSec === "number") {
       positionShared.value = currentPositionSec;
-      setPosition(currentPositionSec);
+      setPosition((prev) => {
+        if (Math.abs(prev - currentPositionSec) > 0.5) {
+          return currentPositionSec;
+        }
+        return prev;
+      });
     }
   }, [currentPositionSec, positionShared]);
 
@@ -155,20 +160,21 @@ export default function useAudioPlayerHook() {
     async (asset: Song) => {
       if (syncingSongs.current.has(asset.id)) return asset.id;
 
-      const { data: existingSongs } =
-        (queryClient.getQueryData(["songs"]) as any) || { data: [] };
-      const exists = existingSongs?.some((s: any) => s.id === asset.id);
+      const existingSongs = (queryClient.getQueryData(["songs"]) as Song[]) || [];
+      const existsInCache = existingSongs.some((s) => s.id === asset.id);
 
-      if (!exists) {
+      if (!existsInCache) {
         try {
+          // Bu şarkı için bir daha insert atmaması adına kalıcı olarak Set'e ekle
           syncingSongs.current.add(asset.id);
-          const savedSong = await insertSong(asset);
-          if (savedSong) {
-            queryClient.invalidateQueries({ queryKey: ["songs"] });
-          }
-        } finally {
-          syncingSongs.current.delete(asset.id);
+          await insertSong(asset);
+          // ["songs"] yerel kütüphaneyi temsil ettiği için invalidate etmeye gerek yok
+        } catch (e) {
+          console.error("Song sync error", e);
         }
+      } else {
+        // Eğer cache'te varsa zaten batch ile gönderilmiştir, yine de işaretle
+        syncingSongs.current.add(asset.id);
       }
       return asset.id;
     },
@@ -179,103 +185,16 @@ export default function useAudioPlayerHook() {
 
   // ── Event Listeners ──
   useEffect(() => {
-    let fgActiveSongId: string | null = null;
-    let fgPlayStartTime: number | null = null;
-    let fgAccumulatedTime = 0;
-    let fgSessionTime = 0;
-    let fgHasCountedPlay = false;
-
-    const saveFgStats = async (songId: string, playCountDelta: number = 0, skipCountDelta: number = 0) => {
-      let timeToSave = fgAccumulatedTime;
-      fgAccumulatedTime = 0;
-      if (timeToSave >= 1 || playCountDelta > 0 || skipCountDelta > 0) {
-        try {
-          await upsertlisteningtime(timeToSave, songId, skipCountDelta, playCountDelta);
-        } catch (e) {
-          console.log(`[FOREGROUND STATS] ❌ Kayıt Hatası:`, e);
-        }
-      }
-    };
-
     const trackTransitionSub = TrackPlayer.addEventListener(
       Event.MediaItemTransition,
       async (e) => {
-        if (fgActiveSongId) {
-          if (fgPlayStartTime !== null) {
-            const played = (Date.now() - fgPlayStartTime) / 1000;
-            fgAccumulatedTime += played;
-            fgSessionTime += played;
-            fgPlayStartTime = null;
-          }
-
-          let skipDelta = 0;
-          if (!fgHasCountedPlay && fgSessionTime > 0 && fgSessionTime < 30) {
-            skipDelta = 1;
-          }
-          await saveFgStats(fgActiveSongId, 0, skipDelta);
-        }
-
-        fgActiveSongId = e.item?.mediaId ?? null;
-        fgAccumulatedTime = 0;
-        fgSessionTime = 0;
-        fgHasCountedPlay = false;
-        fgPlayStartTime = Date.now();
-
         if (e.item && typeof e.item.mediaId === "string") {
           const list = playlistRef.current || [];
           const foundSong = list.find((s) => s.id === e.item?.mediaId);
-          if (foundSong) {
+          if (foundSong && foundSong.id !== activeSongRef.current?.id) {
             setActiveSong(foundSong);
+            // Sadece UI tarafında değiştiyse profile yaz (zaten play içinde de yazılıyor, o yüzden kontrol ekledik)
             mutateUpdateCurrentSongRef.current(foundSong.id);
-          }
-        }
-      }
-    );
-
-    const isPlayingChangedSub = TrackPlayer.addEventListener(
-      Event.IsPlayingChanged,
-      async (e) => {
-        const { playing } = e;
-        if (playing) {
-          if (fgPlayStartTime === null) {
-            fgPlayStartTime = Date.now();
-          }
-        } else {
-          if (fgPlayStartTime !== null) {
-            const played = (Date.now() - fgPlayStartTime) / 1000;
-            fgAccumulatedTime += played;
-            fgSessionTime += played;
-            fgPlayStartTime = null;
-          }
-          if (fgActiveSongId && fgAccumulatedTime >= 5) {
-            let playDelta = 0;
-            if (!fgHasCountedPlay && fgSessionTime >= 30) {
-              playDelta = 1;
-              fgHasCountedPlay = true;
-            }
-            await saveFgStats(fgActiveSongId, playDelta, 0);
-          }
-        }
-      }
-    );
-
-    const playbackStateSub = TrackPlayer.addEventListener(
-      Event.PlaybackStateChanged,
-      async (e) => {
-        if (e.state === PlaybackState.Ended) {
-          if (fgPlayStartTime !== null) {
-            const played = (Date.now() - fgPlayStartTime) / 1000;
-            fgAccumulatedTime += played;
-            fgSessionTime += played;
-            fgPlayStartTime = null;
-          }
-          if (fgActiveSongId) {
-            let playDelta = 0;
-            if (!fgHasCountedPlay && fgSessionTime >= 30) {
-              playDelta = 1;
-              fgHasCountedPlay = true;
-            }
-            await saveFgStats(fgActiveSongId, playDelta, 0);
           }
         }
       }
@@ -283,8 +202,6 @@ export default function useAudioPlayerHook() {
 
     return () => {
       trackTransitionSub.remove();
-      isPlayingChangedSub.remove();
-      playbackStateSub.remove();
     };
   }, []);
 

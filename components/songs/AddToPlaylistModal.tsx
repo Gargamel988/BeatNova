@@ -60,18 +60,41 @@ export default function AddToPlaylistModal({
 		mutationFn: async (playlistId: number) => {
 			return addSongToPlaylist(selectedSongId as string, playlistId);
 		},
-		onSuccess: () => {
+		onMutate: async (playlistId: number) => {
+			// 1. Devam eden sorguları iptal et
+			await queryClient.cancelQueries({ queryKey: ['playlistSongs', playlistId] });
+			
+			// 2. Önceki durumu kaydet
+			const previousSongs = queryClient.getQueryData(['playlistSongs', playlistId]);
+			
+			// 3. İyimser güncellemeyi yap
+			// Tam şarkı objesi elimizde olmadığı için sadece placeholder koyuyoruz.
+			// Gerçek veri onSettled içindeki invalidateQueries ile gelecek.
+			queryClient.setQueryData(['playlistSongs', playlistId], (old: any[] = []) => [
+				...old, 
+				{ id: selectedSongId, title: 'Ekleniyor...', isOptimistic: true }
+			]);
+			
+			// 4. Modal'ı anında kapat, kullanıcıya hızlı hissettir
 			toast({
-				title: "Playliste ekleme işlemi başarılı",
-				description: "Şarkı başarıyla playliste eklendi",
+				title: "Playliste ekleniyor",
+				description: "Şarkı playliste ekleniyor...",
 				variant: "success",
 			});
-			queryClient.invalidateQueries({ queryKey: ['playlists'] });
 			onClose();
 			setSearchQuery('');
+			
+			return { previousSongs, playlistId };
+		},
+		onSuccess: () => {
+			// Başarılı olursa sadece toast göster, invalidate zaten onSettled'da yapılıyor
 			setSelectedPlaylistId(null);
 		},
-		onError: (error) => {
+		onError: (error, playlistId, context) => {
+			// Hata durumunda eski veriye dön
+			if (context?.previousSongs) {
+				queryClient.setQueryData(['playlistSongs', context.playlistId], context.previousSongs);
+			}
 			toast({
 				title: "Playliste ekleme işlemi başarısız",
 				description: error.message,
@@ -79,6 +102,11 @@ export default function AddToPlaylistModal({
 			});
 			setSelectedPlaylistId(null);
 		},
+		onSettled: (data, error, playlistId) => {
+			// İşlem bitince playlist şarkılarını ve genel playlistleri yenile
+			queryClient.invalidateQueries({ queryKey: ['playlistSongs', playlistId] });
+			queryClient.invalidateQueries({ queryKey: ['playlists'] });
+		}
 	});
 
 	const handleSelectPlaylist = useCallback((playlist: PlaylistType) => {
@@ -256,6 +284,7 @@ export default function AddToPlaylistModal({
 			snapPoints={[0.5, 0.75, 0.9]}
 			disablePanGesture={false}
 			title="Playlist'e Ekle"
+			isScrollable={false}
 		>
 			<View style={{ flex: 1, gap: hp(2) }}>
 				{/* Search Input */}

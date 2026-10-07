@@ -35,7 +35,16 @@ SplashScreen.setOptions({
   fade: true,
 });
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 dakika
+      gcTime: 1000 * 60 * 30, // 30 dakika
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
 
 export default function RootLayout() {
   const colorScheme = useColorScheme() || "system";

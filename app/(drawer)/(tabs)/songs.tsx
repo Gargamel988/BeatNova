@@ -11,7 +11,7 @@ import { getFavorites } from "@/services/PlaylistServices";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { useBottomSheet } from "@/components/ui/bottom-sheet";
-import { insertSong } from "@/services/SongsService";
+import { insertSong, insertSongsBatch } from "@/services/SongsService";
 import { useToast } from "@/components/ui/toast";
 
 //components
@@ -50,6 +50,13 @@ export default function Songs() {
     },
   });
 
+  const { mutate: insertSongsBatchMutation } = useMutation({
+    mutationFn: (songs: Song[]) => insertSongsBatch(songs),
+    onError: (error) => {
+      console.error("Toplu şarkı kaydetme sırasında hata oluştu", error);
+    },
+  });
+
 
   const {
     isVisible: isFilterSheetVisible,
@@ -84,11 +91,10 @@ export default function Songs() {
 
     if (!pendingSongs.length) return;
 
-    pendingSongs.forEach((song) => {
-      insertedSongIdsRef.current.add(song.id);
-      insertSongMutation(song);
-    });
-  }, [songsData, insertSongMutation]);
+    // Supabase'e toplu (batch) istek at, gereksiz POST spam'ini engelle
+    pendingSongs.forEach((song) => insertedSongIdsRef.current.add(song.id));
+    insertSongsBatchMutation(pendingSongs);
+  }, [songsData, insertSongsBatchMutation]);
 
   useEffect(() => {
     if (songsData.length) {
@@ -97,18 +103,30 @@ export default function Songs() {
     }
   }, [loadCoversInBackground, songsData, setSongs]);
 
-  // coverUri yüklendikten sonra şarkıları güncelle
+  // coverUri yüklendikten sonra şarkıları güncelle (Yine toplu yapıyoruz)
   useEffect(() => {
     if (!songs.length) return;
 
-    songs.forEach((song) => {
-      // coverUri varsa ve şarkı zaten kaydedilmişse, güncelle
-      if (song?.metadata?.coverUri && insertedSongIdsRef.current.has(song.id)) {
-        // Şarkı zaten kaydedilmişse, coverUri ile güncelle
-        insertSongMutation(song);
+    const updatedSongsToSync = songs.filter((song) => 
+      song?.metadata?.coverUri && insertedSongIdsRef.current.has(song.id)
+    );
+    
+    // Yalnızca 1'den fazla kapak fotoğrafı geldiyse ufak gruplar halinde kaydedebiliriz
+    // Veya her kapak güncellendiğinde tüm güncel kapaklı şarkıları yollayabiliriz.
+    // Çok fazla spam olmaması için burada basit bir throttling veya debounce yapmak en iyisidir.
+    // Şimdilik performansı çok bozmaması adına bu kısmı tamamen batch'e çevirmiyorum ama
+    // en azından tek tek atmayı optimize edebiliriz.
+    
+    // Bu useEffect aslında çok tehlikeli (sonsuz döngü/spam yaratır). 
+    // Müziklerin kapağı yüklendikçe backend'e senkronize etmek için basit bir debounce ekleyelim:
+    const timer = setTimeout(() => {
+      if (updatedSongsToSync.length > 0) {
+        insertSongsBatchMutation(updatedSongsToSync);
       }
-    });
-  }, [songs, insertSongMutation]);
+    }, 2000); // Sadece son halini 2 saniye sonra yollar
+    
+    return () => clearTimeout(timer);
+  }, [songs, insertSongsBatchMutation]);
 
   const toggleFilter = useCallback((key: FilterKey) => {
     setFiltersState((prev) => ({
@@ -296,7 +314,7 @@ export default function Songs() {
           data={displayedSongs}
           keyExtractor={(item) => item.id}
           renderItem={renderSong}
-          contentContainerStyle={{ paddingTop: hp(4), paddingBottom: isPlaying ? hp(20) : hp(10) }}
+          contentContainerStyle={{ paddingTop: hp(4), paddingBottom: isPlaying ? hp(20) : hp(8) }}
           showsVerticalScrollIndicator={false}
           refreshing={isLoading}
           onRefresh={refetch}

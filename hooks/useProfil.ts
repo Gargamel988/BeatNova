@@ -31,11 +31,24 @@ export const useProfile = () => {
 
   const mutateUpdateCurrentSong = useMutation({
     mutationFn: (songId: string | null) => updateCurrentSong(songId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    onSuccess: (data, variables) => {
+      // Profil verisini yeniden çekmek (invalidate) yerine yerel cache'i güncelliyoruz
+      // Böylece her şarkı değişiminde fazladan GET /v1/profiles isteği gitmez.
+      if (data && data.length > 0) {
+        queryClient.setQueryData(["profile"], (old: any) => {
+          if (!old?.data) return old;
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              current_song_id: variables,
+            },
+          };
+        });
+      }
+      // Sadece arkadaş feed'ini invalidate ediyoruz (bunu da dilersen silebilirsin)
+      // queryClient.invalidateQueries({ queryKey: ["friends"] }); 
     },
-
   });
 
   const mutateUpdateProfile = useMutation({

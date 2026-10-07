@@ -35,6 +35,7 @@ type BottomSheetContentProps = {
   cardColor: string;
   mutedColor: string;
   onHandlePress?: () => void;
+  isScrollable?: boolean;
 };
 
 // Component for the bottom sheet content
@@ -47,7 +48,11 @@ const BottomSheetContent = ({
   cardColor,
   mutedColor,
   onHandlePress,
+  isScrollable = true,
 }: BottomSheetContentProps) => {
+  const contentWrapperStyle = { flex: 1 };
+  const contentContainerStyle = { padding: 16, paddingBottom: 40 };
+
   return (
     <Animated.View
       style={[
@@ -99,15 +104,21 @@ const BottomSheetContent = ({
         </View>
       )}
 
-      {/* Content now wrapped in a ScrollView */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        keyboardShouldPersistTaps='handled'
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
+      {/* Content wrapper: ScrollView or View based on isScrollable */}
+      {isScrollable ? (
+        <ScrollView
+          style={contentWrapperStyle}
+          contentContainerStyle={contentContainerStyle}
+          keyboardShouldPersistTaps='handled'
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={[contentWrapperStyle, contentContainerStyle]}>
+          {children}
+        </View>
+      )}
     </Animated.View>
   );
 };
@@ -121,6 +132,7 @@ type BottomSheetProps = {
   title?: string;
   style?: ViewStyle;
   disablePanGesture?: boolean;
+  isScrollable?: boolean;
 };
 
 export function BottomSheet({
@@ -132,6 +144,7 @@ export function BottomSheet({
   title,
   style,
   disablePanGesture = false,
+  isScrollable = true,
 }: BottomSheetProps) {
   const cardColor = useColor('background1');
   const mutedColor = useColor('muted');
@@ -306,6 +319,7 @@ export function BottomSheet({
               rBottomSheetStyle={rBottomSheetStyle}
               cardColor={cardColor}
               mutedColor={mutedColor}
+              isScrollable={isScrollable}
               onHandlePress={() => runOnJS(handlePress)()}
             />
           ) : (
@@ -317,6 +331,7 @@ export function BottomSheet({
                 rBottomSheetStyle={rBottomSheetStyle}
                 cardColor={cardColor}
                 mutedColor={mutedColor}
+                isScrollable={isScrollable}
                 onHandlePress={() => runOnJS(handlePress)()}
               />
             </GestureDetector>

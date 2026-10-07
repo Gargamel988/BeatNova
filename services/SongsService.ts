@@ -58,33 +58,46 @@ const sanitizeSong = (song: Song, userId: string): SongInsertPayload | null => {
   };
 };
 
-const insertSong = async (song: Song) => {
+const insertSongsBatch = async (songs: Song[]) => {
   try {
-    // Önce oturum kontrolü yap
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
-    if (sessionError || !sessionData.session) {
-      return null;
-    }
-
     const user = await getUser();
     if (!user?.id) {
       return null;
     }
 
-    // users_id'nin auth.uid() ile eşleştiğinden emin ol
-    const payload = sanitizeSong(song, user.id);
+    const payloads = songs
+      .map((song) => sanitizeSong(song, user.id))
+      .filter((payload) => payload !== null);
 
-    // Payload null ise (URI eksik), işlemi atla
-    if (!payload) {
+    if (payloads.length === 0) {
       return null;
     }
 
-    // RLS politikası için auth.uid() kontrolü
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-    if (authUser?.id !== user.id) {
+    // Supabase can batch upsert arrays
+    const { data, error } = await supabase
+      .from("songs")
+      .upsert(payloads, { onConflict: "id" })
+      .select();
+
+    if (error) {
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    return null;
+  }
+};
+
+const insertSong = async (song: Song) => {
+  try {
+    const user = await getUser();
+    if (!user?.id) {
+      return null;
+    }
+
+    const payload = sanitizeSong(song, user.id);
+    if (!payload) {
+      return null;
     }
 
     const { data, error } = await supabase
@@ -225,6 +238,7 @@ const deleteSong = async (assetId: string): Promise<boolean> => {
 
 export {
   insertSong,
+  insertSongsBatch,
   getsongs,
   getAllSongsWithDetails,
   deleteSong,

@@ -248,7 +248,7 @@ export default function Settings() {
         contentContainerStyle={{
           paddingHorizontal: wp(4),
           paddingTop: hp(2.5),
-          paddingBottom: isPlaying ? hp(20) : hp(10),
+          paddingBottom: isPlaying ? hp(20) : hp(8),
         }}
         showsVerticalScrollIndicator={false}
       >
