@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Users, Music2, UserPlus } from "lucide-react-native";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
+import { useTranslation } from "react-i18next";
 
 interface StatsCardsProps {
   totalFriends: number;
@@ -17,6 +18,7 @@ export function StatsCards({
   activeFriends,
   pendingRequests,
 }: StatsCardsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -59,7 +61,7 @@ export function StatsCards({
             fontSize: fontSize(12),
           }}
         >
-          Toplam
+          {t("friends.total")}
         </Text>
       </View>
 
@@ -90,7 +92,7 @@ export function StatsCards({
             fontSize: fontSize(12),
           }}
         >
-          Aktif
+          {t("friends.active")}
         </Text>
       </View>
 
@@ -121,7 +123,7 @@ export function StatsCards({
             fontSize: fontSize(12),
           }}
         >
-          İstek
+          {t("friends.request")}
         </Text>
       </View>
     </View>

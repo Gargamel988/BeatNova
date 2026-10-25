@@ -3,14 +3,15 @@ import { TouchableOpacity } from "react-native";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
-import { Menu } from "lucide-react-native";
+import { BarChart3 } from "lucide-react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
-import { useNavigation } from "expo-router";
+import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 export function HomeHeaderComponent() {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
-  const navigation = useNavigation();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
@@ -18,9 +19,9 @@ export function HomeHeaderComponent() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Günaydın";
-    if (hour < 18) return "İyi günler";
-    return "İyi akşamlar";
+    if (hour < 12) return t("home.goodMorning", "Günaydın");
+    if (hour < 18) return t("home.goodAfternoon", "İyi günler");
+    return t("home.goodEvening", "İyi akşamlar");
   };
 
   return (
@@ -47,13 +48,12 @@ export function HomeHeaderComponent() {
             fontWeight: "800",
           }}
         >
-          Müzik Keyfin Başlasın
+          {t("home.startMusic", "Müzik Keyfin Başlasın")}
         </Text>
       </View>
       <TouchableOpacity
         onPress={() => {
-          // @ts-ignore
-          navigation.openDrawer?.();
+          router.push("/statistic" as any);
         }}
         className="items-center justify-center"
         style={{
@@ -65,8 +65,9 @@ export function HomeHeaderComponent() {
           borderColor,
         }}
         activeOpacity={0.7}
+        accessibilityLabel={t("stats.title", "İstatistikler")}
       >
-        <Icon name={Menu} size={24} color={textPrimary} />
+        <Icon name={BarChart3} size={22} color={textPrimary} />
       </TouchableOpacity>
     </View>
   );

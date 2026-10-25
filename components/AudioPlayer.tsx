@@ -26,6 +26,9 @@ import PlayerControls from "@/components/segmenttabs/PlayerControls";
 import ProgressSection from "@/components/ProgressSection";
 import SegmentTabs, { SEGMENTS } from "@/components/SegmentTabs";
 import useSongsService, { Song } from "@/components/songs/songsService";
+import { SleepTimerModal } from "@/components/settings/SleepTimerModal";
+import { useTranslation } from "react-i18next";
+
 export default function AudioPlayer({
   visible,
   onClose,
@@ -35,6 +38,7 @@ export default function AudioPlayer({
   onClose: () => void;
   selectedSong: Song;
 }) {
+  const { t, i18n } = useTranslation();
   const {
     activeSong,
     pause,
@@ -225,23 +229,23 @@ export default function AudioPlayer({
 
   const detailsItems = useMemo(
     () => [
-      { label: "Dosya Adı", value: activeSong?.filename ?? "Bilinmiyor" },
+      { label: t("songs.fileName"), value: activeSong?.filename ?? t("songs.unknown") },
       {
-        label: "Süre",
+        label: t("songs.duration"),
         value: durationSeconds ? formatTime(durationSeconds) : "—",
       },
       {
-        label: "Albüm",
-        value: activeMediaItem?.albumTitle ?? currentSong?.metadata?.album ?? "Bilinmeyen Albüm",
+        label: t("songs.album"),
+        value: activeMediaItem?.albumTitle ?? currentSong?.metadata?.album ?? t("songs.unknownAlbum"),
       },
       {
-        label: "Sanatçı",
-        value: activeMediaItem?.artist ?? currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı",
+        label: t("songs.artist"),
+        value: activeMediaItem?.artist ?? currentSong?.metadata?.artist ?? t("songs.unknownArtist"),
       },
       {
-        label: "Oluşturulma",
+        label: t("songs.createdAt"),
         value: activeSong?.creationTime
-          ? new Date(activeSong.creationTime * 1000).toLocaleDateString()
+          ? new Date(activeSong.creationTime * 1000).toLocaleDateString(i18n.language)
           : "—",
       },
     ],
@@ -253,6 +257,8 @@ export default function AudioPlayer({
       currentSong?.metadata?.artist,
       activeMediaItem?.albumTitle,
       activeMediaItem?.artist,
+      t,
+      i18n.language,
     ]
   );
 
@@ -335,7 +341,7 @@ export default function AudioPlayer({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                Şimdi Çalıyor
+                {t("player.nowPlaying")}
               </Text>
               <Text
                 style={{
@@ -345,7 +351,7 @@ export default function AudioPlayer({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {activeMediaItem?.artist ?? currentSong?.metadata?.artist ?? "Bilinmeyen Sanatçı"}
+                {activeMediaItem?.artist ?? currentSong?.metadata?.artist ?? t("songs.unknownArtist")}
               </Text>
             </View>
 
@@ -378,7 +384,7 @@ export default function AudioPlayer({
                   ellipsizeMode="tail"
                 >
                   {activeMediaItem?.title ?? currentSong?.metadata?.title ??
-                    "Şarkı"}
+                    t("songs.unknownTitle")}
                 </Text>
                 <Text
                   style={{
@@ -420,87 +426,10 @@ export default function AudioPlayer({
 
         </View>
 
-        <Modal
+        <SleepTimerModal
           visible={sleepTimerModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setSleepTimerModalVisible(false)}
-        >
-          <TouchableOpacity
-            className="flex-1 justify-end"
-            activeOpacity={1}
-            onPress={() => setSleepTimerModalVisible(false)}
-          >
-            <BlurView intensity={40} tint="dark" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-
-            <View
-              style={{
-                backgroundColor: colors.popoverCard || colors.card || '#1A1A1A',
-                borderTopLeftRadius: radius(32),
-                borderTopRightRadius: radius(32),
-                padding: wp(6),
-                paddingBottom: hp(4),
-                gap: hp(2)
-              }}
-            >
-              <View className="items-center mb-2">
-                <View
-                  style={{
-                    width: wp(12),
-                    height: 4,
-                    backgroundColor: colors.player.textMuted,
-                    borderRadius: 2,
-                    opacity: 0.3
-                  }}
-                />
-                <Text style={{ fontSize: fontSize(18), color: colors.player.textPrimary, fontWeight: 'bold', marginTop: hp(2) }}>
-                  Uyku Zamanlayıcısı
-                </Text>
-              </View>
-
-              {[15, 30, 45, 60].map((minutes) => (
-                <TouchableOpacity
-                  key={minutes}
-                  onPress={() => {
-                    setSleepTimer(minutes);
-                    setSleepTimerModalVisible(false);
-                  }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingVertical: hp(2),
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.player.textVeryDimmed
-                  }}
-                >
-                  <Text style={{ fontSize: fontSize(16), color: colors.player.textPrimary }}>
-                    {minutes} Dakika Sonra
-                  </Text>
-                  {isSleepTimerActive && Math.ceil((sleepTimerRemaining || 0) / 60) === minutes && (
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.player.iconActive }} />
-                  )}
-                </TouchableOpacity>
-              ))}
-
-              <TouchableOpacity
-                onPress={() => {
-                  setSleepTimer(null);
-                  setSleepTimerModalVisible(false);
-                }}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingVertical: hp(2),
-                }}
-              >
-                <Text style={{ fontSize: fontSize(16), color: '#FF4D4D' }}>
-                  Zamanlayıcıyı Kapat
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </Modal>
+          onClose={() => setSleepTimerModalVisible(false)}
+        />
       </View>
     </Modal>
   );

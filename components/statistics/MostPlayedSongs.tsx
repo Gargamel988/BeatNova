@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { ChartContainer } from "@/components/charts/chart-container";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
+import { useTranslation } from "react-i18next";
 
 type TimeFilter = "week" | "month" | "all";
 
@@ -19,8 +20,9 @@ interface Song {
 
 interface ListeningHistoryItem {
   song_id: string;
-  created_at: string;
-  total_seconds: number;
+  created_at?: string;
+  total_seconds?: number;
+  listening_time?: number;
   play_count?: number;
 }
 
@@ -38,9 +40,16 @@ interface MostPlayedSongsProps {
 }
 
 export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }: MostPlayedSongsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("week");
+
+  const filterLabels: Record<TimeFilter, string> = {
+    week: t("stats.thisWeek"),
+    month: t("stats.thisMonth"),
+    all: t("stats.allTime"),
+  };
   const filteredSongs = React.useMemo(() => {
     if (!songs || songs.length === 0) return [];
 
@@ -99,8 +108,8 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
 
   return (
     <ChartContainer
-      title="En Çok Dinlenen Şarkılar"
-      description="Son dönemde en sık açtığın parçalar"
+      title={t("stats.mostPlayedTitle")}
+      description={t("stats.mostPlayedDesc")}
       style={{ gap: hp(1.2), borderWidth: 1, borderColor: colors.overlay.white12 }}
     >
       <View
@@ -130,11 +139,7 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
                 color: timeFilter === filter ? colors.foreground : colors.textSecondary,
               }}
             >
-              {filter === "week"
-                ? "Bu hafta"
-                : filter === "month"
-                  ? "Bu ay"
-                  : "Tüm zamanlar"}
+              {filterLabels[filter]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -239,7 +244,7 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
                 fontSize: fontSize(11),
               }}
             >
-              çalma
+              {t("fav.plays", { count: song.plays }).replace(String(song.plays), "").trim() || "plays"}
             </Text>
             <Text
               style={{
@@ -248,7 +253,7 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
                 marginTop: 2,
               }}
             >
-              {Math.round((song.plays * song.duration) / 60)} dk
+              {Math.round((song.plays * song.duration) / 60)} {t("stats.minutesShort")}
             </Text>
           </View>
         </View>

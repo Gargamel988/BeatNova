@@ -14,6 +14,8 @@ import {
   ViewStyle,
 } from 'react-native';
 
+import { useTranslation } from 'react-i18next';
+
 interface SearchBarProps extends Omit<TextInputProps, 'style'> {
   loading?: boolean;
   onSearch?: (query: string) => void;
@@ -36,13 +38,15 @@ export function SearchBar({
   containerStyle,
   inputStyle,
   debounceMs = 300,
-  placeholder = 'Search...',
+  placeholder,
   value,
   onChangeText,
   ...props
 }: SearchBarProps) {
+  const { t } = useTranslation();
+  const defaultPlaceholder = placeholder ?? t('common.search', 'Search...');
   const [internalValue, setInternalValue] = useState(value || '');
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   // Theme colors
@@ -111,7 +115,7 @@ export function SearchBar({
       <TextInput
         ref={inputRef}
         style={[baseInputStyle, inputStyle]}
-        placeholder={placeholder}
+        placeholder={defaultPlaceholder}
         placeholderTextColor={muted}
         value={displayValue}
         onChangeText={handleTextChange}

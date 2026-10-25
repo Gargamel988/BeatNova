@@ -6,6 +6,7 @@ import { Music2, ListMusic, BarChart3, Heart } from "lucide-react-native";
 import { Href, router } from "expo-router";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
+import { useTranslation } from "react-i18next";
 
 type QuickAccessProps = {
   songsCount: number;
@@ -18,6 +19,7 @@ export function QuickAccessComponent({
   playlistsCount,
   favoritesCount,
 }: QuickAccessProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -27,28 +29,28 @@ export function QuickAccessComponent({
 
   const quickAccessItems = [
     {
-      title: "Tüm Şarkılar",
+      title: t("home.allSongs", "Tüm Şarkılar"),
       icon: Music2,
-      href: "/(drawer)/(tabs)/songs" as Href,
-      subtitle: `${songsCount} şarkı`,
+      href: "/(tabs)/songs" as Href,
+      subtitle: `${songsCount} ${t("playlists.songs", "şarkı")}`,
     },
     {
-      title: "Playlistler",
+      title: t("playlists.title", "Playlistler"),
       icon: ListMusic,
-      href: "/(drawer)/(tabs)/PlayList" as Href,
-      subtitle: `${playlistsCount} liste`,
+      href: "/(tabs)/playlist" as Href,
+      subtitle: `${playlistsCount} ${t("playlists.title", "liste")}`,
     },
     {
-      title: "İstatistikler",
+      title: t("stats.title", "İstatistikler"),
       icon: BarChart3,
-      href: "/(drawer)/Statistic" as Href,
-      subtitle: "Detayları gör",
+      href: "/statistic" as Href,
+      subtitle: t("home.viewDetails", "Detayları gör"),
     },
     {
-      title: "Favoriler",
+      title: t("favorites.title", "Favoriler"),
       icon: Heart,
-      href: "/(drawer)/Favorite" as Href,
-      subtitle: `${favoritesCount} favori`,
+      href: "/favorite" as Href,
+      subtitle: `${favoritesCount} ${t("favorites.title", "favori")}`,
     },
   ];
 
@@ -62,7 +64,7 @@ export function QuickAccessComponent({
           marginBottom: hp(1.5),
         }}
       >
-        Hızlı Erişim
+        {t("home.quickAccess", "Hızlı Erişim")}
       </Text>
       <View
         style={{

@@ -8,6 +8,7 @@ import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Edit3 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface ProfileHeaderProps {
   displayName?: string;
@@ -22,6 +23,7 @@ export function ProfileHeader({
   avatarUrl,
   onEditPress,
 }: ProfileHeaderProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
@@ -110,7 +112,7 @@ export function ProfileHeader({
             textAlign: "center",
           }}
         >
-          {displayName || "Kullanıcı"}
+          {displayName || t("profile.defaultUser")}
         </Text>
 
         {bio ? (
@@ -137,7 +139,7 @@ export function ProfileHeader({
               opacity: 0.6,
             }}
           >
-            Bio eklenmemiş
+            {t("profile.noBio")}
           </Text>
         )}
 
@@ -172,7 +174,7 @@ export function ProfileHeader({
               fontWeight: "700",
             }}
           >
-            Profili Düzenle
+            {t("profile.editProfile")}
           </Text>
         </TouchableOpacity>
       </LinearGradient>

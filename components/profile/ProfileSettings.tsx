@@ -9,6 +9,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Settings, Shield, Radio, UserPlus } from "lucide-react-native";
 import { useProfile } from "@/hooks/useProfil";
+import { useTranslation } from "react-i18next";
 
 interface ProfileSettingsProps {
   isPrivate?: boolean;
@@ -21,6 +22,7 @@ export function ProfileSettings({
   showCurrentSong,
   allowFriendRequests,
 }: ProfileSettingsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
@@ -116,7 +118,7 @@ export function ProfileSettings({
               fontWeight: "800",
             }}
           >
-            Profil Ayarları
+            {t("profile.settingsTitle")}
           </Text>
         </View>
 
@@ -154,7 +156,7 @@ export function ProfileSettings({
                     fontWeight: "700",
                   }}
                 >
-                  Özel Profil
+                  {t("profile.privateProfile")}
                 </Text>
                 <Text
                   style={{
@@ -163,7 +165,7 @@ export function ProfileSettings({
                     marginTop: 2,
                   }}
                 >
-                  Profilini gizle
+                  {t("profile.privateProfileDesc")}
                 </Text>
               </View>
             </View>
@@ -211,7 +213,7 @@ export function ProfileSettings({
                     fontWeight: "700",
                   }}
                 >
-                  Çalan Şarkıyı Göster
+                  {t("profile.showCurrentSong")}
                 </Text>
                 <Text
                   style={{
@@ -220,7 +222,7 @@ export function ProfileSettings({
                     marginTop: 2,
                   }}
                 >
-                  Aktif şarkıyı paylaş
+                  {t("profile.showCurrentSongDesc")}
                 </Text>
               </View>
             </View>
@@ -268,7 +270,7 @@ export function ProfileSettings({
                     fontWeight: "700",
                   }}
                 >
-                  Arkadaş İstekleri
+                  {t("profile.friendRequests")}
                 </Text>
                 <Text
                   style={{
@@ -277,7 +279,7 @@ export function ProfileSettings({
                     marginTop: 2,
                   }}
                 >
-                  İstekleri kabul et
+                  {t("profile.friendRequestsDesc")}
                 </Text>
               </View>
             </View>

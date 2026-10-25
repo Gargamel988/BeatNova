@@ -1,320 +1,255 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Eye, EyeOff, Mail, Lock, Music, User } from "lucide-react-native";
-import { Link } from "expo-router";
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react-native";
+import { router } from "expo-router";
 import { useResponsive } from "@/hooks/useResponsive";
-import { ScrollView, TouchableOpacity } from "react-native";
+import { ScrollView, TouchableOpacity, View, Platform, KeyboardAvoidingView } from "react-native";
 import { Controller, useForm } from "react-hook-form";
-import { RegisterScheme, RegisterSchemeType } from "@/schemes/RegisterScheme";
+import { getRegisterScheme, RegisterSchemeType } from "@/schemes/RegisterScheme";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 
-// Components
-import { useToast } from "@/components/ui/toast";
-import { ButtonSpinner } from "@/components/ui/spinner";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { View } from "@/components/ui/view";
-import { LinearGradient } from "expo-linear-gradient";
-import GoogleSignIn from "@/components/GoogleAuth";
 import { useColor } from "@/hooks/useColor";
+import { useRegisterMutation } from "@/hooks/useAuthMutations";
+
+import GoogleSignIn from "@/components/GoogleAuth";
+import { AuthHeader } from "@/components/auth/AuthHeader";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
+import { AuthBottomPrompt } from "@/components/auth/AuthBottomPrompt";
 
 export default function Register() {
+  const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
-  const { toast } = useToast();
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { wp, hp, fontSize, radius } = useResponsive();
-  const { register } = useAuth();
+
+  const registerScheme = useMemo(() => getRegisterScheme(t), [t]);
 
   const {
     control,
     handleSubmit,
-    formState: { errors,  isSubmitting },
+    formState: { errors },
     reset,
   } = useForm<RegisterSchemeType>({
-    resolver: zodResolver(RegisterScheme),
+    resolver: zodResolver(registerScheme),
   });
 
-  const { mutate: registerMutation } = useMutation({
-    mutationFn: async (data: RegisterSchemeType) => {
-      const response = await register(data.email, data.password, data.username);
-      return response;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Başarılı",
-        description: "Hesabınız başarıyla oluşturuldu",
-        variant: "success",
-        duration: 3000,
-      });
-      reset();
-    },
-    onError: (error: any) => {
-      console.error("Kayıt hatası:", error);
-      toast({
-        title: "Hata",
-        description: error?.message || "Kayıt işlemi sırasında bir hata oluştu",
-        variant: "error",
-        duration: 3000,
-      });
-    },
-  });
+  const { mutate: registerMutation, isPending: isRegistering } = useRegisterMutation(() => reset());
 
-
-  const iconBackground = useColor("authIconBackground");
   const primaryText = useColor("authPrimaryText");
-  const secondaryText = useColor("authSecondaryText");
-  const buttonGradientStart = useColor("authButtonGradientStart");
-  const buttonGradientEnd = useColor("authButtonGradientEnd");
-  const buttonTextColor = useColor("authButtonText");
-  const linkColor = useColor("authLink");
   const rightIconColor = useColor("authRightIcon");
   const borderColor = useColor("border");
 
   return (
-
-      <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: wp(6),
+            paddingTop: hp(2),
             paddingBottom: hp(4),
           }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo ve Başlık */}
-          <View className="items-center" style={{ marginBottom: hp(4) }}>
-            <View
-              className="justify-center items-center"
-              style={{
-                width: wp(20),
-                height: wp(20),
-                borderRadius: radius(16),
-                backgroundColor: iconBackground,
-                marginBottom: hp(2),
-              }}
-            >
-              <Music size={wp(12)} color={primaryText} />
-            </View>
-            <Text
-              style={{
-                fontSize: fontSize(28),
-                fontWeight: "bold",
-                marginBottom: hp(1),
-                color: primaryText,
-              }}
-            >
-              Hesabını Oluştur
-            </Text>
-            <Text
-              style={{
-                fontSize: fontSize(14),
-                color: secondaryText,
-              }}
-            >
-              BeatNova&apos;ya Hoş Geldin!
-            </Text>
-          </View>
+          {/* Header */}
+          <AuthHeader
+            title={t("auth.createAccount", "Hesap Oluştur")}
+            subtitle={t("auth.registerSubtitle", "Müzik dünyasına katıl ve keşfetmeye başla")}
+          />
 
-          {/* Input Fields */}
-          <View style={{ gap: hp(2.5), marginBottom: hp(2) }}>
-            <Text
-              style={{
-                fontSize: fontSize(14),
-                color: primaryText,
-                fontWeight: "500",
-              }}
-            >
-              Kullanıcı Adı
-            </Text>
-            <Controller
-              control={control}
-              name="username"
-              rules={{ required: true }}
-              render={({ field }) => (
-                <Input
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  placeholder="Kullanıcı Adınızı giriniz"
-                  icon={User}
-                  variant="filled"
-                  keyboardType="default"
-                  containerStyle={{
-                    borderColor: errors.username ? "transparent" : borderColor,
-                    borderWidth: 1,
-                    borderRadius: radius(99),
-                  }}
-                  autoCapitalize="none"
-                  error={errors.username?.message}
-                />
-              )}
-            />
-
-            {/* E-posta */}
-            <Text
-              style={{
-                fontSize: fontSize(14),
-                color: primaryText,
-                fontWeight: "500",
-              }}
-            >
-              E-posta
-            </Text>
-            <Controller
-              control={control}
-              name="email"
-              rules={{ required: true }}
-              render={({ field }) => (
-                <Input
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  placeholder="ornek@email.com"
-                  icon={Mail}
-                  variant="filled"
-                  containerStyle={{
-                    borderColor: errors.email ? "transparent" : borderColor,
-                    borderWidth: 1,
-                    borderRadius: radius(99),
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  error={errors.email?.message}
-                />
-              )}
-            />
-
-            {/* Şifre */}
-            <View className="flex-row justify-between items-center">
+          {/* Form Alanları */}
+          <View style={{ gap: hp(2), marginBottom: hp(2.5) }}>
+            {/* Kullanıcı Adı */}
+            <View>
               <Text
                 style={{
                   fontSize: fontSize(14),
                   color: primaryText,
+                  marginBottom: hp(0.8),
                   fontWeight: "500",
                 }}
               >
-                Şifre
+                {t("auth.username", "Kullanıcı Adı")}
               </Text>
-            </View>
-            <Controller
-              control={control}
-              name="password"
-              rules={{ required: true }}
-              render={({ field }) => (
-                <Input
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  placeholder="Şifrenizi giriniz"
-                  icon={Lock}
-                  variant="filled"
-                  containerStyle={{
-                    borderColor: errors.password ? "transparent" : borderColor,
-                    borderWidth: 1,
-                    borderRadius: radius(99),
-                    marginBottom: hp(3),
-                  }}
-                  rightComponent={() => (
-                    <TouchableOpacity
-                      onPress={() => setShowPassword(!showPassword)}
-                    >
-                      <Icon
-                        name={showPassword ? EyeOff : Eye}
-                        size={24}
-                        color={rightIconColor}
-                      />
-                    </TouchableOpacity>
-                  )}
-                  secureTextEntry={!showPassword}
-                  error={errors.password?.message}
-                />
-              )}
-            />
-          </View>
-
-          {/* Kayıt Ol Butonu */}
-          <TouchableOpacity
-            onPress={handleSubmit((data) => registerMutation(data))}
-            activeOpacity={0.8}
-            style={{
-              borderRadius: radius(12),
-              overflow: "hidden",
-              marginBottom: hp(2),
-            }}
-          >
-            <LinearGradient
-              colors={[buttonGradientStart, buttonGradientEnd]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                paddingVertical: hp(2),
-                paddingHorizontal: wp(6),
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: hp(6),
-              }}
-            >
-              {isSubmitting ? (
-                <View className="flex-row items-center justify-center gap-2">
-                  <ButtonSpinner size="lg" variant="circle" />
-                  <Text
-                    style={{
-                      fontSize: fontSize(16),
-                      fontWeight: "600",
-                      color: buttonTextColor,
+              <Controller
+                control={control}
+                name="username"
+                render={({ field }) => (
+                  <Input
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={t("auth.usernamePlaceholder", "kullaniciadi")}
+                    icon={User}
+                    autoCapitalize="none"
+                    containerStyle={{
+                      borderColor: errors.username ? "transparent" : borderColor,
+                      borderWidth: 1,
+                      borderRadius: radius(99),
                     }}
-                  >
-                    Kayıt Oluyor...
-                  </Text>
-                </View>
-              ) : (
-                <Text
-                  style={{
-                    fontSize: fontSize(16),
-                    fontWeight: "600",
-                    color: buttonTextColor,
-                  }}
-                >
-                  Kayıt Ol
-                </Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+                    error={errors.username?.message}
+                  />
+                )}
+              />
+            </View>
 
-          {/* Ayırıcı */}
-          <View className="items-center my-4 flex-row ">
-            <Separator orientation="horizontal" />
-          </View>
-
-          {/* Google Butonu */}
-          <GoogleSignIn text="Google ile devam et" />
-
-          {/* Kayıt Ol Linki */}
-          <View className="items-center">
-            <View className="flex-row" style={{ gap: wp(2) }}>
+            {/* E-posta */}
+            <View>
               <Text
                 style={{
                   fontSize: fontSize(14),
-                  color: secondaryText,
+                  color: primaryText,
+                  marginBottom: hp(0.8),
+                  fontWeight: "500",
                 }}
               >
-                Hesabın var mı?
+                {t("auth.email", "E-posta")}
               </Text>
-              <Link href="/login">
-                <Text
-                  style={{
-                    fontSize: fontSize(14),
-                    textDecorationLine: "underline",
-                    color: linkColor,
-                    fontWeight: "600",
-                  }}
-                >
-                  Giriş Yap
-                </Text>
-              </Link>
+              <Controller
+                control={control}
+                name="email"
+                render={({ field }) => (
+                  <Input
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={t("auth.emailPlaceholder", "ornek@email.com")}
+                    icon={Mail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    containerStyle={{
+                      borderColor: errors.email ? "transparent" : borderColor,
+                      borderWidth: 1,
+                      borderRadius: radius(99),
+                    }}
+                    error={errors.email?.message}
+                  />
+                )}
+              />
+            </View>
+
+            {/* Şifre */}
+            <View>
+              <Text
+                style={{
+                  fontSize: fontSize(14),
+                  color: primaryText,
+                  marginBottom: hp(0.8),
+                  fontWeight: "500",
+                }}
+              >
+                {t("auth.password", "Şifre")}
+              </Text>
+              <Controller
+                control={control}
+                name="password"
+                render={({ field }) => (
+                  <Input
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={t("auth.passwordPlaceholder", "Şifrenizi giriniz")}
+                    icon={Lock}
+                    containerStyle={{
+                      borderColor: errors.password ? "transparent" : borderColor,
+                      borderWidth: 1,
+                      borderRadius: radius(99),
+                    }}
+                    error={errors.password?.message}
+                    rightComponent={() => (
+                      <TouchableOpacity
+                        onPress={() => setShowPassword(!showPassword)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Icon
+                          name={showPassword ? EyeOff : Eye}
+                          size={24}
+                          color={rightIconColor}
+                        />
+                      </TouchableOpacity>
+                    )}
+                    secureTextEntry={!showPassword}
+                  />
+                )}
+              />
+            </View>
+
+            {/* Şifre Tekrar */}
+            <View>
+              <Text
+                style={{
+                  fontSize: fontSize(14),
+                  color: primaryText,
+                  marginBottom: hp(0.8),
+                  fontWeight: "500",
+                }}
+              >
+                {t("auth.confirmPassword", "Şifre Tekrar")}
+              </Text>
+              <Controller
+                control={control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <Input
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={t("auth.confirmPasswordPlaceholder", "Şifrenizi tekrar giriniz")}
+                    icon={Lock}
+                    containerStyle={{
+                      borderColor: errors.confirmPassword ? "transparent" : borderColor,
+                      borderWidth: 1,
+                      borderRadius: radius(99),
+                    }}
+                    error={errors.confirmPassword?.message}
+                    rightComponent={() => (
+                      <TouchableOpacity
+                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Icon
+                          name={showConfirmPassword ? EyeOff : Eye}
+                          size={24}
+                          color={rightIconColor}
+                        />
+                      </TouchableOpacity>
+                    )}
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                )}
+              />
             </View>
           </View>
+
+          {/* Kayıt Ol Butonu */}
+          <AuthSubmitButton
+            title={t("auth.register", "Kayıt Ol")}
+            loadingTitle={t("common.loading", "Kayıt Yapılıyor...")}
+            isLoading={isRegistering}
+            onPress={handleSubmit((data) => registerMutation(data))}
+          />
+
+          {/* Ayırıcı */}
+          <Separator
+            orientation="horizontal"
+            style={{ marginVertical: hp(2) }}
+          />
+
+          {/* Google Butonu */}
+          <GoogleSignIn text={t("auth.googleContinue", "Google ile devam et")} />
+
+          {/* Giriş Yap Linki */}
+          <AuthBottomPrompt
+            promptText={t("auth.alreadyHaveAccount", "Zaten bir hesabın var mı?")}
+            actionText={t("auth.login", "Giriş Yap")}
+            onActionPress={() => router.push("/(auth)/login")}
+          />
         </ScrollView>
-      </SafeAreaView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

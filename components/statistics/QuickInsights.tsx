@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ChartContainer } from "@/components/charts/chart-container";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
+import { useTranslation } from "react-i18next";
 
 interface Insight {
   id: string;
@@ -18,13 +19,14 @@ interface QuickInsightsProps {
 }
 
 export function QuickInsights({ insights }: QuickInsightsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
 
   return (
     <ChartContainer
-      title="Küçük İpuçları"
-      description="Son haftalarda öne çıkan hareketlerin"
+      title={t("stats.quickInsightsTitle")}
+      description={t("stats.quickInsightsDesc")}
       style={{ gap: hp(1.2) }}
     >
       <View

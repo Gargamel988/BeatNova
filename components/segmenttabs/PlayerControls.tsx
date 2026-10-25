@@ -38,6 +38,8 @@ type PlayerControlsProps = {
 	  <View
 		className="flex-row justify-between items-center"
 		style={{
+		  direction: "ltr",
+		  flexDirection: "row",
 		  paddingHorizontal: horizontalPadding,
 		  marginTop: topMargin,
 		}}

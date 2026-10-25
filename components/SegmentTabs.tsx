@@ -5,6 +5,7 @@ import { Text } from "./ui/text";
 import { ThemePalette } from "@/theme/colors";
 import { useResponsive } from "@/hooks/useResponsive";
 import { ComponentType } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Play,
   List,
@@ -36,7 +37,15 @@ export default function SegmentTabs({
   onSelect,
   colors,
 }: SegmentTabsProps) {
+  const { t } = useTranslation();
   const { wp, fontSize, hp, radius } = useResponsive();
+
+  const segmentLabels: Record<SegmentKey, string> = {
+    controls: t("player.controls"),
+    queue: t("player.queue"),
+    details: t("player.details"),
+    notes: t("player.notes"),
+  };
   return (
     <View
       className="flex-row  items-center"
@@ -80,7 +89,7 @@ export default function SegmentTabs({
                 fontSize: fontSize(13),
               }}
             >
-              {segment.label}
+              {segmentLabels[segment.key] || segment.label}
             </Text>
           </TouchableOpacity>
         );

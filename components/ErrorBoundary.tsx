@@ -6,6 +6,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { Icon } from './ui/icon';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   children: ReactNode;
@@ -46,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   handleGoHome = () => {
     this.handleReset();
-    router.replace('/(drawer)/(tabs)');
+    router.replace('/');
   };
 
   render() {
@@ -73,6 +74,7 @@ interface ErrorFallbackProps {
 }
 
 function ErrorFallback({ error, onReset, onGoHome }: ErrorFallbackProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor('card');
   const textPrimary = useColor('authPrimaryText');
@@ -116,7 +118,7 @@ function ErrorFallback({ error, onReset, onGoHome }: ErrorFallbackProps) {
             marginBottom: hp(0.5),
           }}
         >
-          Bir Hata Oluştu
+          {t("common.error")}
         </Text>
 
         <Text
@@ -128,7 +130,7 @@ function ErrorFallback({ error, onReset, onGoHome }: ErrorFallbackProps) {
             marginBottom: hp(2),
           }}
         >
-          {error?.message || 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'}
+          {error?.message || t("assistant.errorMessage")}
         </Text>
 
         <View style={{ gap: hp(1.5), width: '100%', maxWidth: wp(80) }}>
@@ -154,7 +156,7 @@ function ErrorFallback({ error, onReset, onGoHome }: ErrorFallbackProps) {
                 fontWeight: '600',
               }}
             >
-              Tekrar Dene
+              {t("common.retry")}
             </Text>
           </TouchableOpacity>
 
@@ -182,7 +184,7 @@ function ErrorFallback({ error, onReset, onGoHome }: ErrorFallbackProps) {
                 fontWeight: '600',
               }}
             >
-              Ana Sayfaya Dön
+              {t("tabs.home")}
             </Text>
           </TouchableOpacity>
         </View>

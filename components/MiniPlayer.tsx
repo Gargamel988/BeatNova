@@ -26,6 +26,7 @@ import Animated, {
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import { useAudioPositionContext } from "@/providers/player-context";
 import { useTabBarLayout } from "@/hooks/useTabBarLayout";
+import { useTranslation } from "react-i18next";
 
 function MiniPlayerComponent({
   coverUri,
@@ -52,6 +53,7 @@ function MiniPlayerComponent({
   activeSong?: Song;
   hasTabBar?: boolean;
 }) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
   const { position } = useAudioPositionContext();
@@ -219,7 +221,7 @@ function MiniPlayerComponent({
                       }}
                       numberOfLines={1}
                     >
-                      {title}
+                      {(!title || title === "Bilinmeyen Şarkı") ? t("songs.unknownTitle") : title}
                     </Text>
                     <Text
                       style={{
@@ -229,13 +231,15 @@ function MiniPlayerComponent({
                       }}
                       numberOfLines={1}
                     >
-                      {artist}
+                      {(!artist || artist === "Bilinmeyen Sanatçı") ? t("songs.unknownArtist") : artist}
                     </Text>
                   </View>
                 </View>
                 <View
                   className="flex-row items-center"
                   style={{
+                    direction: "ltr",
+                    flexDirection: "row",
                     gap: wp(3),
                   }}
                 >

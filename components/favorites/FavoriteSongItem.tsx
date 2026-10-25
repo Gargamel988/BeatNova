@@ -6,12 +6,11 @@ import { Song } from "@/components/songs/songsService";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { useThemeModeContext } from "@/providers/theme-provider";
-import { useAudioPlayerContext } from "@/providers/player-context";
 import { formatTime } from "@/utils/format";
 import { Music2, Heart, Clock, Waves } from "lucide-react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/components/ui/toast";
-import { removeSongFromFavorites } from "@/services/PlaylistServices";
+import { useRemoveFromFavoritesMutation } from "@/hooks/useSongMutations";
+import { useTranslation } from "react-i18next";
+import { useAudioPlayerContext } from "@/providers/player-context";
 
 interface FavoriteSongItemProps {
   item: Song;
@@ -22,35 +21,14 @@ export default function FavoriteSongItem({
   item,
   playlist,
 }: FavoriteSongItemProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
   const accent = useColor("accent");
+  const { mutate: removeFromFavorites } = useRemoveFromFavoritesMutation();
   const { play } = useAudioPlayerContext();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const hasCover = item.metadata?.coverUri && item.metadata.coverUri.trim() !== "";
-
-  const { mutate: removeFromFavorites } = useMutation({
-    mutationFn: async (songId: string) => {
-      return removeSongFromFavorites(songId);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Favorilerden kaldırıldı",
-        description: "Şarkı favorilerden kaldırıldı",
-        variant: "success",
-      });
-      queryClient.invalidateQueries({ queryKey: ["favorites"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Hata",
-        description: error.message || "Bir hata oluştu",
-        variant: "error",
-      });
-    },
-  });
 
   const handlePlay = () => {
     play(item, playlist);
@@ -79,7 +57,7 @@ export default function FavoriteSongItem({
       }}
     >
       {/* Cover Image */}
-      <View style={{ marginRight: wp(3) }}>
+      <View style={{ marginEnd: wp(3) }}>
         {hasCover ? (
           <Image
             source={{ uri: item.metadata.coverUri }}
@@ -122,7 +100,7 @@ export default function FavoriteSongItem({
           }}
           numberOfLines={1}
         >
-          {item.metadata?.title || "Bilinmeyen Şarkı"}
+          {item.metadata?.title || t("songs.unknownTitle", { defaultValue: "Bilinmeyen Şarkı" })}
         </Text>
         <Text
           style={{
@@ -132,7 +110,7 @@ export default function FavoriteSongItem({
           }}
           numberOfLines={1}
         >
-          {item.metadata?.artist || "Bilinmeyen Sanatçı"}
+          {item.metadata?.artist || t("songs.unknownArtist", { defaultValue: "Bilinmeyen Sanatçı" })}
           {item.metadata?.album ? ` • ${item.metadata.album}` : ""}
         </Text>
         <View
@@ -169,7 +147,7 @@ export default function FavoriteSongItem({
                 fontSize: fontSize(11),
               }}
             >
-              {playCount} çalma
+              {t("fav.plays", { count: playCount })}
             </Text>
           </View>
         </View>

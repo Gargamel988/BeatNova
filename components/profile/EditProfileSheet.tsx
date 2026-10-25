@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
+import { useTranslation } from "react-i18next";
 
 interface EditProfileSheetProps {
   isVisible: boolean;
@@ -29,6 +30,7 @@ export function EditProfileSheet({
   onSave,
   isSaving = false,
 }: EditProfileSheetProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const accent = useColor("accent");
@@ -38,7 +40,7 @@ export function EditProfileSheet({
     <BottomSheet
       isVisible={isVisible}
       onClose={onClose}
-      title="Profili Düzenle"
+      title={t("profile.editProfile")}
       snapPoints={[0.7]}
     >
       <View style={{ gap: hp(2) }}>
@@ -52,12 +54,12 @@ export function EditProfileSheet({
               marginLeft: wp(1),
             }}
           >
-            İsim
+            {t("profile.name")}
           </Text>
           <Input
             value={displayName}
             onChangeText={onDisplayNameChange}
-            placeholder="İsminizi girin"
+            placeholder={t("profile.namePlaceholder")}
             variant="filled"
           />
         </View>
@@ -72,12 +74,12 @@ export function EditProfileSheet({
               marginLeft: wp(1),
             }}
           >
-            Bio
+            {t("profile.bio")}
           </Text>
           <Input
             value={bio}
             onChangeText={onBioChange}
-            placeholder="Hakkınızda bir şeyler yazın..."
+            placeholder={t("profile.bioPlaceholder")}
             variant="filled"
             type="textarea"
             rows={4}
@@ -110,7 +112,7 @@ export function EditProfileSheet({
                 fontWeight: "700",
               }}
             >
-              {isSaving ? "Kaydediliyor..." : "Kaydet"}
+              {isSaving ? t("profile.saving") : t("common.save")}
             </Text>
           </LinearGradient>
         </TouchableOpacity>

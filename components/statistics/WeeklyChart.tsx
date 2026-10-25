@@ -5,12 +5,14 @@ import { ChartContainer } from "@/components/charts/chart-container";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { formatTime } from "@/utils/format";
+import { useTranslation } from "react-i18next";
 
 interface WeeklyChartProps {
   data: { day: string; value: number }[];
 }
 
 export function WeeklyChart({ data }: WeeklyChartProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
 
@@ -20,8 +22,8 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
 
   return (
     <ChartContainer
-      title="Haftalık Dinleme"
-      description="Son 7 güne göre tahmini dinleme süresi (dk)"
+      title={t("stats.weeklyTitle")}
+      description={t("stats.weeklyDesc")}
       style={{
         gap: hp(1.5),
         borderRadius: radius(18),
@@ -66,7 +68,7 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
                   marginBottom: 2,
                 }}
               >
-                {formatTime(item.value || 0).split(":")[0]} dk
+                {formatTime(item.value || 0).split(":")[0]} {t("stats.minutesShort")}
               </Text>
               <View
                 style={{

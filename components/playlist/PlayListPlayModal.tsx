@@ -41,6 +41,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import PlaylistModal from "./PlaylistModal";
+import { useTranslation } from "react-i18next";
+import { Song } from "@/type/SongType";
+import { PlaylistType } from "@/type/PlaylistType";
 
 export default function PlayListPlayModal({
   visible,
@@ -52,9 +55,10 @@ export default function PlayListPlayModal({
   visible: boolean;
   onClose: () => void;
   playlistId: number | string;
-  playlistData?: any;
+  playlistData?: PlaylistType;
   autoPlayShuffled?: boolean;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { palette: colors } = useThemeModeContext();
@@ -70,7 +74,7 @@ export default function PlayListPlayModal({
   // State
   const [isMoreMenuVisible, setIsMoreMenuVisible] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
-  const [reorderedSongs, setReorderedSongs] = useState<any[]>([]);
+  const [reorderedSongs, setReorderedSongs] = useState<Song[]>([]);
   const [hasOrderChanged, setHasOrderChanged] = useState(false);
   const [isPlaylistEditVisible, setIsPlaylistEditVisible] = useState(false);
 
@@ -79,17 +83,17 @@ export default function PlayListPlayModal({
     mutationFn: (id: number | string) => deletePlaylist(id),
     onSuccess: () => {
       toast({
-        title: "Başarılı",
-        description: "Playlist başarıyla silindi",
+        title: t("common.success"),
+        description: t("playlist.deleteSuccess"),
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
       onClose();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
-        title: "Hata",
-        description: error.message || "Playlist silinirken bir hata oluştu",
+        title: t("common.error"),
+        description: error instanceof Error ? error.message : t("playlist.deleteError"),
         variant: "error",
       });
     },
@@ -101,17 +105,17 @@ export default function PlayListPlayModal({
       removeSongFromPlaylist(songId, plId),
     onSuccess: () => {
       toast({
-        title: "Başarılı",
-        description: "Şarkı playlistten çıkarıldı",
+        title: t("common.success"),
+        description: t("playlist.songRemoved"),
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["playlistSongs", playlistId] });
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
-        title: "Hata",
-        description: error.message || "Şarkı çıkarılırken hata oluştu",
+        title: t("common.error"),
+        description: error instanceof Error ? error.message : t("playlist.removeSongError"),
         variant: "error",
       });
     },
@@ -126,11 +130,11 @@ export default function PlayListPlayModal({
       await queryClient.cancelQueries({ queryKey: ["playlistSongs", plId] });
 
       // 2. Önceki durumu yedekle
-      const previousSongs = queryClient.getQueryData(["playlistSongs", plId]);
+      const previousSongs = queryClient.getQueryData<Song[]>(["playlistSongs", plId]);
 
       // 3. İstemci önbelleğini iyimser olarak (hemen) güncelle
-      queryClient.setQueryData(["playlistSongs", plId], (old: any[] | undefined) =>
-        old ? songIds.map((id) => old.find((s) => s.id === id)).filter(Boolean) : old
+      queryClient.setQueryData(["playlistSongs", plId], (old: Song[] | undefined) =>
+        old ? songIds.map((id) => old.find((s) => s.id === id)).filter((s): s is Song => Boolean(s)) : old
       );
 
       // 4. Arayüzü anında normal moda çevir (Kullanıcı beklediğini hissetmez)
@@ -140,14 +144,14 @@ export default function PlayListPlayModal({
       // Rollback için yedeği dön
       return { previousSongs };
     },
-    onError: (error: any, { plId }, context) => {
+    onError: (error: unknown, { plId }, context) => {
       // Hata durumunda yedeğe geri dön
       if (context?.previousSongs) {
         queryClient.setQueryData(["playlistSongs", plId], context.previousSongs);
       }
       toast({
-        title: "Hata",
-        description: error.message || "Sıralama kaydedilemedi",
+        title: t("common.error"),
+        description: error instanceof Error ? error.message : t("playlist.reorderError"),
         variant: "error",
       });
     },
@@ -156,7 +160,7 @@ export default function PlayListPlayModal({
       queryClient.invalidateQueries({ queryKey: ["playlistSongs", plId] });
     },
     onSuccess: () => {
-      toast({ title: "Başarılı", description: "Şarkı sırası güncellendi", variant: "success" });
+      toast({ title: t("common.success"), description: t("playlist.reorderSuccess"), variant: "success" });
     },
   });
 
@@ -165,17 +169,17 @@ export default function PlayListPlayModal({
     mutationFn: (id: number | string) => clonePlaylist(id),
     onSuccess: () => {
       toast({
-        title: "Başarılı",
-        description: "Playlist kopyalandı",
+        title: t("common.success"),
+        description: t("playlist.cloneSuccess"),
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["playlists"] });
       setIsMoreMenuVisible(false);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
-        title: "Hata",
-        description: error.message || "Kopyalama başarısız",
+        title: t("common.error"),
+        description: error instanceof Error ? error.message : t("playlist.cloneError"),
         variant: "error",
       });
     },
@@ -207,7 +211,7 @@ export default function PlayListPlayModal({
   // Toplam süre
   const totalDuration = useMemo(() => {
     const list = isReorderMode ? reorderedSongs : songs;
-    return list?.reduce((acc: number, s: any) => acc + (Number(s.duration) || 0), 0) ?? 0;
+    return list?.reduce((acc: number, s: Song) => acc + (Number(s.duration) || 0), 0) ?? 0;
   }, [songs, reorderedSongs, isReorderMode]);
 
   // Otomatik karıştırıp çalma
@@ -224,36 +228,38 @@ export default function PlayListPlayModal({
   }, [autoPlayShuffled, visible, songs, play, shuffle]);
 
   // Şarkıyı player formatına çevir
-  const mapSongsToPlayer = useCallback((songList: any[]) => {
-    return songList.map((song: any) => ({
+  const mapSongsToPlayer = useCallback((songList: Song[]) => {
+    return songList.map((song: Song) => ({
       id: song.id,
       filename: song.title || "",
-      uri: song.audio_url || "",
+      uri: song.url || song.uri || "",
       mediaType: "audio" as const,
       width: 0,
       height: 0,
       duration: song.duration || 0,
       creationTime: 0,
       modificationTime: 0,
-      albumId: song.album || "",
+      albumId: "",
       metadata: {
         title: song.title || "",
         artist: song.artist || "",
-        album: song.album || "",
+        album: "",
         duration: song.duration || 0,
-        coverUri: song.cover_url || null,
+        coverUri: song.cover_url || song.cover || undefined,
       },
     }));
   }, []);
 
   // Şarkı çal
   const handlePlaySong = useCallback(
-    (song: any) => {
+    (song: Song) => {
       const list = isReorderMode ? reorderedSongs : songs;
       if (!list) return;
       const playlistSongs = mapSongsToPlayer(list);
       const clickedIndex = playlistSongs.findIndex((s) => s.id === song.id);
-      play(playlistSongs[clickedIndex], playlistSongs);
+      if (clickedIndex !== -1 && playlistSongs[clickedIndex]) {
+        play(playlistSongs[clickedIndex], playlistSongs);
+      }
     },
     [songs, reorderedSongs, isReorderMode, mapSongsToPlayer, play]
   );
@@ -279,27 +285,27 @@ export default function PlayListPlayModal({
     setIsMoreMenuVisible(false);
     setTimeout(() => {
       Alert.alert(
-        "Playlist'i Sil",
-        "Bu playlist'i ve içindeki tüm şarkı bağlantılarını silmek istediğinizden emin misiniz?",
+        t("playlist.deleteTitle"),
+        t("playlist.deleteConfirmModal"),
         [
-          { text: "İptal", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Sil",
+            text: t("playlist.delete"),
             style: "destructive",
             onPress: () => deleteMutation.mutate(playlistId),
           },
         ]
       );
     }, 300);
-  }, [playlistId, deleteMutation]);
+  }, [playlistId, deleteMutation, t]);
 
   // Şarkıyı playlistten çıkar
   const handleRemoveSong = useCallback(
     (songId: string) => {
-      Alert.alert("Şarkıyı Çıkar", "Bu şarkıyı playlistten çıkarmak istiyor musun?", [
-        { text: "İptal", style: "cancel" },
+      Alert.alert(t("playlist.removeSongTitle"), t("playlist.removeSongConfirm"), [
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Çıkar",
+          text: t("playlist.remove"),
           style: "destructive",
           onPress: () => {
             removeSongMutation.mutate({ songId, plId: playlistId });
@@ -311,7 +317,7 @@ export default function PlayListPlayModal({
         },
       ]);
     },
-    [playlistId, removeSongMutation, isReorderMode]
+    [playlistId, removeSongMutation, isReorderMode, t]
   );
 
   // handleMoveUp ve handleMoveDown artık gerekli değil (DraggableFlatList kullanılıyor)
@@ -331,16 +337,17 @@ export default function PlayListPlayModal({
         message: shareData.text,
         title: shareData.title,
       });
-    } catch (error: any) {
-      if (error.message !== "User did not share") {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg !== "User did not share") {
         toast({
-          title: "Hata",
-          description: "Paylaşma sırasında hata oluştu",
+          title: t("common.error"),
+          description: t("playlist.shareError"),
           variant: "error",
         });
       }
     }
-  }, [playlistId, toast]);
+  }, [playlistId, toast, t]);
 
   // Kopyala
   const handleClone = useCallback(() => {
@@ -364,7 +371,7 @@ export default function PlayListPlayModal({
   }, [songs]);
 
   const displaySongs = isReorderMode ? reorderedSongs : songs;
-  const playlistName = playlistData?.name || "Playlist Şarkıları";
+  const playlistName = playlistData?.name || t("playlist.defaultPlaylistSongs");
 
   // Şarkı item'ı renderla
   const renderSongItem = useCallback(
@@ -396,7 +403,7 @@ export default function PlayListPlayModal({
             <TouchableOpacity
               onPressIn={drag}
               style={{
-                marginRight: wp(3),
+                marginEnd: wp(3),
                 padding: wp(1),
               }}
             >
@@ -424,7 +431,7 @@ export default function PlayListPlayModal({
           )}
 
           {/* Kapak */}
-          <View style={{ marginRight: wp(3) }}>
+          <View style={{ marginEnd: wp(3) }}>
             {hasCover ? (
               <Image
                 source={{ uri: item.cover_url }}
@@ -467,7 +474,7 @@ export default function PlayListPlayModal({
               }}
               numberOfLines={1}
             >
-              {item.title || "Bilinmeyen Şarkı"}
+              {item.title || t("songs.unknown")}
             </Text>
             <Text
               style={{
@@ -476,7 +483,7 @@ export default function PlayListPlayModal({
               }}
               numberOfLines={1}
             >
-              {item.artist || "Bilinmeyen Sanatçı"}
+              {item.artist || t("songs.unknownArtist")}
             </Text>
           </View>
 
@@ -486,8 +493,8 @@ export default function PlayListPlayModal({
               style={{
                 color: textSecondary,
                 fontSize: fontSize(12),
-                marginLeft: wp(2),
-                marginRight: wp(1),
+                marginStart: wp(2),
+                marginEnd: wp(1),
               }}
             >
               {formatTime(item.duration || 0)}
@@ -530,6 +537,7 @@ export default function PlayListPlayModal({
       hp,
       fontSize,
       radius,
+      t
     ]
   );
 
@@ -538,37 +546,37 @@ export default function PlayListPlayModal({
     () => [
       {
         icon: Edit3,
-        label: "Bilgileri Düzenle",
-        description: "Playlist adı, açıklama ve etiketlerini güncelle",
+        label: t("playlist.editInfo"),
+        description: t("playlist.editInfoDesc"),
         color: accent,
         onPress: handleEdit,
       },
       {
         icon: ArrowUpDown,
-        label: "Sırayı Değiştir",
-        description: "Şarkıların sırasını yeniden düzenle",
+        label: t("playlist.changeOrder"),
+        description: t("playlist.changeOrderDesc"),
         color: colors.blue || "#3b82f6",
         onPress: handleReorderMode,
       },
       {
         icon: Copy,
-        label: "Kopyala (Klonla)",
-        description: "Bu playlistin bir kopyasını oluştur",
+        label: t("playlist.clone"),
+        description: t("playlist.cloneDesc"),
         color: colors.green || "#22c55e",
         onPress: handleClone,
         loading: cloneMutation.isPending,
       },
       {
         icon: Share2,
-        label: "Paylaş",
-        description: "Playlist şarkı listesini paylaş",
+        label: t("playlist.share"),
+        description: t("playlist.shareDesc"),
         color: colors.blue || "#3b82f6",
         onPress: handleShare,
       },
       {
         icon: Trash2,
-        label: "Playlist'i Sil",
-        description: "Playlist'i ve tüm bağlantıları kalıcı olarak sil",
+        label: t("playlist.delete"),
+        description: t("playlist.deleteDesc"),
         color: colors.red || "#ef4444",
         onPress: handleDelete,
       },
@@ -582,6 +590,7 @@ export default function PlayListPlayModal({
       handleShare,
       handleDelete,
       cloneMutation.isPending,
+      t
     ]
   );
 
@@ -625,7 +634,7 @@ export default function PlayListPlayModal({
                   marginTop: hp(0.3),
                 }}
               >
-                {displaySongs.length} şarkı • {formatTime(totalDuration)}
+                {t("playlist.songCount", { count: displaySongs.length })} • {formatTime(totalDuration)}
               </Text>
             )}
           </View>
@@ -659,7 +668,7 @@ export default function PlayListPlayModal({
                     fontWeight: "700",
                   }}
                 >
-                  Kaydet
+                  {t("playlist.save")}
                 </Text>
               </TouchableOpacity>
             )}
@@ -743,7 +752,7 @@ export default function PlayListPlayModal({
                   fontWeight: "700",
                 }}
               >
-                Tümünü Çal
+                {t("playlist.playAll")}
               </Text>
             </TouchableOpacity>
 
@@ -771,7 +780,7 @@ export default function PlayListPlayModal({
                   fontWeight: "700",
                 }}
               >
-                Karıştır
+                {t("playlist.shuffle")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -798,14 +807,14 @@ export default function PlayListPlayModal({
                 flex: 1,
               }}
             >
-              Uzun basarak veya simgeden tutup sürükle
+              {t("playlist.reorderHint")}
             </Text>
           </View>
         )}
 
         {/* İçerik */}
         {isLoading ? (
-          <LoadingState message="Şarkılar yükleniyor..." fullScreen />
+          <LoadingState message={t("songs.loading")} fullScreen />
         ) : displaySongs && displaySongs.length > 0 ? (
           isReorderMode ? (
             <DraggableFlatList
@@ -841,8 +850,8 @@ export default function PlayListPlayModal({
           )
         ) : (
           <EmptyState
-            title="Playlist Boş"
-            message="Bu playlist'te henüz şarkı yok"
+            title={t("playlist.emptyPlaylist")}
+            message={t("playlist.emptyPlaylistDesc")}
             icon="playlist"
             fullScreen
           />
@@ -854,7 +863,7 @@ export default function PlayListPlayModal({
         isVisible={isMoreMenuVisible}
         onClose={() => setIsMoreMenuVisible(false)}
         snapPoints={[0.5, 0.65]}
-        title="Playlist İşlemleri"
+        title={t("playlist.playlistActions")}
       >
         <View style={{ gap: hp(1) }}>
           {menuActions.map((action) => (

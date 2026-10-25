@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Music2, ListMusic, Heart } from "lucide-react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
+import { useTranslation } from "react-i18next";
 
 type StatsCardsProps = {
   totalSongs: number;
@@ -17,6 +18,7 @@ export function StatsCardsComponent({
   totalPlaylists,
   totalFavorites,
 }: StatsCardsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -26,19 +28,19 @@ export function StatsCardsComponent({
 
   const stats = [
     {
-      label: "Şarkı",
+      label: t("songs.title", "Şarkı"),
       value: totalSongs.toString(),
       icon: Music2,
       color: accent,
     },
     {
-      label: "Playlist",
+      label: t("playlists.title", "Playlist"),
       value: totalPlaylists.toString(),
       icon: ListMusic,
       color: "#8B5CF6",
     },
     {
-      label: "Favori",
+      label: t("favorites.title", "Favori"),
       value: totalFavorites.toString(),
       icon: Heart,
       color: "#EF4444",

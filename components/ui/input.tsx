@@ -108,6 +108,7 @@ export const Input = forwardRef<TextInput, InputProps>(
       color: disabled ? muted : error ? danger : textColor,
       paddingVertical: 0, // Remove default padding
       textAlignVertical: isTextarea ? 'top' : 'center',
+      textAlign: 'auto',
     });
 
     const handleFocus = (e: any) => {
@@ -202,7 +203,7 @@ export const Input = forwardRef<TextInput, InputProps>(
                 numberOfLines={rows}
                 style={[getInputStyle(), inputStyle]}
                 placeholderTextColor={error ? danger + '99' : muted}
-                placeholder={placeholder || 'Type your message...'}
+                placeholder={placeholder}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 editable={!disabled}
@@ -255,7 +256,7 @@ export const Input = forwardRef<TextInput, InputProps>(
                 <TextInput
                   ref={ref}
                   style={[getInputStyle(), inputStyle]}
-                  placeholderTextColor={error ? danger + 99 : muted}
+                  placeholderTextColor={error ? danger + '99' : muted}
                   onFocus={handleFocus}
                   onBlur={handleBlur}
                   editable={!disabled}
@@ -521,7 +522,7 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
                   inputStyle,
                 ]}
                 placeholderTextColor={error ? danger + '99' : muted}
-                placeholder={placeholder || 'Type your message...'}
+                placeholder={placeholder}
                 editable={!disabled}
                 selectionColor={primary}
                 onFocus={handleFocus}
@@ -580,6 +581,7 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
                       fontSize: FONT_SIZE,
                       color: disabled ? muted : error ? danger : text,
                       paddingVertical: 0,
+                      textAlign: 'auto',
                     },
                     inputStyle,
                   ]}

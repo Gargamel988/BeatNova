@@ -8,6 +8,7 @@ import { Play } from "lucide-react-native";
 import { Friend } from "./types";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
+import { useTranslation } from "react-i18next";
 
 const getInitialsColor = (initials: string): string => {
   const colors = ["#ec4899", "#9333ea", "#a855f7", "#c084fc", "#f472b6"];
@@ -19,6 +20,7 @@ interface FriendCardProps {
 }
 
 export function FriendCard({ friend }: FriendCardProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
@@ -143,7 +145,7 @@ export function FriendCard({ friend }: FriendCardProps) {
                 fontWeight: "600",
               }}
             >
-              Şu anda müzik dinliyor
+              {t("friends.listeningNow")}
             </Text>
           </View>
         )}

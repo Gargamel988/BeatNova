@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import { ChartContainer } from "@/components/charts/chart-container";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
+import { useTranslation } from "react-i18next";
 
 interface GenreData {
   genre: string;
@@ -16,6 +17,7 @@ interface GenreChartProps {
 }
 
 export function GenreChart({ data }: GenreChartProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
 
@@ -23,8 +25,8 @@ export function GenreChart({ data }: GenreChartProps) {
 
   return (
     <ChartContainer
-      title="En Çok Dinlediğin Müzik Türleri"
-      description="Tür bazlı dinleme dağılımı"
+      title={t("stats.genreTitle")}
+      description={t("stats.genreDesc")}
       style={{ gap: hp(1.5) }}
     >
       <View style={{ gap: hp(1) }}>

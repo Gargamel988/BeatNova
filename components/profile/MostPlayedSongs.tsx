@@ -8,6 +8,7 @@ import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Music2 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface Song {
   id: string | number;
@@ -22,6 +23,7 @@ interface MostPlayedSongsProps {
 }
 
 export function MostPlayedSongs({ songs }: MostPlayedSongsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
@@ -75,7 +77,7 @@ export function MostPlayedSongs({ songs }: MostPlayedSongsProps) {
               fontWeight: "800",
             }}
           >
-            En Çok Dinlenen Şarkılar
+            {t("stats.mostPlayedTitle")}
           </Text>
         </View>
 

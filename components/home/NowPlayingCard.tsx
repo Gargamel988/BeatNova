@@ -9,12 +9,14 @@ import { Song } from "@/components/songs/songsService";
 import { LinearGradient } from "expo-linear-gradient";
 import { formatTime } from "@/utils/format";
 import { useAudioPlayerContext, useAudioPositionContext } from "@/providers/player-context";
+import { useTranslation } from "react-i18next";
 
 type NowPlayingCardProps = {
   activeSong: Song | null;
 };
 
 export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -79,7 +81,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
           <View style={{
             position: "absolute",
             top: -hp(1),
-            left: -wp(2),
+            start: -wp(2),
             backgroundColor: "rgba(0,0,0,0.6)",
             paddingHorizontal: wp(2),
             paddingVertical: hp(0.3),
@@ -89,15 +91,15 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
             borderWidth: 1,
             borderColor: "rgba(255,255,255,0.1)",
           }}>
-            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#06b6d4", marginRight: 4 }} />
+            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#06b6d4", marginEnd: 4 }} />
             <Text style={{ color: "#06b6d4", fontSize: fontSize(10), fontWeight: "700" }}>
-              Kaldığın Yerden
+              {t("home.resumeListening", "Kaldığın Yerden")}
             </Text>
           </View>
         </View>
 
         {/* Orta Taraf: Şarkı Bilgileri */}
-        <View style={{ flex: 1, marginLeft: wp(4) }}>
+        <View style={{ flex: 1, marginStart: wp(4) }}>
           <Text
             style={{
               color: textSecondary,
@@ -108,7 +110,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
               textTransform: "uppercase",
             }}
           >
-            ÇALMAYA HAZIR
+            {t("home.readyToPlay", "ÇALMAYA HAZIR")}
           </Text>
           <Text
             style={{
@@ -119,7 +121,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
             }}
             numberOfLines={1}
           >
-            {activeSong.metadata?.title || "Bilinmeyen Şarkı"}
+            {activeSong.metadata?.title || t("songs.unknownSong", "Bilinmeyen Şarkı")}
           </Text>
           <Text
             style={{
@@ -129,7 +131,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
             }}
             numberOfLines={1}
           >
-            {activeSong.metadata?.artist || "Bilinmeyen Sanatçı"}
+            {activeSong.metadata?.artist || t("songs.unknownArtist", "Bilinmeyen Sanatçı")}
           </Text>
         </View>
 
@@ -142,7 +144,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
             backgroundColor: accent,
             alignItems: "center",
             justifyContent: "center",
-            marginLeft: wp(2),
+            marginStart: wp(2),
           }}
         >
           <Icon name={Play} size={20} color={accentForeground} />
@@ -150,16 +152,16 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
       </View>
 
       {/* Alt Taraf: Progress Bar */}
-      <View style={{ marginTop: hp(2.5) }}>
-        <View style={{ height: 4, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 2, width: "100%", overflow: "hidden" }}>
+      <View style={{ marginTop: hp(2.5), direction: "ltr" }}>
+        <View style={{ height: 4, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 2, width: "100%", overflow: "hidden", direction: "ltr" }}>
           <View style={{ height: "100%", width: `${progressPercent}%`, backgroundColor: "#06b6d4", borderRadius: 2 }} />
         </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: hp(1) }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: hp(1), direction: "ltr" }}>
           <Text style={{ color: textSecondary, fontSize: fontSize(11), fontWeight: "600" }}>
             {formatTime(currentPos)}
           </Text>
           <Text style={{ color: "#06b6d4", fontSize: fontSize(11), fontWeight: "700" }}>
-            Kalan {formatTime(remaining)}
+            {t("home.remaining", "Kalan")} {formatTime(remaining)}
           </Text>
           <Text style={{ color: textSecondary, fontSize: fontSize(11), fontWeight: "600" }}>
             {formatTime(duration)}

@@ -8,6 +8,7 @@ import { Users, Music2, Check, X } from "lucide-react-native";
 import { FriendRequest } from "./types";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
+import { useTranslation } from "react-i18next";
 
 const getInitialsColor = (initials: string): string => {
   const colors = ["#ec4899", "#9333ea", "#a855f7", "#c084fc", "#f472b6"];
@@ -25,6 +26,7 @@ export function FriendRequestCard({
   onAccept,
   onReject,
 }: FriendRequestCardProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
@@ -112,7 +114,7 @@ export function FriendRequestCard({
               fontSize: fontSize(12),
             }}
           >
-            {request.mutualFriends} ortak arkadaş
+            {t("friends.mutualFriends", { count: request.mutualFriends })}
           </Text>
         </View>
         <View
@@ -155,7 +157,7 @@ export function FriendRequestCard({
           icon={Check}
           onPress={() => onAccept(request.id)}
         >
-          Kabul Et
+          {t("friends.accept")}
         </Button>
         <Button
           variant="outline"
@@ -171,7 +173,7 @@ export function FriendRequestCard({
           icon={X}
           onPress={() => onReject(request.id)}
         >
-          Reddet
+          {t("friends.reject")}
         </Button>
       </View>
     </Card>

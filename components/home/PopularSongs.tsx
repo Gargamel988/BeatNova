@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { TrendingUp, Play, Music2 } from "lucide-react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
+import { useTranslation } from "react-i18next";
 
 type Song = {
   id: string;
@@ -22,6 +23,7 @@ type PopularSongsProps = {
 };
 
 export function PopularSongsComponent({ songs, onPlaySong }: PopularSongsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -53,7 +55,7 @@ export function PopularSongsComponent({ songs, onPlaySong }: PopularSongsProps) 
               fontWeight: "800",
             }}
           >
-            En Çok Dinlenenler
+            {t("home.popularSongs", "En Çok Dinlenenler")}
           </Text>
         </View>
       </View>
@@ -102,7 +104,7 @@ export function PopularSongsComponent({ songs, onPlaySong }: PopularSongsProps) 
                 style={{
                   position: "absolute",
                   top: -4,
-                  left: -4,
+                  start: -4,
                   backgroundColor: "#FF9F0A",
                   borderRadius: radius(8),
                   width: 20,

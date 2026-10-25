@@ -10,19 +10,21 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { formatTime } from "@/utils/format";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useTranslation } from "react-i18next";
 type QueueSectionProps = {
   queue: Song[];
 };
 
 export default function QueueSection({ queue }: QueueSectionProps) {
+  const { t } = useTranslation();
   const { wp, hp, radius, fontSize } = useResponsive();
   const { palette } = useThemeModeContext();
 
   if (queue.length === 0) {
     return (
       <EmptyState 
-        title="Kuyruk Boş"
-        message="Çalma kuyruğunda şarkı yok"
+        title={t("player.queueEmpty")}
+        message={t("player.queueEmptyDesc")}
         icon="music"
         fullScreen
       />
@@ -99,7 +101,7 @@ export default function QueueSection({ queue }: QueueSectionProps) {
                   }}
                   numberOfLines={1}
                 >
-                  {item.metadata?.title || "Bilinmeyen Şarkı"}
+                  {item.metadata?.title || t("songs.unknownTitle")}
                 </Text>
                 <Text
                   style={{
@@ -110,7 +112,7 @@ export default function QueueSection({ queue }: QueueSectionProps) {
                   }}
                   numberOfLines={1}
                 >
-                  {item.metadata?.artist ?? "Bilinmeyen Sanatçı"}
+                  {item.metadata?.artist ?? t("songs.unknownArtist")}
                 </Text>
               </View>
 
@@ -150,7 +152,7 @@ export default function QueueSection({ queue }: QueueSectionProps) {
                         color: palette.player.iconWhite,
                       }}
                     >
-                      Çalıyor
+                      {t("player.playing")}
                     </Text>
                   </View>
                 ) : (
@@ -179,7 +181,7 @@ export default function QueueSection({ queue }: QueueSectionProps) {
                         color: palette.player.textMuted,
                       }}
                     >
-                      Sırada
+                      {t("player.inQueue")}
                     </Text>
                   </View>
                 )}

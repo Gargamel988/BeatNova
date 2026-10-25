@@ -1,5 +1,5 @@
 import React from "react";
-import { TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View, I18nManager } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -7,12 +7,14 @@ import { Sparkles, ArrowRight } from "lucide-react-native";
 import { router } from "expo-router";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
+import { useTranslation } from "react-i18next";
 
 export function AIBannerComponent() {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
   const handlePress = () => {
-    router.push("/(drawer)/(tabs)/MusicAssistant");
+    router.push("/(tabs)/music-assistant");
   };
 
   return (
@@ -94,7 +96,7 @@ export function AIBannerComponent() {
                   opacity: 0.9,
                 }}
               >
-                YAPAY ZEKA
+                {t("home.aiAssistant", "YAPAY ZEKA")}
               </Text>
             </View>
             <Text
@@ -105,7 +107,7 @@ export function AIBannerComponent() {
                 marginBottom: hp(0.5),
               }}
             >
-              Müzik Asistanı
+              {t("assistant.title", "Müzik Asistanı")}
             </Text>
             <Text
               style={{
@@ -115,7 +117,7 @@ export function AIBannerComponent() {
                 lineHeight: fontSize(20),
               }}
             >
-              AI ile sana özel şarkı önerileri al
+              {t("home.aiDesc", "AI ile sana özel şarkı önerileri al")}
             </Text>
           </View>
 
@@ -127,10 +129,12 @@ export function AIBannerComponent() {
               backgroundColor: colors.overlay.white20,
               alignItems: "center",
               justifyContent: "center",
-              marginLeft: wp(3),
+              marginStart: wp(3),
             }}
           >
-            <Icon name={ArrowRight} size={28} color={colors.text} />
+            <View style={{ transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }] }}>
+              <Icon name={ArrowRight} size={28} color={colors.text} />
+            </View>
           </View>
         </View>
       </LinearGradient>

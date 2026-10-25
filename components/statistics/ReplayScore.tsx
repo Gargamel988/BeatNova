@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { Repeat } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface ReplaySong {
   title: string;
@@ -19,13 +20,14 @@ interface ReplayScoreProps {
 }
 
 export function ReplayScore({ songs }: ReplayScoreProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
 
   return (
     <ChartContainer
-      title="Tekrarlı Dinleme Skoru"
-      description="Bir şarkıyı kaç defa arka arkaya dinledin?"
+      title={t("stats.replayTitle")}
+      description={t("stats.replayDesc")}
       style={{ gap: hp(1.5) }}
     >
       {songs.map((song, index) => (
@@ -103,7 +105,7 @@ export function ReplayScore({ songs }: ReplayScoreProps) {
                     fontSize: fontSize(10),
                   }}
                 >
-                  tekrar
+                  {t("stats.replayLabel")}
                 </Text>
               </View>
             </View>

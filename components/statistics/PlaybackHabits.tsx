@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { SkipForward } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface SkippedSong {
   title: string;
@@ -23,13 +24,14 @@ export function PlaybackHabits({
   averageCompletionRate,
   mostSkippedSongs,
 }: PlaybackHabitsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
 
   return (
     <ChartContainer
-      title="Oynatma Alışkanlığı"
-      description="Şarkıların ne kadarını dinliyorsun?"
+      title={t("stats.habitsTitle")}
+      description={t("stats.habitsDesc")}
       style={{ gap: hp(1.5) }}
     >
       <Card
@@ -52,7 +54,7 @@ export function PlaybackHabits({
                 fontWeight: "600",
               }}
             >
-              Ortalama Tamamlama Oranı
+              {t("stats.avgCompletionRate")}
             </Text>
           </View>
           <Text
@@ -93,7 +95,7 @@ export function PlaybackHabits({
             marginTop: hp(0.5),
           }}
         >
-          En Çok Skip Yapılan Şarkılar
+          {t("stats.mostSkippedTitle")}
         </Text>
         {mostSkippedSongs.map((song, index) => (
           <Card
@@ -150,7 +152,7 @@ export function PlaybackHabits({
                       fontSize: fontSize(10),
                     }}
                   >
-                    skip
+                    {t("stats.timesSkipped", { count: song.skipCount }).replace(String(song.skipCount), "").trim() || "skip"}
                   </Text>
                 </View>
               </View>

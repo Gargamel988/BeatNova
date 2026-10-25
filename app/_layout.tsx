@@ -1,3 +1,4 @@
+import "@/i18n";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { ThemeProvider } from "@/providers/theme-provider";
 import * as NavigationBar from "expo-navigation-bar";
@@ -23,12 +24,24 @@ import { AnimatedLogoSplash } from "@/components/AnimatedLogoSplash";
 import { AdsProvider } from "@/providers/AdsProvider";
 import * as MediaLibrary from "expo-media-library";
 import { ShieldAlert } from "lucide-react-native";
+import { useTranslation, I18nextProvider } from "react-i18next";
+import i18n from "@/i18n";
 import TrackPlayer from "@rntp/player";
 import { PlaybackService } from "@/services/playbackService";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Arka plan müzik servisi (İstatistik ve background event'ler için)
-TrackPlayer.registerBackgroundEventHandler(() => PlaybackService);
+// Fast Refresh sırasında tekrar tekrar çağrılmasını engelle
+// @ts-ignore
+if (!global.__TRACK_PLAYER_BG_REGISTERED__) {
+  // @ts-ignore
+  global.__TRACK_PLAYER_BG_REGISTERED__ = true;
+  try {
+    TrackPlayer.registerBackgroundEventHandler(() => PlaybackService);
+  } catch (e) {
+    console.warn("TrackPlayer background handler skipped (Expo Go):", e);
+  }
+}
 
 SplashScreen.setOptions({
   duration: 200,
@@ -48,14 +61,17 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const colorScheme = useColorScheme() || "system";
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <ToastProvider>
-          <RootContent colorScheme={colorScheme} />
-        </ToastProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <ToastProvider>
+            <RootContent colorScheme={colorScheme} />
+          </ToastProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </I18nextProvider>
   );
 }
 
@@ -66,6 +82,7 @@ type RootContentProps = {
 
 
 function RootContent({ colorScheme }: RootContentProps) {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasMediaPermission, setHasMediaPermission] = useState<boolean | null>(null);
@@ -118,9 +135,21 @@ function RootContent({ colorScheme }: RootContentProps) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (isMounted) {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      // Sadece oturum açma/kapama event'lerinde state güncelle.
+      // TOKEN_REFRESHED, USER_UPDATED gibi event'ler gereksiz
+      // yönlendirmeye neden olmaması için filtrelenir.
+      if (
+        event === 'SIGNED_IN' ||
+        event === 'SIGNED_OUT' ||
+        event === 'INITIAL_SESSION'
+      ) {
         setIsAuthenticated(!!session);
+        if (event !== 'INITIAL_SESSION') {
+          // Yükleme bittikten sonra bu event'ler gelirse de loading'i kapat
+          setIsLoading(false);
+        }
       }
     });
 
@@ -136,17 +165,21 @@ function RootContent({ colorScheme }: RootContentProps) {
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!isAuthenticated && !inAuthGroup) {
+      // Giriş yapılmamış ve drawer'dayız → login'e gönder
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace("/(drawer)/(tabs)");
+      // Giriş yapılmış ve auth ekranındayız → ana sayfaya gönder
+      router.replace("/");
     }
-  }, [isAuthenticated, isLoading, segments]);
+    // Diğer durumlar (isAuthenticated=true, inAuthGroup=false veya
+    // isAuthenticated=false, inAuthGroup=true) → hiçbir şey yapma,
+    // mevcut konumda kal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isLoading]);
 
   useEffect(() => {
     if (Platform.OS === "android") {
-      NavigationBar.setButtonStyleAsync(
-        colorScheme === "light" ? "dark" : "light"
-      );
+      NavigationBar.setStyle(colorScheme === "light" ? "dark" : "light");
       setBackgroundColorAsync("#000000");
     }
   }, [colorScheme]);
@@ -156,10 +189,16 @@ function RootContent({ colorScheme }: RootContentProps) {
   const end = useColor("authBackgroundGradientEnd");
   const primaryColor = useColor("primary");
 
-  const isDrawerPage = segments[0] === "(drawer)" && segments[1] === "(tabs)";
+  const isTabsPage = segments[0] === "(tabs)";
 
   if (isLoading) {
-    return <AnimatedLogoSplash message="MüzikBox Hazırlanıyor..." />;
+    return (
+      <AnimatedLogoSplash
+        message={t("splash.preparing", {
+          defaultValue: "BeatNova Hazırlanıyor...",
+        })}
+      />
+    );
   }
 
   // Kullanıcı giriş yapmış ama müzik/medya izni verilmemişse izin isteme ekranı göster
@@ -213,7 +252,7 @@ function RootContent({ colorScheme }: RootContentProps) {
                 marginBottom: hp(1),
               }}
             >
-              Müzik Erişimi İzni Gerekli
+              {t("permission.title", "Müzik Erişimi İzni Gerekli")}
             </Text>
 
             <Text
@@ -225,7 +264,10 @@ function RootContent({ colorScheme }: RootContentProps) {
                 lineHeight: fontSize(14) * 1.4,
               }}
             >
-              Cihazınızdaki şarkıları tarayabilmek ve oynatabilmek için medya / müzik kütüphanesine erişim izni vermeniz gerekmektedir.
+              {t(
+                "permission.desc",
+                "Cihazınızdaki şarkıları tarayabilmek ve oynatabilmek için medya / müzik kütüphanesine erişim izni vermeniz gerekmektedir."
+              )}
             </Text>
 
             <TouchableOpacity
@@ -248,7 +290,7 @@ function RootContent({ colorScheme }: RootContentProps) {
                   fontWeight: "600",
                 }}
               >
-                İzin Ver
+                {t("permission.grantBtn", "İzin Ver")}
               </Text>
             </TouchableOpacity>
 
@@ -266,7 +308,7 @@ function RootContent({ colorScheme }: RootContentProps) {
                   textDecorationLine: "underline",
                 }}
               >
-                Cihaz Ayarlarını Aç
+                {t("permission.openSettings", "Cihaz Ayarlarını Aç")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -298,13 +340,16 @@ function RootContent({ colorScheme }: RootContentProps) {
                     animation: "fade",
                   }}
                 >
-                  <Stack.Screen name="(drawer)" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="favorite" options={{ animation: "slide_from_right" }} />
+                  <Stack.Screen name="statistic" options={{ animation: "slide_from_right" }} />
+                  <Stack.Screen name="theme" options={{ animation: "slide_from_right" }} />
                   <Stack.Screen name="(auth)" />
                   <Stack.Screen name="+not-found" />
                 </Stack>
                 {isAuthenticated && (
                   <>
-                    <GlobalMiniPlayer hasTabBar={isDrawerPage} />
+                    <GlobalMiniPlayer hasTabBar={isTabsPage} />
                   </>
                 )}
               </LinearGradient>

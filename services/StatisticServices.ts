@@ -10,6 +10,18 @@ export type ListeningDailyRow = {
   skip_count: number;
 };
 
+export type ListeningHistoryRow = {
+  id: string;
+  user_id: string;
+  song_id: string;
+  listening_time?: number;
+  total_seconds?: number;
+  play_count?: number;
+  skip_count?: number;
+  last_played_at?: string;
+  created_at?: string;
+};
+
 const toLocalDateString = (d: Date) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -17,7 +29,7 @@ const toLocalDateString = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-const fetchAll = async <T,>(build: () => any): Promise<T[]> => {
+const fetchAll = async <T>(build: () => { range: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }> }): Promise<T[]> => {
   const PAGE = 1000;
   const out: T[] = [];
   for (let from = 0; ; from += PAGE) {
@@ -46,9 +58,13 @@ const logDailyListening = async (
       p_play: playCount,
       p_skip: skipCount,
     });
-    if (error) console.log("[STATS] listening_daily yazılamadı:", error.message);
-  } catch (e) {
-    console.log("[STATS] listening_daily hatası:", e);
+    if (error && __DEV__) {
+      console.warn("[STATS] increment_listening_daily error:", error.message);
+    }
+  } catch (e: unknown) {
+    if (__DEV__) {
+      console.warn("[STATS] increment_listening_daily exception:", e instanceof Error ? e.message : String(e));
+    }
   }
 };
 
@@ -81,30 +97,34 @@ const upsertlisteningtime = async (
     await logDailyListening(songId, safeListeningDelta, safePlayCount, safeSkipDelta);
 
     return true;
-  } catch (error: any) {
-    if (error?.message?.includes("session missing")) return null;
-    console.log("[STATS] upsert error:", error);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : typeof error === 'object' && error && 'message' in error ? String((error as { message: unknown }).message) : String(error);
+    if (errorMsg.includes("session missing")) return null;
+    if (__DEV__) {
+      console.warn("[STATS] upsert error:", errorMsg);
+    }
     return null;
   }
 };
 
-const getlisteninghistory = async () => {
+const getlisteninghistory = async (): Promise<ListeningHistoryRow[]> => {
   try {
     const user = await getUser();
     if (!user?.id) {
       return [];
     }
-    return await fetchAll<any>(() => 
+    return await fetchAll<ListeningHistoryRow>(() => 
       supabase
         .from("listening_history")
         .select("*")
         .eq("user_id", user.id)
     );
-  } catch (error: any) {
-    if (error?.message?.includes("session missing")) return [];
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if (errorMsg.includes("session missing")) return [];
     return [];
   }
-}
+};
 
 // Belirtilen tarihten (dahil) itibaren günlük kayıtlar
 const getListeningDaily = async (fromDate: Date): Promise<ListeningDailyRow[]> => {

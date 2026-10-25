@@ -26,9 +26,10 @@ export const getProfile = async () => {
       .eq("id", user.id)
       .maybeSingle();
     return { data, error };
-  } catch (error: any) {
-    if (error?.message?.includes("session missing")) return { data: null, error: null };
-    return { data: null, error };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("session missing")) return { data: null, error: null };
+    return { data: null, error: error instanceof Error ? error : new Error(msg) };
   }
 };
 

@@ -6,28 +6,18 @@ import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { MoreVertical, Play } from "lucide-react-native";
 import { formatTime } from "@/utils/format";
+import { useTranslation } from "react-i18next";
 
-type Playlist = {
-	id: number;
-	name: string;
-	songCount?: number;
-	song_count?: number;
-	duration?: string | number;
-	cover?: string;
-	cover_url?: string;
-	gradient?: [string, string];
-	isPinned?: boolean;
-	is_pinned?: boolean;
-	mood?: string;
-  };
+import { PlaylistType } from "@/type/PlaylistType";
 
 export default function PinnedPlaylistCard({
 	playlist,
 	onPressMore,
   }: {
-	playlist: Playlist;
+	playlist: PlaylistType;
 	onPressMore?: () => void;
   }) {
+	const { t } = useTranslation();
 	const { wp, hp, fontSize, radius } = useResponsive();
   
 	// Fallback değerler
@@ -63,7 +53,7 @@ export default function PinnedPlaylistCard({
 			  alignItems: "flex-start",
 			}}
 		  >
-			<View style={{ flex: 1, paddingRight: wp(2) }}>
+			<View style={{ flex: 1, paddingEnd: wp(2) }}>
 			  <Text
 				style={{
 				  color: "#fff",
@@ -81,7 +71,7 @@ export default function PinnedPlaylistCard({
 				  fontSize: fontSize(13),
 				}}
 			  >
-				{`${songCount} şarkı • ${duration}`}
+				{`${t("playlist.songCount", { count: songCount })} • ${duration}`}
 			  </Text>
 			</View>
 			<TouchableOpacity
@@ -137,7 +127,7 @@ export default function PinnedPlaylistCard({
 					fontWeight: "600",
 				  }}
 				>
-				  Son dinlenen
+				  {t("playlist.lastListened")}
 				</Text>
 				<Text
 				  style={{
@@ -145,7 +135,7 @@ export default function PinnedPlaylistCard({
 					fontSize: fontSize(11),
 				  }}
 				>
-				  12 saat önce
+				  {t("playlist.recently")}
 				</Text>
 			  </View>
 			</View>
@@ -159,7 +149,7 @@ export default function PinnedPlaylistCard({
 				justifyContent: "center",
 			  }}
 			>
-			  <Icon name={Play} size={22} color="#000" style={{ marginLeft: 2 }} />
+			  <Icon name={Play} size={22} color="#000" style={{ marginStart: 2 }} />
 			</TouchableOpacity>
 		  </View>
 		</LinearGradient>

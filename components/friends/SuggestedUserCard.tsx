@@ -9,7 +9,7 @@ import { Users, Music2, TrendingUp, UserPlus } from "lucide-react-native";
 import { SuggestedUser } from "./types";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
-
+import { useTranslation } from "react-i18next";
 
 const getInitialsColor = (initials: string): string => {
   const colors = ["#ec4899", "#9333ea", "#a855f7", "#c084fc", "#f472b6"];
@@ -25,6 +25,7 @@ export function SuggestedUserCard({
   user,
   onAddFriend,
 }: SuggestedUserCardProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
@@ -212,7 +213,7 @@ export function SuggestedUserCard({
                 fontSize: fontSize(10),
               }}
             >
-              Ortak
+              {t("friends.mutual")}
             </Text>
           </View>
         </View>
@@ -252,7 +253,7 @@ export function SuggestedUserCard({
                 fontSize: fontSize(10),
               }}
             >
-              Müzik
+              {t("friends.music")}
             </Text>
           </View>
         </View>
@@ -281,7 +282,7 @@ export function SuggestedUserCard({
         icon={UserPlus}
         onPress={() => onAddFriend(user.id)}
       >
-        Arkadaş Ekle
+        {t("friends.addFriend")}
       </Button>
     </Card>
   );

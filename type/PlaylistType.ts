@@ -1,26 +1,67 @@
 type PlaylistType = {
-	id?: number;
-	name: string;
-	description: string;
-	is_public: boolean;
-	tags: string[];
-	created_at?: Date;
-	updated_at?: Date;
-	// getPlaylists tarafından eklenen genişletilmiş alanlar
-	song_count?: number;
-	songCount?: number;
-	duration?: number | string;
-	cover_url?: string;
-	cover?: string;
-	song_cover_urls?: string[];
-	isPinned?: boolean;
-	mood?: string[];
-	gradient?: [string, string];
+  id: number;
+  name: string;
+  description: string;
+  is_public: boolean;
+  tags: string[];
+  created_at?: Date;
+  updated_at?: Date;
+  // getPlaylists tarafından eklenen genişletilmiş alanlar
+  song_count?: number;
+  songCount?: number;
+  duration?: number | string;
+  cover_url?: string;
+  cover?: string;
+  song_cover_urls?: string[];
+  isPinned?: boolean;
+  mood?: string[];
+  gradient?: [string, string];
 };
 
 type PlaylistCreatePayload = Pick<
-	PlaylistType,
-	"name" | "description" | "is_public" | "tags"
+  PlaylistType,
+  "name" | "description" | "is_public" | "tags"
 >;
 
-export type { PlaylistType, PlaylistCreatePayload };
+type RawPlaylistSong = {
+  song_duration: number | null;
+  songs:
+    | {
+        cover_url: string | null;
+        duration: number | null;
+      }
+    | {
+        cover_url: string | null;
+        duration: number | null;
+      }[]
+    | null;
+};
+
+type RawPlaylist = {
+  id: number;
+  name: string;
+  description: string;
+  is_public: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  cover_url?: string | null;
+  isPinned?: boolean;
+  mood?: string[];
+  gradient?: [string, string];
+  playlist_songs: RawPlaylistSong[] | null;
+};
+
+type PlaylistShareData = {
+  title: string;
+  text: string;
+};
+
+export type {
+  PlaylistType,
+  PlaylistCreatePayload,
+  RawPlaylist,
+  RawPlaylistSong,
+  PlaylistShareData,
+};

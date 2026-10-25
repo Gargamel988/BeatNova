@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { TabType } from "./types";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
+import { useTranslation } from "react-i18next";
 
 interface FriendsTabsProps {
   activeTab: TabType;
@@ -17,6 +18,7 @@ export function FriendsTabs({
   onTabChange,
   pendingRequests,
 }: FriendsTabsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textSecondary = useColor("authSecondaryText");
@@ -56,7 +58,7 @@ export function FriendsTabs({
             fontWeight: activeTab === "friends" ? "700" : "500",
           }}
         >
-          Arkadaşlar
+          {t("friends.title")}
         </Text>
       </TouchableOpacity>
 
@@ -105,7 +107,7 @@ export function FriendsTabs({
             fontWeight: activeTab === "requests" ? "700" : "500",
           }}
         >
-          İstekler
+          {t("friends.requests")}
         </Text>
       </TouchableOpacity>
 
@@ -127,7 +129,7 @@ export function FriendsTabs({
             fontWeight: activeTab === "add" ? "700" : "500",
           }}
         >
-          Arkadaş Ekle
+          {t("friends.addFriend")}
         </Text>
       </TouchableOpacity>
     </View>

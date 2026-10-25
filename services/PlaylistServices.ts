@@ -1,9 +1,37 @@
 import { supabase } from "@/lib/supabase";
 import { PlaylistType, PlaylistCreatePayload } from "@/type/PlaylistType";
+import { Song } from "@/type/SongType";
 import { getUser } from "@/lib/user";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const getPlaylists = async () => {
+type RawPlaylistSong = {
+  song_duration: number | null;
+  songs: {
+    cover_url: string | null;
+    duration: number | null;
+  } | {
+    cover_url: string | null;
+    duration: number | null;
+  }[] | null;
+};
+
+type RawPlaylist = {
+  id: number;
+  name: string;
+  description: string;
+  is_public: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  cover_url?: string | null;
+  isPinned?: boolean;
+  mood?: string[];
+  gradient?: [string, string];
+  playlist_songs: RawPlaylistSong[] | null;
+};
+
+const getPlaylists = async (): Promise<PlaylistType[]> => {
   try {
     const user = await getUser();
     if (!user?.id) {
@@ -33,20 +61,22 @@ const getPlaylists = async () => {
       return [];
     }
 
+    const rawList = playlists as unknown as RawPlaylist[];
+
     // Tek sorguda gelen verileri yerel olarak (istemcide) işle (N+1 sorununu çözer)
-    const playlistsWithCounts = playlists.map((playlist: any) => {
-      const pSongs = playlist.playlist_songs || [];
+    const playlistsWithCounts: PlaylistType[] = rawList.map((playlist) => {
+      const pSongs = playlist.playlist_songs ?? [];
       const songCount = pSongs.length;
 
       let totalDuration = 0;
       const songCoverUrls: string[] = [];
 
-      pSongs.forEach((ps: any, index: number) => {
+      pSongs.forEach((ps) => {
         // Süre hesaplama
         let duration = ps.song_duration;
         if (duration == null) {
           const songsObj = Array.isArray(ps.songs) ? ps.songs[0] : ps.songs;
-          duration = songsObj?.duration || 0;
+          duration = songsObj?.duration ?? 0;
         }
         totalDuration += Number(duration) || 0;
 
@@ -62,25 +92,30 @@ const getPlaylists = async () => {
 
       return {
         ...playlist,
+        created_at: playlist.created_at ? new Date(playlist.created_at) : undefined,
+        updated_at: playlist.updated_at ? new Date(playlist.updated_at) : undefined,
         song_count: songCount,
         songCount: songCount,
         duration: totalDuration,
-        cover_url: playlist.cover_url || "",
-        cover: playlist.cover_url || "",
+        cover_url: playlist.cover_url ?? "",
+        cover: playlist.cover_url ?? "",
         song_cover_urls: songCoverUrls,
-        isPinned: playlist.isPinned || false,
-        mood: playlist.mood || playlist.tags || [],
-        gradient: playlist.gradient || ["#a855f7", "#ec4899"],
-        playlist_songs: [],
+        isPinned: playlist.isPinned ?? false,
+        mood: playlist.mood ?? playlist.tags ?? [],
+        gradient: playlist.gradient ?? ["#a855f7", "#ec4899"],
       };
     });
 
     return playlistsWithCounts;
-  } catch (error) {
+  } catch (error: unknown) {
+    if (__DEV__) {
+      console.warn("getPlaylists error:", error instanceof Error ? error.message : String(error));
+    }
     return [];
   }
 };
-const createPlaylist = async (playlist: PlaylistCreatePayload) => {
+
+const createPlaylist = async (playlist: PlaylistCreatePayload): Promise<PlaylistType | null> => {
   try {
     const user = await getUser();
     const { data, error } = await supabase
@@ -91,13 +126,16 @@ const createPlaylist = async (playlist: PlaylistCreatePayload) => {
     if (error) {
       throw error;
     }
-    return data;
-  } catch (error) {
-    console.error(error);
+    return data as PlaylistType;
+  } catch (error: unknown) {
+    if (__DEV__) {
+      console.warn("createPlaylist error:", error instanceof Error ? error.message : String(error));
+    }
     return null;
   }
 };
-const updatePlaylist = async (playlist: PlaylistType) => {
+
+const updatePlaylist = async (playlist: PlaylistType): Promise<PlaylistType | null> => {
   try {
     const user = await getUser();
     const { data, error } = await supabase
@@ -110,17 +148,19 @@ const updatePlaylist = async (playlist: PlaylistType) => {
     if (error) {
       throw error;
     }
-    return data;
-  } catch (error) {
-    console.error(error);
+    return data as PlaylistType;
+  } catch (error: unknown) {
+    if (__DEV__) {
+      console.warn("updatePlaylist error:", error instanceof Error ? error.message : String(error));
+    }
     return null;
   }
 };
+
 const deletePlaylist = async (id: number | string) => {
   try {
     const user = await getUser();
     if (!user?.id) throw new Error("Kullanıcı bulunamadı");
-
 
     // 1. Önce playlist_songs tablosundaki şarkı bağlantılarını sil
     const { error: songsError } = await supabase
@@ -146,10 +186,14 @@ const deletePlaylist = async (id: number | string) => {
     }
 
     return data;
-  } catch (error) {
+  } catch (error: unknown) {
+    if (__DEV__) {
+      console.warn("deletePlaylist error:", error instanceof Error ? error.message : String(error));
+    }
     return null;
   }
 };
+
 // Playlistteki bir sonraki sıra numarası (en sona eklemek için)
 const getNextPosition = async (playlistId: number | string): Promise<number> => {
   const { data } = await supabase
@@ -210,11 +254,12 @@ const addSongToPlaylist = async (assetId: string, playlistId: number) => {
       throw error;
     }
     return data;
-  } catch (error: any) {
-    throw error;
+  } catch (error: unknown) {
+    throw error instanceof Error ? error : new Error(String(error));
   }
 };
-const getPlaylistSongs = async (playlistId: number | string) => {
+
+const getPlaylistSongs = async (playlistId: number | string): Promise<Song[]> => {
   try {
     // Validate playlistId before making the query
     if (!playlistId) {
@@ -251,18 +296,19 @@ const getPlaylistSongs = async (playlistId: number | string) => {
 
     // Gelen veriden songs objelerini çıkart
     const orderedSongs = playlistSongs
-      .map((item: any) => {
+      .map((item) => {
         const songObj = Array.isArray(item.songs) ? item.songs[0] : item.songs;
-        return songObj;
+        return songObj as unknown as Song | null;
       })
-      .filter((song: any) => song !== null && song !== undefined);
+      .filter((song): song is Song => song !== null && song !== undefined);
 
     return orderedSongs;
   } catch {
     return [];
   }
 };
-const addSongToFavorites = async (songId: string) => {
+
+const addSongToFavorites = async (songId: string): Promise<{ success: boolean; message: string }> => {
   try {
     const user = await getUser();
     if (!user?.id) {
@@ -270,7 +316,14 @@ const addSongToFavorites = async (songId: string) => {
     }
     const saved = await AsyncStorage.getItem("favorites");
     if (saved) {
-      const favorites = JSON.parse(saved);
+      let favorites: string[] = [];
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) favorites = parsed;
+      } catch {
+        favorites = [];
+      }
+
       if (!favorites.includes(songId)) {
         favorites.push(songId);
         await AsyncStorage.setItem("favorites", JSON.stringify(favorites));
@@ -285,16 +338,19 @@ const addSongToFavorites = async (songId: string) => {
         message: "Şarkı başarıyla favorilere eklendi",
       };
     }
+    await AsyncStorage.setItem("favorites", JSON.stringify([songId]));
     return {
       success: true,
       message: "Şarkı başarıyla favorilere eklendi",
     };
-  } catch (error: any) {
-    if (error?.message?.includes("session missing")) return { success: false, message: "" };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("session missing")) return { success: false, message: "" };
     return { success: false, message: "Hata" };
   }
 };
-const removeSongFromFavorites = async (songId: string) => {
+
+const removeSongFromFavorites = async (songId: string): Promise<boolean> => {
   try {
     const user = await getUser();
     if (!user?.id) {
@@ -302,21 +358,24 @@ const removeSongFromFavorites = async (songId: string) => {
     }
     const saved = await AsyncStorage.getItem("favorites");
     if (saved) {
-      const favorites = JSON.parse(saved);
-      const filteredFavorites = favorites.filter((id: string) => id !== songId);
-      await AsyncStorage.setItem(
-        "favorites",
-        JSON.stringify(filteredFavorites)
-      );
-      return true;
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const filteredFavorites = parsed.filter((id) => typeof id === "string" && id !== songId);
+          await AsyncStorage.setItem("favorites", JSON.stringify(filteredFavorites));
+          return true;
+        }
+      } catch {
+        return false;
+      }
     }
     return false;
-  } catch (error: any) {
+  } catch {
     return false;
   }
 };
 
-const getFavorites = async () => {
+const getFavorites = async (): Promise<string[]> => {
   try {
     const user = await getUser();
     if (!user?.id) {
@@ -324,14 +383,16 @@ const getFavorites = async () => {
     }
     const saved = await AsyncStorage.getItem("favorites");
     if (saved) {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     }
     return [];
-  } catch (error: any) {
+  } catch {
     return [];
   }
 };
-const removeSongFromPlaylist = async (songId: string, playlistId: number | string) => {
+
+const removeSongFromPlaylist = async (songId: string, playlistId: number | string): Promise<boolean> => {
   try {
     const user = await getUser();
     if (!user?.id) throw new Error("Kullanıcı bulunamadı");
@@ -344,12 +405,12 @@ const removeSongFromPlaylist = async (songId: string, playlistId: number | strin
 
     if (error) throw error;
     return true;
-  } catch (error: any) {
-    throw error;
+  } catch (error: unknown) {
+    throw error instanceof Error ? error : new Error(String(error));
   }
 };
 
-const reorderPlaylistSongs = async (playlistId: number | string, songIds: string[]) => {
+const reorderPlaylistSongs = async (playlistId: number | string, songIds: string[]): Promise<boolean> => {
   const user = await getUser();
   if (!user?.id) throw new Error("Kullanıcı bulunamadı");
 
@@ -361,7 +422,7 @@ const reorderPlaylistSongs = async (playlistId: number | string, songIds: string
   if (fetchError) throw fetchError;
 
   const durationMap = new Map<string, number>(
-    (existingSongs ?? []).map((s: any) => [s.song_id, s.song_duration])
+    (existingSongs ?? []).map((s) => [s.song_id, s.song_duration])
   );
 
   const rows = songIds.map((songId, index) => ({
@@ -417,7 +478,7 @@ const clonePlaylist = async (playlistId: number | string) => {
       .order("position", { ascending: true });
 
     if (!songsError && songs && songs.length > 0) {
-      const inserts = songs.map((s: any, index: number) => ({
+      const inserts = songs.map((s, index: number) => ({
         song_id: s.song_id,
         playlist_id: newPlaylist.id,
         song_duration: s.song_duration,
@@ -427,8 +488,8 @@ const clonePlaylist = async (playlistId: number | string) => {
     }
 
     return newPlaylist;
-  } catch (error: any) {
-    throw error;
+  } catch (error: unknown) {
+    throw error instanceof Error ? error : new Error(String(error));
   }
 };
 
@@ -453,9 +514,9 @@ const addMultipleSongsToPlaylist = async (songIds: string[], playlistId: number)
 
     if (songsResult.error) throw songsResult.error;
 
-    const existingIds = new Set(existingResult.data?.map((e: any) => e.song_id));
+    const existingIds = new Set(existingResult.data?.map((e) => e.song_id));
     const durationMap = new Map<string, number>();
-    songsResult.data?.forEach((s: any) => durationMap.set(s.id, s.duration));
+    songsResult.data?.forEach((s) => durationMap.set(s.id, s.duration));
 
     const newSongIds = songIds.filter((id) => !existingIds.has(id));
 
@@ -467,7 +528,7 @@ const addMultipleSongsToPlaylist = async (songIds: string[], playlistId: number)
     const inserts = newSongIds.map((songId, index) => ({
       song_id: songId,
       playlist_id: playlistId,
-      song_duration: durationMap.get(songId) || 0,
+      song_duration: durationMap.get(songId) ?? 0,
       position: startPosition + index,
     }));
 
@@ -477,8 +538,8 @@ const addMultipleSongsToPlaylist = async (songIds: string[], playlistId: number)
 
     if (insertError) throw insertError;
     return { added: newSongIds.length, skipped: existingIds.size };
-  } catch (error: any) {
-    throw error;
+  } catch (error: unknown) {
+    throw error instanceof Error ? error : new Error(String(error));
   }
 };
 
@@ -500,9 +561,9 @@ const getPlaylistShareData = async (playlistId: number | string) => {
     const songs = songsResult.data || [];
 
     const songList = songs
-      .map((item: any, index: number) => {
-        const song = Array.isArray(item.songs) ? item.songs[0] : item.songs;
-        return `${index + 1}. ${song?.title || "Bilinmeyen"} - ${song?.artist || "Bilinmeyen"}`;
+      .map((item, index: number) => {
+        const songData = Array.isArray(item.songs) ? item.songs[0] : item.songs;
+        return `${index + 1}. ${songData?.title ?? "Bilinmeyen"} - ${songData?.artist ?? "Bilinmeyen"}`;
       })
       .join("\n");
 
@@ -510,8 +571,8 @@ const getPlaylistShareData = async (playlistId: number | string) => {
       title: playlist.name,
       text: `🎵 ${playlist.name}\n${playlist.description ? `📝 ${playlist.description}\n` : ""}\n🎶 ${songs.length} şarkı\n\n${songList}\n\n📱 BeatNova ile paylaşıldı`,
     };
-  } catch (error: any) {
-    throw error;
+  } catch (error: unknown) {
+    throw error instanceof Error ? error : new Error(String(error));
   }
 };
 
@@ -530,4 +591,5 @@ export {
   clonePlaylist,
   addMultipleSongsToPlaylist,
   getPlaylistShareData,
+  type PlaylistCreatePayload,
 };

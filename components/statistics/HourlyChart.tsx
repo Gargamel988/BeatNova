@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import { ChartContainer } from "@/components/charts/chart-container";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
+import { useTranslation } from "react-i18next";
 
 interface HourlyData {
   hour: number;
@@ -15,6 +16,7 @@ interface HourlyChartProps {
 }
 
 export function HourlyChart({ data }: HourlyChartProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
 
@@ -22,8 +24,8 @@ export function HourlyChart({ data }: HourlyChartProps) {
 
   return (
     <ChartContainer
-      title="En Aktif Dinleme Saatleri"
-      description="Günün hangi saatlerinde en çok müzik dinliyorsun?"
+      title={t("stats.hourlyTitle")}
+      description={t("stats.hourlyDesc")}
       style={{ gap: hp(1.5) }}
     >
       <View

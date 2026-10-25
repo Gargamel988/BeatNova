@@ -1,13 +1,15 @@
 import { Stack } from 'expo-router';
-
 import { Link } from '@/components/ui/link';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
+import { useTranslation } from 'react-i18next';
 
 export default function NotFoundScreen() {
+  const { t } = useTranslation();
+
   return (
     <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
+      <Stack.Screen options={{ title: t("common.error") }} />
       <View
         style={{
           flex: 1,
@@ -16,8 +18,8 @@ export default function NotFoundScreen() {
           padding: 20,
         }}
       >
-        <Text>Bu sayfa bulunamadı.</Text>
-        <Link href='/'>Ana sayfaya dön</Link>
+        <Text>{t("common.noData")}</Text>
+        <Link href='/'>{t("tabs.home")}</Link>
       </View>
     </>
   );

@@ -1,6 +1,7 @@
 import React from "react";
 import { TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
 import { SearchBar } from "@/components/ui/searchbar";
@@ -22,6 +23,7 @@ export default function SearchAndFilterBar({
   onFilterPress,
   onSortPress,
 }: SearchAndFilterBarProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
 
   const cardBgInactive = useColor("background1");
@@ -36,7 +38,7 @@ export default function SearchAndFilterBar({
         }}
       >
         <SearchBar
-          placeholder="Şarkı, sanatçı veya albüm ara..."
+          placeholder={t("songs.searchPlaceholder")}
           placeholderTextColor="rgba(255,255,255,0.6)"
           onSearch={onSearchChange}
           value={searchQuery}
@@ -66,7 +68,7 @@ export default function SearchAndFilterBar({
         }}
       >
         <TouchableOpacity
-          className="flex-1 flex-row items-center justify-center gap-2  "
+          className="flex-1 flex-row items-center justify-center gap-2"
           activeOpacity={0.9}
           style={{
             backgroundColor: "rgba(255,255,255,0.08)",
@@ -82,11 +84,11 @@ export default function SearchAndFilterBar({
             className="text-white font-medium"
             style={{ fontSize: fontSize(16) }}
           >
-            Filtrele
+            {t("songs.filter")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          className="flex-1 flex-row items-center justify-center gap-2  "
+          className="flex-1 flex-row items-center justify-center gap-2"
           activeOpacity={0.9}
           style={{
             backgroundColor: "rgba(255,255,255,0.08)",
@@ -102,7 +104,7 @@ export default function SearchAndFilterBar({
             className="text-white font-medium"
             style={{ fontSize: fontSize(16) }}
           >
-            Sırala
+            {t("songs.sort")}
           </Text>
         </TouchableOpacity>
       </View>

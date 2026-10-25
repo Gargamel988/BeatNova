@@ -9,21 +9,17 @@ import { Href, router } from "expo-router";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { formatTime } from "@/utils/format";
+import { useTranslation } from "react-i18next";
 
-type Playlist = {
-  id: string;
-  name: string;
-  song_count?: number;
-  duration?: number;
-  song_cover_urls?: string[];
-};
+import { PlaylistType } from "@/type/PlaylistType";
 
 type PinnedPlaylistsProps = {
-  playlists: Playlist[];
-  onPlayPlaylist: (playlist: Playlist) => void;
+  playlists: PlaylistType[];
+  onPlayPlaylist: (playlist: PlaylistType) => void;
 };
 
 export default function PinnedPlaylists({ playlists, onPlayPlaylist }: PinnedPlaylistsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -54,11 +50,11 @@ export default function PinnedPlaylists({ playlists, onPlayPlaylist }: PinnedPla
               fontWeight: "800",
             }}
           >
-            Playlistlerim
+            {t("home.playlists", "Playlistlerim")}
           </Text>
         </View>
         <TouchableOpacity
-          onPress={() => router.push("/(drawer)/(tabs)/PlayList" as Href)}
+          onPress={() => router.push("/(tabs)/playlist" as Href)}
         >
           <Text
             style={{
@@ -67,14 +63,14 @@ export default function PinnedPlaylists({ playlists, onPlayPlaylist }: PinnedPla
               fontWeight: "600",
             }}
           >
-            Tümünü Gör
+            {t("home.seeAll", "Tümünü Gör")}
           </Text>
         </TouchableOpacity>
       </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: wp(3), paddingRight: wp(2) }}
+        contentContainerStyle={{ gap: wp(3), paddingEnd: wp(2) }}
       >
         {playlists.map((playlist) => {
           const hasCovers = playlist.song_cover_urls && playlist.song_cover_urls.length > 0;
@@ -175,7 +171,7 @@ export default function PinnedPlaylists({ playlists, onPlayPlaylist }: PinnedPla
                     fontSize: fontSize(12),
                   }}
                 >
-                  {playlist.song_count || 0} şarkı • {formatTime(playlist.duration || 0)}
+                  {playlist.song_count ?? 0} {t("playlists.songs", "şarkı")} • {formatTime(Number(playlist.duration) || 0)}
                 </Text>
               </View>
             </TouchableOpacity>

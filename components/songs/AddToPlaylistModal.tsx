@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheet } from '../ui/bottom-sheet';
 import { PlaylistType } from '@/type/PlaylistType';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -12,15 +13,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../ui/toast';
 import { EmptyState } from '../ui/empty-state';
 import { LoadingState } from '../ui/loading-state';
+import { Song } from '@/type/SongType';
 
-interface AddToPlaylistModalProps {
+type AddToPlaylistModalProps = {
 	isVisible: boolean;
 	onClose: () => void;
 	playlists: PlaylistType[];
 	onSelectPlaylist?: (playlist: PlaylistType) => void;
 	isLoadingData: boolean;
 	selectedSongId?: string;
-}
+};
 
 export default function AddToPlaylistModal({
 	isVisible,
@@ -30,6 +32,7 @@ export default function AddToPlaylistModal({
 	isLoadingData,
 	selectedSongId,
 }: AddToPlaylistModalProps) {
+	const { t } = useTranslation();
 	const { wp, hp, fontSize, radius } = useResponsive();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
@@ -68,17 +71,15 @@ export default function AddToPlaylistModal({
 			const previousSongs = queryClient.getQueryData(['playlistSongs', playlistId]);
 			
 			// 3. İyimser güncellemeyi yap
-			// Tam şarkı objesi elimizde olmadığı için sadece placeholder koyuyoruz.
-			// Gerçek veri onSettled içindeki invalidateQueries ile gelecek.
-			queryClient.setQueryData(['playlistSongs', playlistId], (old: any[] = []) => [
+			queryClient.setQueryData(['playlistSongs', playlistId], (old: Song[] = []) => [
 				...old, 
-				{ id: selectedSongId, title: 'Ekleniyor...', isOptimistic: true }
+				{ id: selectedSongId ?? "", title: t('songs.addingToPlaylist'), artist: "" }
 			]);
 			
 			// 4. Modal'ı anında kapat, kullanıcıya hızlı hissettir
 			toast({
-				title: "Playliste ekleniyor",
-				description: "Şarkı playliste ekleniyor...",
+				title: t('songs.addingToPlaylistTitle'),
+				description: t('songs.addingToPlaylist'),
 				variant: "success",
 			});
 			onClose();
@@ -87,7 +88,6 @@ export default function AddToPlaylistModal({
 			return { previousSongs, playlistId };
 		},
 		onSuccess: () => {
-			// Başarılı olursa sadece toast göster, invalidate zaten onSettled'da yapılıyor
 			setSelectedPlaylistId(null);
 		},
 		onError: (error, playlistId, context) => {
@@ -96,14 +96,13 @@ export default function AddToPlaylistModal({
 				queryClient.setQueryData(['playlistSongs', context.playlistId], context.previousSongs);
 			}
 			toast({
-				title: "Playliste ekleme işlemi başarısız",
+				title: t('songs.addToPlaylistFailed'),
 				description: error.message,
 				variant: "error",
 			});
 			setSelectedPlaylistId(null);
 		},
 		onSettled: (data, error, playlistId) => {
-			// İşlem bitince playlist şarkılarını ve genel playlistleri yenile
 			queryClient.invalidateQueries({ queryKey: ['playlistSongs', playlistId] });
 			queryClient.invalidateQueries({ queryKey: ['playlists'] });
 		}
@@ -128,9 +127,9 @@ export default function AddToPlaylistModal({
 				onClose={onClose}
 				snapPoints={[0.5, 0.75, 0.9]}
 				disablePanGesture={false}
-				title="Playlist'e Ekle"
+				title={t('songs.addToPlaylistModalTitle')}
 			>
-				<LoadingState message="Playlistler yükleniyor..." size="large" showIcon={true} fullScreen={false} />
+				<LoadingState message={t('songs.loadingPlaylists')} size="large" showIcon={true} fullScreen={false} />
 			</BottomSheet>
 		);
 	}
@@ -220,7 +219,7 @@ export default function AddToPlaylistModal({
 							fontSize: fontSize(11),
 						}}
 					>
-						{item.song_count ?? item.songCount ?? 0} şarkı
+						{t('songs.songCount', { count: item.song_count ?? item.songCount ?? 0 })}
 					</Text>
 
 					{/* Tags */}
@@ -283,13 +282,13 @@ export default function AddToPlaylistModal({
 			onClose={onClose}
 			snapPoints={[0.5, 0.75, 0.9]}
 			disablePanGesture={false}
-			title="Playlist'e Ekle"
+			title={t('songs.addToPlaylistModalTitle')}
 			isScrollable={false}
 		>
 			<View style={{ flex: 1, gap: hp(2) }}>
 				{/* Search Input */}
 				<Input
-					placeholder="Playlist ara..."
+					placeholder={t('songs.searchPlaylistPlaceholder')}
 					placeholderTextColor={textSecondary}
 					value={searchQuery}
 					onChangeText={setSearchQuery}
@@ -330,7 +329,7 @@ export default function AddToPlaylistModal({
 									fontWeight: '600',
 								}}
 							>
-								{filteredPlaylists.length} playlist
+								{t('songs.playlistCount', { count: filteredPlaylists.length })}
 							</Text>
 						</View>
 					</View>
@@ -350,10 +349,10 @@ export default function AddToPlaylistModal({
 					/>
 				) : (
 					<EmptyState 
-						title={searchQuery ? 'Playlist Bulunamadı' : 'Henüz Playlist Yok'}
+						title={searchQuery ? t('songs.noPlaylistsFound') : t('songs.noPlaylistsYet')}
 						message={searchQuery
-							? `"${searchQuery}" için sonuç bulunamadı`
-							: 'Şarkılarınızı organize etmek için yeni bir playlist oluşturun'}
+							? t('songs.noPlaylistsFoundDesc', { query: searchQuery })
+							: t('songs.noPlaylistsYetDesc')}
 						icon="playlist"
 					/>
 				)}

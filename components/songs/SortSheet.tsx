@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { TouchableOpacity } from "react-native";
+import { useTranslation } from "react-i18next";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -17,27 +18,6 @@ type SortOption = {
   icon: any;
 };
 
-const sortOptions: SortOption[] = [
-  {
-    key: "alphabetical",
-    label: "Alfabetik (A-Z)",
-    description: "Şarkı isimlerine göre sırala",
-    icon: ArrowDownAZ,
-  },
-  {
-    key: "recent",
-    label: "Son Eklenenler",
-    description: "En yeni şarkılar en üstte",
-    icon: Clock3,
-  },
-  {
-    key: "duration",
-    label: "Süre (Uzundan kısaya)",
-    description: "Daha uzun şarkıları öncele",
-    icon: Timer,
-  },
-];
-
 interface SortSheetProps {
   isVisible: boolean;
   onClose: () => void;
@@ -51,27 +31,52 @@ export default function SortSheet({
   currentSortOption,
   onSelectSort,
 }: SortSheetProps) {
-  const { fontSize } = useResponsive();
+  const { t } = useTranslation();
+  const { wp, fontSize } = useResponsive();
   const textPrimary = useColor("text");
   const textSecondary = useColor("textSecondary");
   const cardBgActive = useColor("card");
   const cardBgInactive = useColor("background1");
 
+  const sortOptions: SortOption[] = useMemo(
+    () => [
+      {
+        key: "alphabetical",
+        label: t("songs.sortAlphabetical"),
+        description: t("songs.sortAlphabeticalDesc"),
+        icon: ArrowDownAZ,
+      },
+      {
+        key: "recent",
+        label: t("songs.sortRecent"),
+        description: t("songs.sortRecentDesc"),
+        icon: Clock3,
+      },
+      {
+        key: "duration",
+        label: t("songs.sortDuration"),
+        description: t("songs.sortDurationDesc"),
+        icon: Timer,
+      },
+    ],
+    [t]
+  );
+
   return (
-    <BottomSheet isVisible={isVisible} onClose={onClose} title="Sıralama">
+    <BottomSheet isVisible={isVisible} onClose={onClose} title={t("songs.sorting")}>
       <View className="gap-4">
         <View>
           <Text
             className="font-semibold mb-1"
             style={{ fontSize: fontSize(16), color: textPrimary }}
           >
-            Sırala
+            {t("songs.sort")}
           </Text>
           <Text
             className="text-sm"
             style={{ color: textSecondary }}
           >
-            Şarkı listesini nasıl görmek istediğini seç.
+            {t("songs.sortingDesc")}
           </Text>
         </View>
         <View className="gap-3">
@@ -93,8 +98,9 @@ export default function SortSheet({
               >
                 <View className="flex-row items-center flex-1">
                   <View
-                    className="mr-3 rounded-full p-2"
+                    className="rounded-full p-2"
                     style={{
+                      marginEnd: wp(3),
                       backgroundColor: isSelected
                         ? "rgba(147, 51, 234, 0.6)"
                         : "rgba(15,23,42,0.9)",

@@ -296,7 +296,7 @@ export default function useAudioPlayerHook() {
 
   // Sleep Timer Logic
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
 
     const tick = () => {
       if (!sleepTimerEndTime.current) {

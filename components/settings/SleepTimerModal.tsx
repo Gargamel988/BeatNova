@@ -12,6 +12,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { useColor } from "@/hooks/useColor";
 import { useAudioPlayerContext } from "@/providers/player-context";
+import { useTranslation } from "react-i18next";
 
 interface SleepTimerModalProps {
   visible: boolean;
@@ -19,6 +20,7 @@ interface SleepTimerModalProps {
 }
 
 export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClose }) => {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette, mode } = useThemeModeContext();
   const textPrimary = useColor("authPrimaryText");
@@ -68,7 +70,9 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
           }
         ]}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: textPrimary, fontSize: fontSize(20) }]}>Uyku Zamanlayıcısı</Text>
+            <Text style={[styles.modalTitle, { color: textPrimary, fontSize: fontSize(20) }]}>
+              {t("sleepTimer.title", { defaultValue: "Uyku Zamanlayıcısı" })}
+            </Text>
             <TouchableOpacity onPress={onClose}>
               <X color={textSecondary} size={24} />
             </TouchableOpacity>
@@ -79,7 +83,9 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
               {isSleepTimerActive ? formatTimerDigital(sleepTimerRemaining) : `${selectedMinutes}:00`}
             </Text>
             <Text style={[styles.timerStatus, { color: textSecondary, fontSize: fontSize(14) }]}>
-              {isSleepTimerActive ? "Zamanlayıcı çalışıyor" : "Süreyi ayarla"}
+              {isSleepTimerActive
+                ? t("sleepTimer.running", { defaultValue: "Zamanlayıcı çalışıyor" })
+                : t("sleepTimer.setDuration", { defaultValue: "Süreyi ayarla" })}
             </Text>
           </View>
 
@@ -94,7 +100,9 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
               
               <View style={styles.selectedMinsContainer}>
                 <Text style={[styles.selectedMins, { color: textPrimary, fontSize: fontSize(42) }]}>{selectedMinutes}</Text>
-                <Text style={[styles.minLabel, { color: textSecondary, fontSize: fontSize(14) }]}>Dakika</Text>
+                <Text style={[styles.minLabel, { color: textSecondary, fontSize: fontSize(14) }]}>
+                  {t("sleepTimer.minutes", { defaultValue: "Dakika" })}
+                </Text>
               </View>
 
               <TouchableOpacity 
@@ -123,7 +131,7 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
                 disabled={isSleepTimerActive}
               >
                 <Text style={[styles.presetText, { color: selectedMinutes === min ? "white" : textPrimary, fontSize: fontSize(14) }]}>
-                  {min}dk
+                  {t("sleepTimer.minShort", { min, defaultValue: `${min} dk` })}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -138,7 +146,9 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
                   onClose();
                 }}
               >
-                <Text style={styles.actionBtnText}>Zamanlayıcıyı Durdur</Text>
+                <Text style={styles.actionBtnText}>
+                  {t("sleepTimer.stop", { defaultValue: "Zamanlayıcıyı Durdur" })}
+                </Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity 
@@ -148,7 +158,9 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
                   onClose();
                 }}
               >
-                <Text style={styles.actionBtnText}>Zamanlayıcıyı Başlat</Text>
+                <Text style={styles.actionBtnText}>
+                  {t("sleepTimer.start", { defaultValue: "Zamanlayıcıyı Başlat" })}
+                </Text>
               </TouchableOpacity>
             )}
           </View>

@@ -3,6 +3,7 @@ import { View, ActivityIndicator } from "react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { Text } from "./text";
+import { useTranslation } from "react-i18next";
 
 interface LoadingStateProps {
   message?: string;
@@ -12,11 +13,13 @@ interface LoadingStateProps {
 }
 
 export function LoadingState({
-  message = "Yükleniyor...",
+  message,
   size = "large",
   showIcon = true,
   fullScreen = false,
 }: LoadingStateProps) {
+  const { t } = useTranslation();
+  const displayMessage = message ?? t("common.loading");
   const { hp, wp, fontSize } = useResponsive();
   const accent = useColor("accent");
   const textSecondary = useColor("authSecondaryText");
@@ -35,7 +38,7 @@ export function LoadingState({
       {showIcon && (
         <ActivityIndicator size={size} color={accent} />
       )}
-      {message && (
+      {displayMessage && (
         <Text
           style={{
             color: textSecondary,
@@ -43,7 +46,7 @@ export function LoadingState({
             textAlign: "center",
           }}
         >
-          {message}
+          {displayMessage}
         </Text>
       )}
     </View>

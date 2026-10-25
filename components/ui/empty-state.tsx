@@ -4,6 +4,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { Text } from "./text";
 import { Music2, Search, Inbox, ListMusic } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 type EmptyStateIcon =
   | "music"
@@ -28,12 +29,15 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 };
 
 export function EmptyState({
-  title = "Bulunamadı",
-  message = "Henüz içerik eklenmemiş.",
+  title,
+  message,
   icon = "music",
   showIcon = true,
   fullScreen = false,
 }: EmptyStateProps) {
+  const { t } = useTranslation();
+  const displayTitle = title ?? t("common.noData");
+  const displayMessage = message ?? t("common.noDataDesc", { defaultValue: "Henüz içerik eklenmemiş." });
   const { hp, wp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -66,7 +70,7 @@ export function EmptyState({
         }}
         className="font-bold text-center"
       >
-        {title}
+        {displayTitle}
       </Text>
       <Text
         style={{
@@ -76,7 +80,7 @@ export function EmptyState({
           lineHeight: fontSize(20),
         }}
       >
-        {message}
+        {displayMessage}
       </Text>
     </View>
   );

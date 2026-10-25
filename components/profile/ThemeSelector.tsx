@@ -9,6 +9,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { Colors, ThemeMode } from "@/theme/colors";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Palette, Check } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 const THEME_META: Record<ThemeMode, { label: string; icon: string; description: string }> = {
   system: { 
@@ -124,6 +125,7 @@ export function ThemeSelector({
   availableModes,
   onThemeChange,
 }: ThemeSelectorProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const borderColor = useColor("border");
@@ -174,7 +176,7 @@ export function ThemeSelector({
               fontWeight: "800",
             }}
           >
-            Tema
+            {t("settings.theme")}
           </Text>
         </View>
 
@@ -222,7 +224,7 @@ export function ThemeSelector({
                           fontWeight: "700",
                         }}
                       >
-                        {label}
+                        {t(`theme.themes.${themeMode}.name`, { defaultValue: label })}
                       </Text>
                       <Text
                         style={{
@@ -231,7 +233,7 @@ export function ThemeSelector({
                           marginTop: 2,
                         }}
                       >
-                        {description}
+                        {t(`theme.themes.${themeMode}.desc`, { defaultValue: description })}
                       </Text>
                     </View>
                   </View>

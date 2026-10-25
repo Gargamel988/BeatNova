@@ -115,6 +115,7 @@ export function Progress({
       backgroundColor: mutedColor,
       borderRadius: height / 2,
       overflow: 'hidden' as const,
+      direction: 'ltr',
     },
     ...(style ? [style] : []),
   ];

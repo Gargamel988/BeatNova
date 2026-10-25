@@ -1,36 +1,15 @@
-import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/hooks/useProfil";
+import { signInWithEmail, signUpWithEmail, signOut } from "@/services/AuthService";
 
 export const useAuth = () => {
   const { mutateInsertProfile } = useProfile();
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      throw error;
-    }
-    return data;
+    return await signInWithEmail(email, password);
   };
 
-
   const register = async (email: string, password: string, username: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          user_name: username,
-        },
-      },
-    });
-
-
-    if (error) {
-      throw error;
-    }
+    const data = await signUpWithEmail(email, password, username);
 
     if (!data.user) {
       throw new Error("Kullanıcı oluşturulamadı");
@@ -41,19 +20,13 @@ export const useAuth = () => {
     } catch {
       throw new Error("Profil oluşturulurken bir hata oluştu");
     }
-    
+
     return data;
   };
 
-
   const logout = async () => {
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      throw error;
-    }
+    await signOut();
   };
-  
+
   return { login, logout, register };
 };

@@ -1,21 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, Keyboard, Platform, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useColor } from "@/hooks/useColor";
 import { useTabBarLayout } from "@/hooks/useTabBarLayout";
+import { useTranslation } from "react-i18next";
+
+export type FloatingTabBarProps = {
+  state: any;
+  navigation: any;
+  [key: string]: any;
+};
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
-const ICONS: Record<string, { off: IconName; on: IconName; label: string }> = {
-  index: { off: "home-outline", on: "home", label: "Ana Sayfa" },
-  songs: { off: "musical-notes-outline", on: "musical-notes", label: "Şarkılar" },
-  MusicAssistant: { off: "sparkles-outline", on: "sparkles", label: "Asistan" },
-  PlayList: { off: "albums-outline", on: "albums", label: "Listeler" },
-  settings: { off: "settings-outline", on: "settings", label: "Ayarlar" },
+const ICONS: Record<string, { off: IconName; on: IconName; labelKey: string; defaultLabel: string }> = {
+  index: { off: "home-outline", on: "home", labelKey: "tabs.home", defaultLabel: "Ana Sayfa" },
+  songs: { off: "musical-notes-outline", on: "musical-notes", labelKey: "tabs.songs", defaultLabel: "Şarkılar" },
+  "music-assistant": { off: "sparkles-outline", on: "sparkles", labelKey: "tabs.assistant", defaultLabel: "Asistan" },
+  playlist: { off: "albums-outline", on: "albums", labelKey: "tabs.playlists", defaultLabel: "Listeler" },
+  settings: { off: "settings-outline", on: "settings", labelKey: "tabs.settings", defaultLabel: "Ayarlar" },
 };
 
-export default function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+export default function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
+  const { t } = useTranslation();
   const accent = useColor("accent");
   const inactive = useColor("tabIconDefault");
   const cardBg = useColor("card");
@@ -58,7 +65,7 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
           },
         ]}
       >
-        {state.routes.map((route, index) => {
+        {state.routes.map((route: { key: string; name: string }, index: number) => {
           const focused = state.index === index;
           const cfg = ICONS[route.name];
           if (!cfg) return null;
@@ -75,13 +82,15 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
             }
           };
 
+          const label = t(cfg.labelKey, cfg.defaultLabel);
+
           return (
             <Pressable
               key={route.key}
               onPress={onPress}
               onLongPress={() => navigation.emit({ type: "tabLongPress", target: route.key })}
               accessibilityRole="tab"
-              accessibilityLabel={cfg.label}
+              accessibilityLabel={label}
               accessibilityState={{ selected: focused }}
               android_ripple={{ color: accent + "22", borderless: true, radius: 36 }}
               style={styles.item}
@@ -99,6 +108,7 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
               </View>
               <Text
                 numberOfLines={1}
+                adjustsFontSizeToFit
                 style={{
                   color,
                   fontSize: Math.round(11 * scale),
@@ -106,7 +116,7 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
                   marginTop: 3,
                 }}
               >
-                {cfg.label}
+                {label}
               </Text>
             </Pressable>
           );

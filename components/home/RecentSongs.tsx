@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Clock, Play, Music2 } from "lucide-react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
+import { useTranslation } from "react-i18next";
 
 type Song = {
   id: string;
@@ -21,6 +22,7 @@ type RecentSongsProps = {
 };
 
 export function RecentSongsComponent({ songs, onPlaySong }: RecentSongsProps) {
+  const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -51,7 +53,7 @@ export function RecentSongsComponent({ songs, onPlaySong }: RecentSongsProps) {
               fontWeight: "800",
             }}
           >
-            Son Çalınanlar
+            {t("home.recentSongs", "Son Çalınanlar")}
           </Text>
         </View>
       </View>
@@ -100,7 +102,7 @@ export function RecentSongsComponent({ songs, onPlaySong }: RecentSongsProps) {
                 style={{
                   position: "absolute",
                   top: -4,
-                  left: -4,
+                  start: -4,
                   backgroundColor: accent,
                   borderRadius: radius(8),
                   width: 20,

@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -26,6 +27,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useAudioPlayerContext } from "@/providers/player-context";
 import { usePlaylistContext } from "@/providers/playlist-context";
 import { useThemeModeContext } from "@/providers/theme-provider";
+import { ThemePalette } from "@/theme/colors";
 import { formatTime } from "@/utils/format";
 import {
   MoreVerticalIcon,
@@ -37,13 +39,13 @@ import {
 } from "lucide-react-native";
 import AddToPlaylistModal from "./AddToPlaylistModal";
 import { PlaylistType } from "@/type/PlaylistType";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "../ui/toast";
 import {
-  addSongToPlaylist,
-  getPlaylists,
-  addSongToFavorites,
-} from "@/services/PlaylistServices";
+  useAddToFavoritesMutation,
+  useAddSongToPlaylistMutation,
+} from "@/hooks/useSongMutations";
+import { getPlaylists } from "@/services/PlaylistServices";
 import { deleteSong } from "@/services/SongsService";
 import DetailsSection from "@/components/segmenttabs/DetailsSection";
 import { BottomSheet, useBottomSheet } from "@/components/ui/bottom-sheet";
@@ -63,44 +65,6 @@ type SongAction = {
   badgeClass: string;
 };
 
-const songActions: SongAction[] = [
-  {
-    key: "addToQueue",
-    label: "Sıraya ekle",
-    description: "Bu şarkıyı çalma sırasına ekle",
-    icon: PlayCircle,
-    badgeClass: "primary",
-  },
-  {
-    key: "addToPlaylist",
-    label: "Listeye ekle",
-    description: "Özel çalma listene kaydet",
-    icon: ListPlus,
-    badgeClass: "blue",
-  },
-  {
-    key: "addToFavorites",
-    label: "Favorilere ekle",
-    description: "Bu şarkıyı favorilerinize ekle",
-    icon: Heart,
-    badgeClass: "red",
-  },
-  {
-    key: "info",
-    label: "Detayları göster",
-    description: "Albüm ve sanatçı bilgilerini aç",
-    icon: Info,
-    badgeClass: "secondary",
-  },
-  {
-    key: "remove",
-    label: "Kaldır",
-    description: "Cihazından sil",
-    icon: Trash2,
-    badgeClass: "red",
-  },
-];
-
 // Helper component for popover actions
 function PopoverActionList({
   actions,
@@ -117,7 +81,7 @@ function PopoverActionList({
   fontSize,
   radius,
 }: {
-  actions: typeof songActions;
+  actions: SongAction[];
   item: Song;
   onSongAction: (action: SongActionKey, song: Song) => void;
   onAddToPlaylist: () => void;
@@ -125,11 +89,11 @@ function PopoverActionList({
   onAddToQueue?: () => void;
   onShowInfo?: () => void;
   onRemove?: () => void;
-  palette: any;
-  wp: any;
-  hp: any;
-  fontSize: any;
-  radius: any;
+  palette: ThemePalette;
+  wp: (val: number) => number;
+  hp: (val: number) => number;
+  fontSize: (val: number) => number;
+  radius: (val: number) => number;
 }) {
   const { setIsOpen } = usePopover();
 
@@ -251,12 +215,54 @@ function SongItemComponent({
     close: closeInfoSheet,
   } = useBottomSheet();
 
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { play } = useAudioPlayerContext();
   const { sortedPlaylist, setSortedPlaylist } = usePlaylistContext();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette } = useThemeModeContext();
   const { toast } = useToast();
+
+  const songActions: SongAction[] = useMemo(
+    () => [
+      {
+        key: "addToQueue",
+        label: t("songs.addToQueue"),
+        description: t("songs.addToQueueDesc"),
+        icon: PlayCircle,
+        badgeClass: "primary",
+      },
+      {
+        key: "addToPlaylist",
+        label: t("songs.addToPlaylist"),
+        description: t("songs.addToPlaylistDesc"),
+        icon: ListPlus,
+        badgeClass: "blue",
+      },
+      {
+        key: "addToFavorites",
+        label: t("songs.addToFavorites"),
+        description: t("songs.addToFavoritesDesc"),
+        icon: Heart,
+        badgeClass: "red",
+      },
+      {
+        key: "info",
+        label: t("songs.showDetails"),
+        description: t("songs.showDetailsDesc"),
+        icon: Info,
+        badgeClass: "white",
+      },
+      {
+        key: "remove",
+        label: t("songs.remove"),
+        description: t("songs.removeDesc"),
+        icon: Trash2,
+        badgeClass: "red",
+      },
+    ],
+    [t]
+  );
 
   const { data: playlistsData, isLoading: playlistsLoading } = useQuery<
     PlaylistType[]
@@ -272,53 +278,11 @@ function SongItemComponent({
   const { title, artist, duration, coverUri } = item.metadata;
   const hasArtwork = !!coverUri;
 
-  const { mutate: addToPlaylistMutation } = useMutation({
-    mutationFn: async ({
-      songId,
-      playlistId,
-    }: {
-      songId: string;
-      playlistId: number;
-    }) => {
-      return addSongToPlaylist(songId, playlistId);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Başarılı",
-        description: "Şarkı başarıyla playliste eklendi",
-        variant: "success",
-      });
-      setVisibleAddToPlaylistModal(false);
-      queryClient.invalidateQueries({ queryKey: ["favorites"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Hata",
-        description: error.message,
-        variant: "error",
-      });
-    },
+  const { mutate: addToPlaylistMutation } = useAddSongToPlaylistMutation({
+    onSuccess: () => setVisibleAddToPlaylistModal(false),
   });
 
-  const { mutate: addToFavoritesMutation } = useMutation({
-    mutationFn: async (songId: string) => {
-      return addSongToFavorites(songId);
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: data.success ? "Başarılı" : "Uyarı",
-        description: data.message,
-        variant: data.success ? "success" : "warning",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Hata",
-        description: error.message,
-        variant: "error",
-      });
-    },
-  });
+  const { mutate: addToFavoritesMutation } = useAddToFavoritesMutation();
 
   const handleImageError = useCallback(() => {
     onSongUpdate({
@@ -330,28 +294,28 @@ function SongItemComponent({
   const handleAddToQueue = useCallback(() => {
     if (sortedPlaylist.find((s) => s.id === item.id)) {
       toast({
-        title: "Uyarı",
-        description: "Bu şarkı zaten sırada",
+        title: t("common.warning"),
+        description: t("songs.alreadyInQueue"),
         variant: "warning",
       });
       return;
     }
     setSortedPlaylist([...sortedPlaylist, item]);
     toast({
-      title: "Başarılı",
-      description: "Şarkı sıraya eklendi",
+      title: t("common.success"),
+      description: t("songs.addedToQueue"),
       variant: "success",
     });
-  }, [item, sortedPlaylist, setSortedPlaylist, toast]);
+  }, [item, sortedPlaylist, setSortedPlaylist, toast, t]);
 
   const handleRemove = useCallback(() => {
     Alert.alert(
-      "Şarkıyı Sil",
-      "Bu şarkıyı cihazınızdan silmek istediğinizden emin misiniz?",
+      t("songs.deleteSongTitle"),
+      t("songs.deleteSongConfirm"),
       [
-        { text: "İptal", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Sil",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             setIsDeleting(true);
@@ -360,25 +324,24 @@ function SongItemComponent({
 
               try {
                 await deleteSong(item.id);
-              } catch (dbError: any) {
+              } catch {
                 toast({
-                  title: "Uyarı",
-                  description:
-                    "Şarkı cihazdan silindi ancak veritabanında hata oluştu",
+                  title: t("common.warning"),
+                  description: t("songs.deleteError"),
                   variant: "warning",
                 });
               }
 
               toast({
-                title: "Başarılı",
-                description: "Şarkı silindi",
+                title: t("common.success"),
+                description: t("songs.deleteSuccess"),
                 variant: "success",
               });
               queryClient.invalidateQueries({ queryKey: ["songs"] });
-            } catch (error: any) {
+            } catch (error: unknown) {
               toast({
-                title: "Hata",
-                description: error.message || "Şarkı silinirken hata oluştu",
+                title: t("common.error"),
+                description: error instanceof Error ? error.message : t("songs.deleteError"),
                 variant: "error",
               });
             } finally {
@@ -388,24 +351,24 @@ function SongItemComponent({
         },
       ]
     );
-  }, [item.id, toast, queryClient]);
+  }, [item.id, toast, queryClient, t]);
 
   // isActive is now a prop
 
   const songDetails = useMemo(
     () => [
-      { label: "Dosya Adı", value: item.filename || "Bilinmiyor" },
-      { label: "Süre", value: duration > 0 ? formatTime(duration) : "—" },
-      { label: "Albüm", value: item.metadata?.album || "Bilinmeyen Albüm" },
-      { label: "Sanatçı", value: artist || "Bilinmeyen Sanatçı" },
+      { label: t("songs.fileName"), value: item.filename || t("songs.unknown") },
+      { label: t("songs.duration"), value: duration > 0 ? formatTime(duration) : "—" },
+      { label: t("songs.album"), value: item.metadata?.album || t("songs.unknownAlbum") },
+      { label: t("songs.artist"), value: artist || t("songs.unknownArtist") },
       {
-        label: "Oluşturulma",
+        label: t("songs.createdAt"),
         value: item.creationTime
-          ? new Date(item.creationTime * 1000).toLocaleDateString("tr-TR")
+          ? new Date(item.creationTime * 1000).toLocaleDateString(i18n.language)
           : "—",
       },
     ],
-    [item, duration, artist]
+    [item, duration, artist, t, i18n.language]
   );
 
   const handlePlayPress = useCallback(() => {
@@ -438,7 +401,7 @@ function SongItemComponent({
         }}
       >
         {/* Album Artwork */}
-        <View style={{ marginRight: wp(3) }}>
+        <View style={{ marginEnd: wp(3) }}>
           {hasArtwork ? (
             <View className="relative flex-shrink">
               <Image
@@ -531,7 +494,7 @@ function SongItemComponent({
           <PopoverTrigger asChild>
             <TouchableOpacity
               className="justify-center"
-              style={{ marginLeft: wp(2) }}
+              style={{ marginStart: wp(2) }}
               disabled={isDeleting}
             >
               {isDeleting ? (
@@ -611,7 +574,7 @@ function SongItemComponent({
       <BottomSheet
         isVisible={isInfoSheetVisible}
         onClose={closeInfoSheet}
-        title="Şarkı Detayları"
+        title={t("songs.songDetails")}
         snapPoints={[0.5, 0.7]}
       >
         <View style={{ gap: hp(1) }}>

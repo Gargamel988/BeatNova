@@ -5,6 +5,7 @@ import { useColor } from "@/hooks/useColor";
 import { Text } from "./text";
 import { Icon } from "./icon";
 import { AlertCircle, RefreshCw } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 interface ErrorStateProps {
   title?: string;
@@ -16,13 +17,17 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = "Bir Hata Oluştu",
-  message = "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+  title,
+  message,
   onRetry,
-  retryLabel = "Tekrar Dene",
+  retryLabel,
   showIcon = true,
   fullScreen = false,
 }: ErrorStateProps) {
+  const { t } = useTranslation();
+  const displayTitle = title ?? t("common.error");
+  const displayMessage = message ?? t("assistant.errorMessage");
+  const displayRetryLabel = retryLabel ?? t("common.retry");
   const { hp, wp, fontSize, radius } = useResponsive();
   const cardBg = useColor("card");
   const textPrimary = useColor("authPrimaryText");
@@ -66,10 +71,10 @@ export function ErrorState({
           marginBottom: hp(0.5),
         }}
       >
-        {title}
+        {displayTitle}
       </Text>
       
-      {message && (
+      {displayMessage && (
         <Text
           style={{
             color: textSecondary,
@@ -78,7 +83,7 @@ export function ErrorState({
             lineHeight: fontSize(20),
           }}
         >
-          {message}
+          {displayMessage}
         </Text>
       )}
 
@@ -105,7 +110,7 @@ export function ErrorState({
               fontWeight: "600",
             }}
           >
-            {retryLabel}
+            {displayRetryLabel}
           </Text>
         </TouchableOpacity>
       )}

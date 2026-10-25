@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
 import { ScrollView } from "@/components/ui/scroll-view";
+import { useTranslation } from "react-i18next";
 
 type Mood = {
   id: string;
@@ -39,18 +40,30 @@ const moods: Mood[] = [
   },
   {
     id: "sad",
-    label: "Hüzünlü",
+    label: "Sakin",
     icon: Sun,
     colors: "#78788033",
   },
 ];
+
 export default function MoodSelector() {
+  const { t } = useTranslation();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+
+  const moodLabels: Record<string, string> = {
+    chill: t("assistant.suggestionChill", { defaultValue: "Chill" }),
+    energetic: t("playlist.tagEnergetic", { defaultValue: "Enerjik" }),
+    focus: t("playlist.tagFocus", { defaultValue: "Odak" }),
+    night: t("playlist.tagNight", { defaultValue: "Gece" }),
+    sad: t("playlist.tagCalm", { defaultValue: "Sakin" }),
+  };
 
   return (
     <>
       <View className="flex-row items-center justify-between mb-5">
-        <Text className="text-white text-xl font-bold">Ruh halin nasıl?</Text>
+        <Text className="text-white text-xl font-bold">
+          {t("home.howAreYouFeeling", { defaultValue: "Ruh halin nasıl?" })}
+        </Text>
       </View>
 
       <ScrollView
@@ -74,7 +87,7 @@ export default function MoodSelector() {
               <View className="px-6 py-3 rounded-full flex-row items-center gap-2">
                 <Icon size={16} color="#d1d5db" />
                 <Text className="text-white whitespace-nowrap">
-                  {mood.label}
+                  {moodLabels[mood.id] || mood.label}
                 </Text>
               </View>
             </Button>

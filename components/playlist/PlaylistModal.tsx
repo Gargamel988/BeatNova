@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { useToast } from "@/components/ui/toast";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { useResponsive } from "@/hooks/useResponsive";
 import {
@@ -19,12 +20,14 @@ import {
   Edit3,
 } from "lucide-react-native";
 import { Controller, useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createPlaylist, updatePlaylist } from "@/services/PlaylistServices";
-import { useToast } from "@/components/ui/toast";
+import {
+  useCreatePlaylistMutation,
+  useUpdatePlaylistMutation,
+} from "@/hooks/usePlaylistMutations";
 import { PlaylistCreatePayload, PlaylistType } from "@/type/PlaylistType";
 import { PlaylistScheme, PlaylistSchemeType } from "@/schemes/PlaylistScehem";
+import { useTranslation } from "react-i18next";
 
 type PlaylistModalProps = {
   visible: boolean;
@@ -32,22 +35,23 @@ type PlaylistModalProps = {
   editPlaylist?: PlaylistType | null;
 };
 
-const QUICK_TAGS = [
-  "Enerjik",
-  "Sakin",
-  "Odak",
-  "Sabah",
-  "Gece",
-  "Spor",
-  "Yolculuk",
-  "Çalışma",
-];
+const QUICK_TAG_KEYS = [
+  "tagEnergetic",
+  "tagCalm",
+  "tagFocus",
+  "tagMorning",
+  "tagNight",
+  "tagSport",
+  "tagTravel",
+  "tagWork",
+] as const;
 
 export default function PlaylistModal({
   visible,
   onClose,
   editPlaylist,
 }: PlaylistModalProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { palette: colors } = useThemeModeContext();
   const { wp, hp, fontSize, radius } = useResponsive();
@@ -83,49 +87,11 @@ export default function PlaylistModal({
     }
   }, [editPlaylist, visible, reset]);
 
-  const queryClient = useQueryClient();
+  const { mutate: createPlaylistMutation, isPending: isCreatePending } =
+    useCreatePlaylistMutation();
 
-  const { mutate: createPlaylistMutation, isPending: isCreatePending } = useMutation({
-    mutationFn: async (data: PlaylistCreatePayload) => {
-      return createPlaylist(data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Playlist oluşturuldu",
-        description: "Playlist başarıyla oluşturuldu",
-        variant: "success",
-      });
-      queryClient.invalidateQueries({ queryKey: ["playlists"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Hata",
-        description: error.message,
-        variant: "error",
-      });
-    },
-  });
-
-  const { mutate: updatePlaylistMutation, isPending: isUpdatePending } = useMutation({
-    mutationFn: async (data: PlaylistType) => {
-      return updatePlaylist(data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Playlist güncellendi",
-        description: "Playlist başarıyla güncellendi",
-        variant: "success",
-      });
-      queryClient.invalidateQueries({ queryKey: ["playlists"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Hata",
-        description: error.message,
-        variant: "error",
-      });
-    },
-  });
+  const { mutate: updatePlaylistMutation, isPending: isUpdatePending } =
+    useUpdatePlaylistMutation();
 
   const isPending = isCreatePending || isUpdatePending;
 
@@ -225,7 +191,7 @@ export default function PlaylistModal({
                   fontWeight: "800",
                 }}
               >
-                {isEditMode ? "Playlist Düzenle" : "Yeni Playlist"}
+                {isEditMode ? t("playlist.modalEditTitle") : t("playlist.modalCreateTitle")}
               </Text>
             </View>
             <TouchableOpacity
@@ -249,8 +215,8 @@ export default function PlaylistModal({
             }}
           >
             {isEditMode
-              ? "Playlist bilgilerini güncelle"
-              : "Sevdiğin şarkıları bir araya getir ve paylaş"}
+              ? t("playlist.modalEditSubtitle")
+              : t("playlist.modalCreateSubtitle")}
           </Text>
         </LinearGradient>
 
@@ -278,7 +244,7 @@ export default function PlaylistModal({
                     fontWeight: "600",
                   }}
                 >
-                  Playlist Adı
+                  {t("playlist.playlistName")}
                 </Text>
                 <Controller
                   control={control}
@@ -287,7 +253,7 @@ export default function PlaylistModal({
                     <Input
                       value={field.value}
                       onChangeText={field.onChange}
-                      placeholder="Örn. Sabah Motivasyonu"
+                      placeholder={t("playlist.namePlaceholder")}
                       containerStyle={{
                         borderRadius: radius(12),
                       }}
@@ -311,9 +277,9 @@ export default function PlaylistModal({
                 fontWeight: "600",
               }}
             >
-              Açıklama{" "}
+              {t("playlist.description")}{" "}
               <Text style={{ color: subtleTextColor, fontSize: fontSize(11) }}>
-                (isteğe bağlı)
+                {t("playlist.optional")}
               </Text>
             </Text>
             <Controller
@@ -323,7 +289,7 @@ export default function PlaylistModal({
                 <Input
                   value={field.value}
                   onChangeText={field.onChange}
-                  placeholder="Bu playlist hangi anlar için?"
+                  placeholder={t("playlist.descriptionPlaceholder")}
                   multiline
                   rows={3}
                   type="textarea"
@@ -352,7 +318,7 @@ export default function PlaylistModal({
                   fontWeight: "600",
                 }}
               >
-                Hızlı Etiketler
+                {t("playlist.quickTags")}
               </Text>
             </View>
             <View
@@ -362,14 +328,15 @@ export default function PlaylistModal({
                 gap: wp(2),
               }}
             >
-              {QUICK_TAGS.map((tag) => {
-                const normalized = tag.toLowerCase();
+              {QUICK_TAG_KEYS.map((key) => {
+                const tagLabel = t(`playlist.${key}` as any);
+                const normalized = tagLabel.toLowerCase();
                 const isSelected = watch("tags")?.includes(normalized);
                 return (
                   <TouchableOpacity
-                    key={tag}
+                    key={key}
                     activeOpacity={0.8}
-                    onPress={() => handleQuickTagToggle(tag)}
+                    onPress={() => handleQuickTagToggle(tagLabel)}
                     style={{
                       paddingHorizontal: wp(3.5),
                       paddingVertical: hp(1),
@@ -390,7 +357,7 @@ export default function PlaylistModal({
                         fontWeight: isSelected ? "700" : "500",
                       }}
                     >
-                      {tag}
+                      {tagLabel}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -407,7 +374,7 @@ export default function PlaylistModal({
                 fontWeight: "600",
               }}
             >
-              Özel Etiketler
+              {t("playlist.customTags")}
               <Text
                 style={{
                   color: subtleTextColor,
@@ -416,7 +383,7 @@ export default function PlaylistModal({
                 }}
               >
                 {" "}
-                (virgülle ayır)
+                {t("playlist.customTagsHint")}
               </Text>
             </Text>
             <Controller
@@ -426,7 +393,7 @@ export default function PlaylistModal({
                 <Input
                   value={field.value?.join(",") ?? ""}
                   onChangeText={(text) => field.onChange(text.split(","))}
-                  placeholder="rock, klasik, 90'lar"
+                  placeholder={t("playlist.tagsPlaceholder")}
                   containerStyle={{
                     borderRadius: radius(12),
                   }}
@@ -460,7 +427,7 @@ export default function PlaylistModal({
                     fontWeight: "600",
                   }}
                 >
-                  Seçili Etiketler ({watch("tags")?.length})
+                  {t("playlist.selectedTags")} ({watch("tags")?.length})
                 </Text>
               </View>
               <View
@@ -517,7 +484,7 @@ export default function PlaylistModal({
             textStyle={{ fontSize: fontSize(16), color: colors.text }}
           >
             <Text style={{ fontSize: fontSize(16), color: colors.text }}>
-              İptal
+              {t("playlist.cancel")}
             </Text>
           </Button>
           <Button
@@ -527,7 +494,7 @@ export default function PlaylistModal({
             disabled={isSubmitting || isPending}
           >
             <Text style={{ fontSize: fontSize(16), color: colors.text }}>
-              {isEditMode ? "Kaydet" : "Oluştur"}
+              {isEditMode ? t("playlist.save") : t("playlist.create")}
             </Text>
           </Button>
         </View>
