@@ -55,3 +55,30 @@ index f16fd58..6190308 100644
      // Headless trim: no editor UI, so no transforms (flip/rotate/crop) are possible.
      // Re-encode for enablePreciseTrimming (frame-accurate cuts) or non-1.0 speed (filters + atempo).
      val enablePrecise = options?.hasKey("enablePreciseTrimming") == true &&
+diff --git a/node_modules/react-native-video-trim/lib/module/NativeVideoTrim.js b/node_modules/react-native-video-trim/lib/module/NativeVideoTrim.js
+index 97d8d3b..c512081 100644
+--- a/node_modules/react-native-video-trim/lib/module/NativeVideoTrim.js
++++ b/node_modules/react-native-video-trim/lib/module/NativeVideoTrim.js
+@@ -93,5 +93,7 @@ import { TurboModuleRegistry } from 'react-native';
+  * payloads.
+  */
+ 
+-export default TurboModuleRegistry.getEnforcing('VideoTrim');
++export default (typeof TurboModuleRegistry !== 'undefined' && TurboModuleRegistry?.getEnforcing)
++  ? TurboModuleRegistry.getEnforcing('VideoTrim')
++  : null;
+ //# sourceMappingURL=NativeVideoTrim.js.map
+\ No newline at end of file
+diff --git a/node_modules/react-native-video-trim/lib/module/index.js b/node_modules/react-native-video-trim/lib/module/index.js
+index 3ddd1a1..27f68b8 100644
+--- a/node_modules/react-native-video-trim/lib/module/index.js
++++ b/node_modules/react-native-video-trim/lib/module/index.js
+@@ -24,7 +24,7 @@ const isFabric = !!global.nativeFabricUIManager;
+  * sub.remove();
+  * ```
+  */
+-const VideoTrim = isFabric ? VideoTrimNewArch : VideoTrimOldArch;
++const VideoTrim = (isFabric && VideoTrimNewArch) ? VideoTrimNewArch : VideoTrimOldArch;
+ function createBaseOptions(overrides = {}) {
+   return {
+     saveToPhoto: false,
