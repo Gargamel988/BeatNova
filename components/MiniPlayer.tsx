@@ -56,14 +56,14 @@ function MiniPlayerComponent({
   const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette: colors } = useThemeModeContext();
-  const { position } = useAudioPositionContext();
+  const { position, duration: contextDuration } = useAudioPositionContext();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { barWidth, miniPlayerBottom, miniPlayerHeight, bottom } = useTabBarLayout();
 
   const radiusValueBase = wp(5.5);
   const circumference = 2 * Math.PI * radiusValueBase;
-  const totalDuration = duration || 1;
-  const progress = Math.min(1, position / totalDuration);
+  const totalDuration = duration || contextDuration || activeSong?.duration || 1;
+  const progress = Math.min(1, Math.max(0, position / totalDuration));
   const strokeDashoffset = circumference * (1 - progress);
 
   const screenWidth = Dimensions.get("window").width;
@@ -159,6 +159,8 @@ function MiniPlayerComponent({
                 setIsModalVisible(true);
               }}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`${title || t("songs.unknownTitle")}, ${artist || t("songs.unknownArtist")}`}
               style={{ flex: 1 }}
             >
               <View className="flex-row items-center justify-between">
@@ -248,6 +250,9 @@ function MiniPlayerComponent({
                       e.stopPropagation();
                       previousSound?.();
                     }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("player.previous", "Önceki")}
                     style={{
                       padding: wp(2),
                     }}
@@ -269,6 +274,9 @@ function MiniPlayerComponent({
                         resumeSound?.();
                       }
                     }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={isPlaying ? t("player.pause", "Duraklat") : t("player.play", "Oynat")}
                     className="rounded-full"
                     style={{
                       width: wp(12),
@@ -278,7 +286,7 @@ function MiniPlayerComponent({
                       alignItems: "center",
                       justifyContent: "center",
                     }}
-                    activeOpacity={0.8}
+                    activeOpacity={0.7}
                   >
                     {duration && duration > 0 ? (
                       <Svg
@@ -332,6 +340,9 @@ function MiniPlayerComponent({
                       e.stopPropagation();
                       nextSound?.();
                     }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("player.next", "Sonraki")}
                     style={{
                       padding: wp(2),
                     }}

@@ -6,6 +6,7 @@ import { useSharedValue } from "react-native-reanimated";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProfile } from "./useProfil";
 import { upsertlisteningtime } from "@/services/StatisticServices";
+import { loadEqualizerSettings } from "@/services/EqualizerService";
 
 import { useAds } from "@/providers/AdsProvider";
 import TrackPlayer, {
@@ -60,7 +61,8 @@ async function ensureTrackPlayerSetup() {
           forwardInterval: 10,
           backwardInterval: 10,
         });
-      } catch (e) {
+        loadEqualizerSettings().catch(() => {});
+      } catch (e: unknown) {
         if (!String((e as Error)?.message ?? e).includes("already")) {
           console.error("TrackPlayer setup error:", e);
         }
@@ -75,7 +77,7 @@ async function ensureTrackPlayerSetup() {
 export default function useAudioPlayerHook() {
   const queryClient = useQueryClient();
   const { position: currentPositionSec, duration: currentDurationSec } =
-    useProgress(1000);
+    useProgress(0.25);
   const { mutateUpdateCurrentSong: mutateUpdateCurrentSongMutation } =
     useProfile();
 
@@ -85,6 +87,7 @@ export default function useAudioPlayerHook() {
 
   const [activeSong, setActiveSong] = useState<Song | null>(null);
   const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
   const positionShared = useSharedValue(0);
   const [nextCount, setNextCount] = useState(0);
   const { showInterstitial } = useAds();
@@ -135,18 +138,61 @@ export default function useAudioPlayerHook() {
     }
   }, [playbackState]);
 
-  // Sync progress
+  // Şarkı değiştiğinde duration ve position'ı sıfırla
+  useEffect(() => {
+    if (activeSong) {
+      const initialDuration =
+        activeSong.duration || activeSong.metadata?.duration || 0;
+      setDuration(initialDuration);
+      setPosition(0);
+      positionShared.value = 0;
+    }
+  }, [activeSong?.id, positionShared]);
+
+  // Sync progress from useProgress hook
   useEffect(() => {
     if (typeof currentPositionSec === "number") {
       positionShared.value = currentPositionSec;
-      setPosition((prev) => {
-        if (Math.abs(prev - currentPositionSec) > 0.5) {
-          return currentPositionSec;
-        }
-        return prev;
-      });
+      setPosition(currentPositionSec);
     }
   }, [currentPositionSec, positionShared]);
+
+  useEffect(() => {
+    if (typeof currentDurationSec === "number" && currentDurationSec > 0) {
+      setDuration(currentDurationSec);
+    }
+  }, [currentDurationSec]);
+
+  // Active progress interval when playing for guaranteed smooth progress updates
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const syncProgress = () => {
+      try {
+        const prog = TrackPlayer.getProgress();
+        if (typeof prog.position === "number") {
+          positionShared.value = prog.position;
+          setPosition(prog.position);
+        }
+        if (typeof prog.duration === "number" && prog.duration > 0) {
+          setDuration(prog.duration);
+        }
+      } catch (err) {
+        // Player not ready
+      }
+    };
+
+    if (isPlaying) {
+      syncProgress();
+      interval = setInterval(syncProgress, 250);
+    } else {
+      syncProgress();
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isPlaying, positionShared]);
 
   useEffect(() => {
     mutateUpdateCurrentSongRef.current = mutateUpdateCurrentSongMutation.mutate;
@@ -158,27 +204,17 @@ export default function useAudioPlayerHook() {
 
   const ensureSongInDb = useCallback(
     async (asset: Song) => {
-      if (syncingSongs.current.has(asset.id)) return asset.id;
+      if (!asset?.id || syncingSongs.current.has(asset.id)) return asset?.id;
 
-      const existingSongs = (queryClient.getQueryData(["songs"]) as Song[]) || [];
-      const existsInCache = existingSongs.some((s) => s.id === asset.id);
-
-      if (!existsInCache) {
-        try {
-          // Bu şarkı için bir daha insert atmaması adına kalıcı olarak Set'e ekle
-          syncingSongs.current.add(asset.id);
-          await insertSong(asset);
-          // ["songs"] yerel kütüphaneyi temsil ettiği için invalidate etmeye gerek yok
-        } catch (e) {
-          console.error("Song sync error", e);
-        }
-      } else {
-        // Eğer cache'te varsa zaten batch ile gönderilmiştir, yine de işaretle
+      try {
         syncingSongs.current.add(asset.id);
+        await insertSong(asset);
+      } catch (e) {
+        if (__DEV__) console.warn("Song sync error", e);
       }
       return asset.id;
     },
-    [queryClient]
+    []
   );
 
 
@@ -373,9 +409,10 @@ export default function useAudioPlayerHook() {
       if (durationSeconds <= 0) return;
       const nextPositionSeconds = (value / 100) * durationSeconds;
       TrackPlayer.seekTo(nextPositionSeconds);
+      positionShared.value = nextPositionSeconds;
       setPosition(nextPositionSeconds);
     },
-    []
+    [positionShared]
   );
 
   const updateLoopMode = useCallback((mode: LoopMode) => {
@@ -398,10 +435,12 @@ export default function useAudioPlayerHook() {
   );
 
   // Player object compatible with components using audioPlayer properties
+  const effectiveDuration = duration || currentDurationSec || activeSong?.duration || 0;
+
   const audioPlayerAdapter = useMemo(() => {
     return {
       isLoaded: !!activeSong,
-      duration: currentDurationSec || activeSong?.duration || 0,
+      duration: effectiveDuration,
       currentTime: position,
       playing: isPlaying,
       seekTo: (sec: number) => TrackPlayer.seekTo(sec),
@@ -409,7 +448,7 @@ export default function useAudioPlayerHook() {
       pause: () => TrackPlayer.pause(),
       volume: 1.0,
     };
-  }, [activeSong, currentDurationSec, position, isPlaying]);
+  }, [activeSong, effectiveDuration, position, isPlaying]);
 
   return {
     play,
@@ -425,6 +464,7 @@ export default function useAudioPlayerHook() {
     audioPlayer: audioPlayerAdapter,
     isPlaying,
     position,
+    duration: effectiveDuration,
     positionShared,
     loopMode,
     isShuffled,

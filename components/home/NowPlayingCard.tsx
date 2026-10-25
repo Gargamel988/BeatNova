@@ -8,6 +8,7 @@ import { useColor } from "@/hooks/useColor";
 import { Song } from "@/components/songs/songsService";
 import { LinearGradient } from "expo-linear-gradient";
 import { formatTime } from "@/utils/format";
+import { getLocalizedArtist, getLocalizedTitle } from "@/utils/audioMetadata";
 import { useAudioPlayerContext, useAudioPositionContext } from "@/providers/player-context";
 import { useTranslation } from "react-i18next";
 
@@ -24,20 +25,21 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
   const borderColor = useColor("border");
   const accent = useColor("accent");
   const accentForeground = useColor("accentForeground");
-  
+
   const { play } = useAudioPlayerContext();
-  const { position } = useAudioPositionContext();
-  
+  const { position, duration: contextDuration } = useAudioPositionContext();
+
   if (!activeSong) {
     return null;
   }
 
   const hasCover = activeSong.metadata?.coverUri;
-  const duration = activeSong.duration || 0;
+  const duration = activeSong.duration || contextDuration || 0;
   const currentPos = position || 0;
   const remaining = Math.max(0, duration - currentPos);
-  
-  const progressPercent = duration > 0 ? (currentPos / duration) * 100 : 0;
+
+  const progressPercent =
+    duration > 0 ? Math.min(100, Math.max(0, (currentPos / duration) * 100)) : 0;
 
   return (
     <TouchableOpacity
@@ -54,7 +56,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        
+
         {/* Sol Taraf: Kapak ve Badge */}
         <View style={{ position: "relative" }}>
           {hasCover ? (
@@ -76,7 +78,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
               <Icon name={Music2} size={28} color="#fff" />
             </LinearGradient>
           )}
-          
+
           {/* Kaldığın Yerden Badge */}
           <View style={{
             position: "absolute",
@@ -121,7 +123,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
             }}
             numberOfLines={1}
           >
-            {activeSong.metadata?.title || t("songs.unknownSong", "Bilinmeyen Şarkı")}
+            {getLocalizedTitle(activeSong.metadata?.title, t)}
           </Text>
           <Text
             style={{
@@ -131,7 +133,7 @@ export function NowPlayingCardComponent({ activeSong }: NowPlayingCardProps) {
             }}
             numberOfLines={1}
           >
-            {activeSong.metadata?.artist || t("songs.unknownArtist", "Bilinmeyen Sanatçı")}
+            {getLocalizedArtist(activeSong.metadata?.artist, t)}
           </Text>
         </View>
 

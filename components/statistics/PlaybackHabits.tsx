@@ -32,7 +32,14 @@ export function PlaybackHabits({
     <ChartContainer
       title={t("stats.habitsTitle")}
       description={t("stats.habitsDesc")}
-      style={{ gap: hp(1.5) }}
+      style={{
+        gap: hp(1.5),
+        borderRadius: radius(18),
+        padding: wp(3.5),
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.overlay.white12,
+      }}
     >
       <Card
         style={{

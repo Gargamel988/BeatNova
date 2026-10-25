@@ -69,11 +69,14 @@ export default function SearchAndFilterBar({
       >
         <TouchableOpacity
           className="flex-1 flex-row items-center justify-center gap-2"
-          activeOpacity={0.9}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t("songs.filter")}
           style={{
             backgroundColor: "rgba(255,255,255,0.08)",
             borderWidth: 1,
             paddingVertical: hp(1.5),
+            minHeight: 48,
             borderRadius: radius(12),
             borderColor: cardBorder,
           }}
@@ -89,11 +92,14 @@ export default function SearchAndFilterBar({
         </TouchableOpacity>
         <TouchableOpacity
           className="flex-1 flex-row items-center justify-center gap-2"
-          activeOpacity={0.9}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t("songs.sort")}
           style={{
             backgroundColor: "rgba(255,255,255,0.08)",
             borderWidth: 1,
             paddingVertical: hp(1.5),
+            minHeight: 48,
             borderRadius: radius(12),
             borderColor: cardBorder,
           }}

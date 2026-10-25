@@ -90,15 +90,19 @@ export function ErrorState({
       {onRetry && (
         <TouchableOpacity
           onPress={onRetry}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={displayRetryLabel}
           style={{
             marginTop: hp(1),
             backgroundColor: accent,
             paddingHorizontal: wp(6),
             paddingVertical: hp(1.5),
+            minHeight: 48,
             borderRadius: radius(12),
             flexDirection: "row",
             alignItems: "center",
+            justifyContent: "center",
             gap: wp(2),
           }}
         >

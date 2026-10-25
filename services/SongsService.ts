@@ -62,6 +62,7 @@ const insertSongsBatch = async (songs: Song[]) => {
   try {
     const user = await getUser();
     if (!user?.id) {
+      if (__DEV__) console.warn("[SongsService] insertSongsBatch: No logged in user");
       return null;
     }
 
@@ -73,17 +74,28 @@ const insertSongsBatch = async (songs: Song[]) => {
       return null;
     }
 
-    // Supabase can batch upsert arrays
-    const { data, error } = await supabase
+    // 1. Önce onConflict: "users_id,id" dene
+    let res = await supabase
       .from("songs")
-      .upsert(payloads, { onConflict: "id" })
-      .select();
+      .upsert(payloads, { onConflict: "users_id,id" });
 
-    if (error) {
-      throw error;
+    // 2. Eğer onConflict formatı hata verirse varsayılan PK upsert'ini dene
+    if (res.error) {
+      if (__DEV__) console.warn("[SongsService] onConflict users_id,id warning, trying default PK upsert:", res.error.message);
+      res = await supabase
+        .from("songs")
+        .upsert(payloads);
     }
-    return data;
-  } catch (error) {
+
+    if (res.error) {
+      if (__DEV__) console.error("[SongsService] insertSongsBatch failed:", res.error);
+      throw res.error;
+    }
+    return res.data;
+  } catch (error: unknown) {
+    if (__DEV__) {
+      console.error("[SongsService] insertSongsBatch exception:", error instanceof Error ? error.message : String(error));
+    }
     return null;
   }
 };
@@ -100,17 +112,25 @@ const insertSong = async (song: Song) => {
       return null;
     }
 
-    const { data, error } = await supabase
+    let res = await supabase
       .from("songs")
-      .upsert(payload, { onConflict: "id" })
-      .select()
-      .single();
+      .upsert(payload, { onConflict: "users_id,id" });
 
-    if (error) {
-      throw error;
+    if (res.error) {
+      res = await supabase
+        .from("songs")
+        .upsert(payload);
     }
-    return data;
-  } catch (error) {
+
+    if (res.error) {
+      if (__DEV__) console.error("[SongsService] insertSong failed:", res.error);
+      throw res.error;
+    }
+    return res.data;
+  } catch (error: unknown) {
+    if (__DEV__) {
+      console.error("[SongsService] insertSong exception:", error instanceof Error ? error.message : String(error));
+    }
     return null;
   }
 };
@@ -125,11 +145,20 @@ const getsongs = async (): Promise<
       return [];
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("songs")
       .select("id")
       .eq("users_id", user.id)
       .order("created_at", { ascending: true });
+
+    if (error) {
+      const fallback = await supabase
+        .from("songs")
+        .select("id")
+        .eq("users_id", user.id);
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       throw error;
@@ -161,7 +190,8 @@ const getAllSongsWithDetails = async (): Promise<
       return [];
     }
 
-    const { data, error } = await supabase
+    // 1. Önce zenginleştirilmiş sütunları (varsa) çekmeyi dene
+    let res: { data: any[] | null; error: any } = await supabase
       .from("songs")
       .select(
         "id, title, artist, album, duration, cover_url, genre, mood, energy_level",
@@ -169,11 +199,44 @@ const getAllSongsWithDetails = async (): Promise<
       .eq("users_id", user.id)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      throw error;
+    // 2. Tabloda genre/mood/energy_level sütunları henüz eklenmemişse mevcut olan sütunları çek
+    if (res.error) {
+      res = await supabase
+        .from("songs")
+        .select("id, title, artist, album, duration, cover_url, audio_url, created_at")
+        .eq("users_id", user.id)
+        .order("created_at", { ascending: true });
     }
-    return data;
-  } catch (error) {
+
+    // 3. created_at ile sıralama da hata verirse ordersız temel sütunları çek
+    if (res.error) {
+      res = await supabase
+        .from("songs")
+        .select("id, title, artist, album, duration, cover_url")
+        .eq("users_id", user.id);
+    }
+
+    if (res.error) {
+      if (__DEV__) console.error("[SongsService] getAllSongsWithDetails error:", res.error);
+      return [];
+    }
+
+    const rows = (res.data ?? []) as any[];
+    return rows.map((row) => ({
+      id: String(row.id),
+      title: row.title || "",
+      artist: row.artist || "",
+      album: row.album || "",
+      duration: Number(row.duration) || 0,
+      cover_url: row.cover_url || null,
+      genre: row.genre || null,
+      mood: row.mood || null,
+      energy_level: row.energy_level || null,
+    }));
+  } catch (error: unknown) {
+    if (__DEV__) {
+      console.error("[SongsService] getAllSongsWithDetails exception:", error instanceof Error ? error.message : String(error));
+    }
     return [];
   }
 };

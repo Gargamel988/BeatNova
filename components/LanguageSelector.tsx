@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Globe, Check, ChevronDown, X } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import {
@@ -49,6 +50,7 @@ export function LanguageSelector({
   const cardBg = useColor("card");
   const borderColor = useColor("border");
   const primaryColor = useColor("primary");
+  const background = useColor("background");
 
   const currentLangCode = (i18n.language || "tr") as SupportedLanguage;
   const currentLang =
@@ -100,144 +102,164 @@ export function LanguageSelector({
 
       <Modal
         visible={modalVisible}
-        transparent
-        animationType="fade"
+        animationType="slide"
+        presentationStyle="fullScreen"
         onRequestClose={closeModal}
       >
-        <Pressable
+        <SafeAreaView
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.65)",
-            justifyContent: "center",
-            alignItems: "center",
-            paddingHorizontal: wp(5),
+            backgroundColor: background,
           }}
-          onPress={closeModal}
         >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
+          {/* Modal Header */}
+          <View
             style={{
-              width: "100%",
-              maxHeight: hp(75),
-              backgroundColor: cardBg,
-              borderRadius: radius(20),
-              borderWidth: 1,
-              borderColor: borderColor,
-              padding: wp(4.5),
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 10,
-              elevation: 8,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingHorizontal: wp(5),
+              paddingVertical: hp(2),
+              borderBottomWidth: 1,
+              borderBottomColor: borderColor,
             }}
           >
-            {/* Modal Header */}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: hp(2),
-                paddingBottom: hp(1.5),
-                borderBottomWidth: 1,
-                borderBottomColor: borderColor,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: wp(2) }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: wp(3) }}>
+              <View
+                style={{
+                  width: wp(10),
+                  height: wp(10),
+                  borderRadius: radius(10),
+                  backgroundColor: primaryColor + "20",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <Globe size={fontSize(20)} color={primaryColor} />
+              </View>
+              <View>
                 <Text
                   style={{
-                    fontSize: fontSize(17),
-                    fontWeight: "bold",
+                    fontSize: fontSize(18),
+                    fontWeight: "800",
                     color: primaryText,
                   }}
                 >
                   {t("language.title", "Dil Seçin / Select Language")}
                 </Text>
+                <Text
+                  style={{
+                    fontSize: fontSize(12),
+                    color: secondaryText,
+                    marginTop: 2,
+                  }}
+                >
+                  {SUPPORTED_LANGUAGES.length} {t("language.available", "dil seçeneği")}
+                </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => closeModal()}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <X size={fontSize(20)} color={secondaryText} />
-              </TouchableOpacity>
             </View>
 
-            {/* Language List */}
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ gap: hp(1) }}
+            <TouchableOpacity
+              onPress={() => closeModal()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.close", "Kapat")}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: "rgba(255,255,255,0.08)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              {SUPPORTED_LANGUAGES.map((lang) => {
-                const isSelected = lang.code === currentLangCode;
-                return (
-                  <TouchableOpacity
-                    key={lang.code}
-                    activeOpacity={0.7}
-                    onPress={() => handleSelectLanguage(lang.code)}
+              <X size={fontSize(20)} color={secondaryText} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Language List */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: wp(5),
+              paddingVertical: hp(2),
+              gap: hp(1.2),
+            }}
+          >
+            {SUPPORTED_LANGUAGES.map((lang) => {
+              const isSelected = lang.code === currentLangCode;
+              return (
+                <TouchableOpacity
+                  key={lang.code}
+                  activeOpacity={0.7}
+                  onPress={() => handleSelectLanguage(lang.code)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${lang.nativeName} (${lang.name})`}
+                  accessibilityState={{ selected: isSelected }}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: hp(1.6),
+                    paddingHorizontal: wp(4),
+                    borderRadius: radius(14),
+                    backgroundColor: isSelected
+                      ? "rgba(124, 58, 237, 0.14)"
+                      : "rgba(255, 255, 255, 0.04)",
+                    borderWidth: 1,
+                    borderColor: isSelected ? primaryColor : borderColor,
+                  }}
+                >
+                  <View
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      justifyContent: "space-between",
-                      paddingVertical: hp(1.4),
-                      paddingHorizontal: wp(3.5),
-                      borderRadius: radius(12),
-                      backgroundColor: isSelected
-                        ? "rgba(124, 58, 237, 0.12)"
-                        : "transparent",
-                      borderWidth: 1,
-                      borderColor: isSelected ? primaryColor : "transparent",
+                      gap: wp(3.5),
                     }}
                   >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: wp(3),
-                      }}
-                    >
-                      <Text style={{ fontSize: fontSize(20) }}>{lang.flag}</Text>
-                      <View>
-                        <Text
-                          style={{
-                            fontSize: fontSize(15),
-                            fontWeight: isSelected ? "700" : "500",
-                            color: isSelected ? primaryColor : primaryText,
-                          }}
-                        >
-                          {lang.nativeName}
-                        </Text>
-                        <Text
-                          style={{
-                            fontSize: fontSize(12),
-                            color: secondaryText,
-                          }}
-                        >
-                          {lang.name}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {isSelected && (
-                      <View
+                    <Text style={{ fontSize: fontSize(22) }}>{lang.flag}</Text>
+                    <View>
+                      <Text
                         style={{
-                          width: wp(6),
-                          height: wp(6),
-                          borderRadius: radius(99),
-                          backgroundColor: primaryColor,
-                          alignItems: "center",
-                          justifyContent: "center",
+                          fontSize: fontSize(16),
+                          fontWeight: isSelected ? "700" : "500",
+                          color: isSelected ? primaryColor : primaryText,
                         }}
                       >
-                        <Check size={fontSize(13)} color="#FFFFFF" strokeWidth={3} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
+                        {lang.nativeName}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: fontSize(12),
+                          color: secondaryText,
+                          marginTop: 1,
+                        }}
+                      >
+                        {lang.name}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {isSelected && (
+                    <View
+                      style={{
+                        width: wp(6.5),
+                        height: wp(6.5),
+                        borderRadius: radius(99),
+                        backgroundColor: primaryColor,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Check size={fontSize(14)} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
     </>
   );

@@ -1,0 +1,9 @@
+{
+  "name": "ringtone-setter",
+  "platforms": ["android"],
+  "android": {
+    "modules": [
+      "expo.modules.ringtonesetter.RingtoneSetterModule"
+    ]
+  }
+}

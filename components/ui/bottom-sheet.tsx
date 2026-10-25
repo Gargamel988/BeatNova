@@ -8,9 +8,11 @@ import {
   Dimensions,
   Modal,
   ScrollView,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   ViewStyle,
 } from 'react-native';
+import { X } from 'lucide-react-native';
 import {
   Gesture,
   GestureDetector,
@@ -35,6 +37,7 @@ type BottomSheetContentProps = {
   cardColor: string;
   mutedColor: string;
   onHandlePress?: () => void;
+  onClose?: () => void;
   isScrollable?: boolean;
 };
 
@@ -48,6 +51,7 @@ const BottomSheetContent = ({
   cardColor,
   mutedColor,
   onHandlePress,
+  onClose,
   isScrollable = true,
 }: BottomSheetContentProps) => {
   const contentWrapperStyle = { flex: 1 };
@@ -89,18 +93,40 @@ const BottomSheetContent = ({
         </View>
       </TouchableWithoutFeedback>
 
-      {/* Title */}
+      {/* Title & Close affordance */}
       {title && (
         <View
           style={{
             marginHorizontal: 16,
-            marginTop: 16,
+            marginTop: 8,
             paddingBottom: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          <Text variant='title' style={{ textAlign: 'center' }}>
+          <Text variant='title' style={{ flex: 1, textAlign: 'left', fontWeight: '700' }}>
             {title}
           </Text>
+          {onClose && (
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Kapat"
+              activeOpacity={0.7}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <X size={18} color={mutedColor} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -321,6 +347,7 @@ export function BottomSheet({
               mutedColor={mutedColor}
               isScrollable={isScrollable}
               onHandlePress={() => runOnJS(handlePress)()}
+              onClose={animateClose}
             />
           ) : (
             <GestureDetector gesture={gesture}>
@@ -333,6 +360,7 @@ export function BottomSheet({
                 mutedColor={mutedColor}
                 isScrollable={isScrollable}
                 onHandlePress={() => runOnJS(handlePress)()}
+                onClose={animateClose}
               />
             </GestureDetector>
           )}

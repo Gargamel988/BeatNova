@@ -7,6 +7,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { formatTime } from "@/utils/format";
+import { getLocalizedArtist, getLocalizedTitle } from "@/utils/audioMetadata";
 import { Music2, Heart, Clock, Waves } from "lucide-react-native";
 import { useRemoveFromFavoritesMutation } from "@/hooks/useSongMutations";
 import { useTranslation } from "react-i18next";
@@ -41,10 +42,15 @@ export default function FavoriteSongItem({
   // Mock play count (would come from actual data)
   const playCount = Math.floor(Math.random() * 100) + 20;
 
+  const localizedTitle = getLocalizedTitle(item.metadata?.title, t);
+  const localizedArtist = getLocalizedArtist(item.metadata?.artist, t);
+
   return (
     <TouchableOpacity
       onPress={handlePlay}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${localizedTitle}, ${localizedArtist}`}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -100,7 +106,7 @@ export default function FavoriteSongItem({
           }}
           numberOfLines={1}
         >
-          {item.metadata?.title || t("songs.unknownTitle", { defaultValue: "Bilinmeyen Şarkı" })}
+          {getLocalizedTitle(item.metadata?.title, t)}
         </Text>
         <Text
           style={{
@@ -110,7 +116,7 @@ export default function FavoriteSongItem({
           }}
           numberOfLines={1}
         >
-          {item.metadata?.artist || t("songs.unknownArtist", { defaultValue: "Bilinmeyen Sanatçı" })}
+          {getLocalizedArtist(item.metadata?.artist, t)}
           {item.metadata?.album ? ` • ${item.metadata.album}` : ""}
         </Text>
         <View
@@ -157,6 +163,9 @@ export default function FavoriteSongItem({
       <TouchableOpacity
         onPress={handleRemoveFromFavorites}
         activeOpacity={0.7}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessibilityRole="button"
+        accessibilityLabel={t("fav.removeFromFavorites", "Favorilerden Çıkar")}
         style={{
           padding: wp(1.5),
         }}

@@ -4,6 +4,8 @@ import { useAudioPlayerContext, useAudioPositionContext } from "@/providers/play
 import {
   ChevronDown,
   Music,
+  Scissors,
+  SlidersHorizontal,
 } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -27,6 +29,9 @@ import ProgressSection from "@/components/ProgressSection";
 import SegmentTabs, { SEGMENTS } from "@/components/SegmentTabs";
 import useSongsService, { Song } from "@/components/songs/songsService";
 import { SleepTimerModal } from "@/components/settings/SleepTimerModal";
+import AudioTrimmerModal from "@/components/trimmer/AudioTrimmerModal";
+import EqualizerModal from "@/components/settings/EqualizerModal";
+import { getLocalizedArtist, getLocalizedTitle } from "@/utils/audioMetadata";
 import { useTranslation } from "react-i18next";
 
 export default function AudioPlayer({
@@ -59,10 +64,12 @@ export default function AudioPlayer({
     loop,
   } = useAudioPlayerContext();
 
-  const { position } = useAudioPositionContext();
+  const { position, duration: contextDuration } = useAudioPositionContext();
   const activeMediaItem = useActiveMediaItem();
   const [songsWithCovers, setSongsState] = useState<Song[]>([]);
   const [sleepTimerModalVisible, setSleepTimerModalVisible] = useState(false);
+  const [isTrimmerModalVisible, setIsTrimmerModalVisible] = useState(false);
+  const [isEqualizerModalVisible, setIsEqualizerModalVisible] = useState(false);
   const { loadSongs, loadCoversInBackground } = useSongsService();
   const { data: songsData = [] } = useQuery<Song[]>({
     queryKey: ["songs"],
@@ -112,6 +119,7 @@ export default function AudioPlayer({
     | undefined;
 
   const durationSeconds =
+    contextDuration ||
     (audioPlayer?.isLoaded && audioPlayer?.duration ? audioPlayer.duration : 0) ||
     currentSong?.metadata?.duration ||
     activeSong?.duration ||
@@ -240,7 +248,7 @@ export default function AudioPlayer({
       },
       {
         label: t("songs.artist"),
-        value: activeMediaItem?.artist ?? currentSong?.metadata?.artist ?? t("songs.unknownArtist"),
+        value: getLocalizedArtist(activeMediaItem?.artist ?? currentSong?.metadata?.artist, t),
       },
       {
         label: t("songs.createdAt"),
@@ -266,12 +274,11 @@ export default function AudioPlayer({
   return (
     <Modal
       visible={visible}
-      transparent={true}
       animationType="slide"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
-      className="flex-1 justify-center items-center"
     >
-      <View className="flex-1">
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         {/* Dynamic Blurred Background */}
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden" }}>
           {(activeMediaItem?.artworkUrl || currentSong?.metadata?.coverUri) ? (
@@ -319,15 +326,21 @@ export default function AudioPlayer({
           <View className="flex-row justify-between items-center">
             <TouchableOpacity
               onPress={onClose}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.close", "Kapat")}
               className="flex-row items-center"
               style={{
-                gap: wp(2),
+                width: wp(11),
+                height: wp(11),
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <Icon
                 name={ChevronDown}
-                size={fontSize(24)}
+                size={fontSize(26)}
                 color={colors.player.iconWhite}
               />
             </TouchableOpacity>
@@ -351,11 +364,55 @@ export default function AudioPlayer({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {activeMediaItem?.artist ?? currentSong?.metadata?.artist ?? t("songs.unknownArtist")}
+                {getLocalizedArtist(activeMediaItem?.artist ?? currentSong?.metadata?.artist, t)}
               </Text>
             </View>
 
+            <View style={{ flexDirection: "row", alignItems: "center", gap: wp(2) }}>
+              <TouchableOpacity
+                onPress={() => setIsEqualizerModalVisible(true)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("equalizer.title", "Ekolayzır & Ses Stüdyosu")}
+                style={{
+                  width: wp(10),
+                  height: wp(10),
+                  borderRadius: wp(5),
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon
+                  name={SlidersHorizontal}
+                  size={fontSize(17)}
+                  color={colors.player.iconWhite}
+                />
+              </TouchableOpacity>
 
+              <TouchableOpacity
+                onPress={() => setIsTrimmerModalVisible(true)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("trimmer.title", "Zil Sesi & Şarkı Kırpıcı")}
+                style={{
+                  width: wp(10),
+                  height: wp(10),
+                  borderRadius: wp(5),
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon
+                  name={Scissors}
+                  size={fontSize(17)}
+                  color={colors.player.iconWhite}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View className="items-center justify-center">{CoverArt}</View>
@@ -429,6 +486,17 @@ export default function AudioPlayer({
         <SleepTimerModal
           visible={sleepTimerModalVisible}
           onClose={() => setSleepTimerModalVisible(false)}
+        />
+
+        <AudioTrimmerModal
+          visible={isTrimmerModalVisible}
+          onClose={() => setIsTrimmerModalVisible(false)}
+          song={currentSong ?? null}
+        />
+
+        <EqualizerModal
+          visible={isEqualizerModalVisible}
+          onClose={() => setIsEqualizerModalVisible(false)}
         />
       </View>
     </Modal>

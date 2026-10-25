@@ -17,8 +17,8 @@ type AudioPlayerContextValue = {
   next: (data: Song[], useShuffle?: boolean, isManual?: boolean) => void;
   previous: (data: Song[], useShuffle?: boolean, isManual?: boolean) => void;
   handleSeek: (durationSeconds: number) => (value: number) => void;
-  beginSeek: () => void;
-  endSeek: () => void;
+  beginSeek?: () => void;
+  endSeek?: () => void;
   loop: (mode: "all" | "one" | "none") => void;
   shuffle: (enable: boolean) => void;
   playlist: Song[] | null;
@@ -29,10 +29,13 @@ type AudioPlayerContextValue = {
   sleepTimerRemaining: number | null;
   isSleepTimerActive: boolean;
   setSleepTimer: (minutes: number | null) => void;
+  position: number;
+  duration: number;
 };
 
 type AudioPositionContextValue = {
   position: number;
+  duration: number;
   positionShared: { value: number };
 };
 
@@ -56,6 +59,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     previous,
     handleSeek,
     position,
+    duration,
     positionShared,
     loop,
     shuffle,
@@ -90,6 +94,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       sleepTimerRemaining,
       isSleepTimerActive,
       setSleepTimer,
+      position,
+      duration,
     }),
     [
       play,
@@ -111,12 +117,14 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       sleepTimerRemaining,
       isSleepTimerActive,
       setSleepTimer,
+      position,
+      duration,
     ]
   );
 
   const positionValue = useMemo(
-    () => ({ position, positionShared }),
-    [position, positionShared]
+    () => ({ position, duration, positionShared }),
+    [position, duration, positionShared]
   );
 
   return (

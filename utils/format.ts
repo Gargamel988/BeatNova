@@ -24,4 +24,26 @@
     const averageSeconds = totalSeconds / dailyPlaySeconds.length;
     return formathour(averageSeconds);
   };
-export { formatTime, formathour, formatDailyAverage };
+export const formatLocalizedDuration = (
+  secondsTotal: number,
+  t: (key: string, opt?: any) => string
+): string => {
+  const total = Math.floor(secondsTotal);
+  if (!Number.isFinite(total) || total <= 0) return "-";
+  const m = Math.floor(total / 60);
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  if (h > 0) {
+    return t("galaxy.durationHoursMinutes", {
+      hours: h,
+      minutes: remM,
+      defaultValue: `${h}h ${remM}m`,
+    });
+  }
+  return t("galaxy.durationMinutes", {
+    minutes: Math.max(1, remM),
+    defaultValue: `${Math.max(1, remM)}m`,
+  });
+};
+
+export { formatTime, formathour, formatDailyAverage };

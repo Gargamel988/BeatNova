@@ -8,6 +8,7 @@ import {  Music } from "lucide-react-native";
 import { Song } from "@/components/songs/songsService";
 import { useResponsive } from "@/hooks/useResponsive";
 import { formatTime } from "@/utils/format";
+import { getLocalizedArtist, getLocalizedTitle } from "@/utils/audioMetadata";
 import { useThemeModeContext } from "@/providers/theme-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useTranslation } from "react-i18next";
@@ -101,7 +102,7 @@ export default function QueueSection({ queue }: QueueSectionProps) {
                   }}
                   numberOfLines={1}
                 >
-                  {item.metadata?.title || t("songs.unknownTitle")}
+                  {getLocalizedTitle(item.metadata?.title, t)}
                 </Text>
                 <Text
                   style={{
@@ -112,7 +113,7 @@ export default function QueueSection({ queue }: QueueSectionProps) {
                   }}
                   numberOfLines={1}
                 >
-                  {item.metadata?.artist ?? t("songs.unknownArtist")}
+                  {getLocalizedArtist(item.metadata?.artist, t)}
                 </Text>
               </View>
 

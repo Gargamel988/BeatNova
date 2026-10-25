@@ -7,6 +7,7 @@ import { TrendingUp, Play, Music2 } from "lucide-react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { useTranslation } from "react-i18next";
+import { getLocalizedArtist, getLocalizedTitle } from "@/utils/audioMetadata";
 
 type Song = {
   id: string;
@@ -60,96 +61,107 @@ export function PopularSongsComponent({ songs, onPlaySong }: PopularSongsProps) 
         </View>
       </View>
       <View style={{ gap: hp(1.2) }}>
-        {songs.map((song) => (
-          <TouchableOpacity
-            key={song.id}
-            activeOpacity={0.9}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: cardBg,
-              borderRadius: radius(16),
-              padding: wp(3),
-              borderWidth: 1,
-              borderColor,
-              gap: wp(3),
-            }}
-            onPress={() => onPlaySong(song.assetId)}
-          >
-            <View style={{ position: "relative" }}>
-              {song.cover ? (
-                <Image
-                  source={{ uri: song.cover }}
-                  style={{
-                    width: wp(16),
-                    height: wp(16),
-                    borderRadius: radius(12),
-                  }}
-                />
-              ) : (
+        {songs.map((song) => {
+          const title = getLocalizedTitle(song.title, t);
+          const artist = getLocalizedArtist(song.artist, t);
+
+          return (
+            <TouchableOpacity
+              key={song.id}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${title}, ${artist}`}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: cardBg,
+                borderRadius: radius(16),
+                padding: wp(3),
+                borderWidth: 1,
+                borderColor,
+                gap: wp(3),
+              }}
+              onPress={() => onPlaySong(song.assetId)}
+            >
+              <View style={{ position: "relative" }}>
+                {song.cover ? (
+                  <Image
+                    source={{ uri: song.cover }}
+                    style={{
+                      width: wp(16),
+                      height: wp(16),
+                      borderRadius: radius(12),
+                    }}
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: wp(16),
+                      height: wp(16),
+                      borderRadius: radius(12),
+                      backgroundColor: accent,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Icon name={Music2} size={20} color={accentForeground} />
+                  </View>
+                )}
                 <View
                   style={{
-                    width: wp(16),
-                    height: wp(16),
-                    borderRadius: radius(12),
-                    backgroundColor: accent,
+                    position: "absolute",
+                    top: -4,
+                    start: -4,
+                    backgroundColor: "#FF9F0A",
+                    borderRadius: radius(8),
+                    width: 20,
+                    height: 20,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Icon name={Music2} size={20} color={accentForeground} />
+                  <Icon name={TrendingUp} size={12} color="#fff" />
                 </View>
-              )}
-              <View
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  start: -4,
-                  backgroundColor: "#FF9F0A",
-                  borderRadius: radius(8),
-                  width: 20,
-                  height: 20,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Icon name={TrendingUp} size={12} color="#fff" />
               </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: textPrimary,
+                    fontSize: fontSize(15),
+                    fontWeight: "700",
+                    marginBottom: 2,
+                  }}
+                  numberOfLines={1}
+                >
+                  {title}
+                </Text>
+                <Text
+                  style={{
+                    color: textSecondary,
+                    fontSize: fontSize(13),
+                  }}
+                  numberOfLines={1}
+                >
+                  {artist}
+                </Text>
+              </View>
+              <TouchableOpacity
                 style={{
-                  color: textPrimary,
-                  fontSize: fontSize(15),
-                  fontWeight: "700",
-                  marginBottom: 2,
+                  backgroundColor: accent,
+                  borderRadius: radius(10),
+                  padding: wp(2.5),
                 }}
-                numberOfLines={1}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("player.play", "Oynat")}
+                onPress={() => onPlaySong(song.assetId)}
               >
-                {song.title}
-              </Text>
-              <Text
-                style={{
-                  color: textSecondary,
-                  fontSize: fontSize(13),
-                }}
-                numberOfLines={1}
-              >
-                {song.artist}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={{
-                backgroundColor: accent,
-                borderRadius: radius(10),
-                padding: wp(2),
-              }}
-              onPress={() => onPlaySong(song.assetId)}
-            >
-              <Icon name={Play} size={18} color={accentForeground} />
+                <Icon name={Play} size={18} color={accentForeground} />
+              </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
+          );
+        })}
       </View>
     </View>
   );

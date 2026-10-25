@@ -73,7 +73,13 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
             <Text style={[styles.modalTitle, { color: textPrimary, fontSize: fontSize(20) }]}>
               {t("sleepTimer.title", { defaultValue: "Uyku Zamanlayıcısı" })}
             </Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.close", "Kapat")}
+            >
               <X color={textSecondary} size={24} />
             </TouchableOpacity>
           </View>
@@ -94,6 +100,9 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
               <TouchableOpacity 
                 style={[styles.btnCircle, { backgroundColor: palette.primary + "15" }]}
                 onPress={() => setSelectedMinutes(prev => Math.max(1, prev - 5))}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("sleepTimer.decrease", "Süreyi azalt")}
               >
                 <Minus color={primary} size={24} />
               </TouchableOpacity>
@@ -108,6 +117,9 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
               <TouchableOpacity 
                 style={[styles.btnCircle, { backgroundColor: palette.primary + "15" }]}
                 onPress={() => setSelectedMinutes(prev => Math.min(480, prev + 5))}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("sleepTimer.increase", "Süreyi artır")}
               >
                 <Plus color={primary} size={24} />
               </TouchableOpacity>
@@ -128,6 +140,10 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
                   { backgroundColor: selectedMinutes === min ? primary : palette.primary + "10" }
                 ]}
                 onPress={() => setSelectedMinutes(min)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${min} ${t("sleepTimer.minutes", "Dakika")}`}
+                accessibilityState={{ selected: selectedMinutes === min }}
                 disabled={isSleepTimerActive}
               >
                 <Text style={[styles.presetText, { color: selectedMinutes === min ? "white" : textPrimary, fontSize: fontSize(14) }]}>
@@ -141,6 +157,9 @@ export const SleepTimerModal: React.FC<SleepTimerModalProps> = ({ visible, onClo
             {isSleepTimerActive ? (
               <TouchableOpacity 
                 style={[styles.actionBtn, { backgroundColor: palette.red }]}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("sleepTimer.stop", "Durdur")}
                 onPress={() => {
                   setSleepTimer(null);
                   onClose();

@@ -2,8 +2,8 @@ import React, { useMemo, useState, useCallback } from "react";
 import {
   Image,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
@@ -30,14 +30,22 @@ import { useThemeModeContext } from "@/providers/theme-provider";
 import { ThemePalette } from "@/theme/colors";
 import { formatTime } from "@/utils/format";
 import {
+  getLocalizedArtist,
+  getLocalizedTitle,
+  getLocalizedAlbum,
+} from "@/utils/audioMetadata";
+import {
   MoreVerticalIcon,
   PlayCircle,
   ListPlus,
   Info,
   Trash2,
   Heart,
+  Scissors,
+  Bell,
 } from "lucide-react-native";
 import AddToPlaylistModal from "./AddToPlaylistModal";
+import AudioTrimmerModal from "@/components/trimmer/AudioTrimmerModal";
 import { PlaylistType } from "@/type/PlaylistType";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "../ui/toast";
@@ -55,6 +63,7 @@ type SongActionKey =
   | "addToPlaylist"
   | "addToFavorites"
   | "info"
+  | "trim"
   | "remove";
 
 type SongAction = {
@@ -74,6 +83,7 @@ function PopoverActionList({
   onAddToFavorites,
   onAddToQueue,
   onShowInfo,
+  onTrim,
   onRemove,
   palette,
   wp,
@@ -88,6 +98,7 @@ function PopoverActionList({
   onAddToFavorites: (songId: string) => void;
   onAddToQueue?: () => void;
   onShowInfo?: () => void;
+  onTrim?: () => void;
   onRemove?: () => void;
   palette: ThemePalette;
   wp: (val: number) => number;
@@ -117,24 +128,20 @@ function PopoverActionList({
         const handlePress = () => {
           setIsOpen(false);
           setTimeout(() => {
-            switch (action.key) {
-              case "addToPlaylist":
-                onAddToPlaylist();
-                break;
-              case "addToFavorites":
-                onAddToFavorites(item.id);
-                break;
-              case "addToQueue":
-                onAddToQueue?.();
-                break;
-              case "info":
-                onShowInfo?.();
-                break;
-              case "remove":
-                onRemove?.();
-                break;
-              default:
-                onSongAction(action.key, item);
+            const actionHandlers: Record<SongActionKey, () => void> = {
+              addToPlaylist: () => onAddToPlaylist(),
+              addToFavorites: () => onAddToFavorites(item.id),
+              addToQueue: () => onAddToQueue?.(),
+              info: () => onShowInfo?.(),
+              trim: () => onTrim?.(),
+              remove: () => onRemove?.(),
+            };
+
+            const handler = actionHandlers[action.key];
+            if (handler) {
+              handler();
+            } else {
+              onSongAction(action.key, item);
             }
           }, 200);
         };
@@ -150,7 +157,9 @@ function PopoverActionList({
               gap: wp(2.5),
               borderRadius: radius(12),
             }}
-            activeOpacity={0.9}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={action.label}
             onPress={handlePress}
           >
             <View
@@ -222,6 +231,7 @@ function SongItemComponent({
   const { wp, hp, fontSize, radius } = useResponsive();
   const { palette } = useThemeModeContext();
   const { toast } = useToast();
+  const [isTrimmerVisible, setIsTrimmerVisible] = useState(false);
 
   const songActions: SongAction[] = useMemo(
     () => [
@@ -245,6 +255,13 @@ function SongItemComponent({
         description: t("songs.addToFavoritesDesc"),
         icon: Heart,
         badgeClass: "red",
+      },
+      {
+        key: "trim",
+        label: t("songs.trimSong", "Kırp & Zil Sesi Yap"),
+        description: t("songs.trimSongDesc", "Müziği kırp, kaydet veya zil sesi yap"),
+        icon: Scissors,
+        badgeClass: "primary",
       },
       {
         key: "info",
@@ -275,7 +292,12 @@ function SongItemComponent({
   });
 
   const playlists = useMemo(() => playlistsData ?? [], [playlistsData]);
-  const { title, artist, duration, coverUri } = item.metadata;
+  const rawTitle = item.metadata?.title;
+  const rawArtist = item.metadata?.artist;
+  const duration = item.metadata?.duration ?? 0;
+  const coverUri = item.metadata?.coverUri;
+  const title = getLocalizedTitle(rawTitle, t);
+  const artist = getLocalizedArtist(rawArtist, t);
   const hasArtwork = !!coverUri;
 
   const { mutate: addToPlaylistMutation } = useAddSongToPlaylistMutation({
@@ -308,49 +330,44 @@ function SongItemComponent({
     });
   }, [item, sortedPlaylist, setSortedPlaylist, toast, t]);
 
-  const handleRemove = useCallback(() => {
-    Alert.alert(
-      t("songs.deleteSongTitle"),
-      t("songs.deleteSongConfirm"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              await MediaLibrary.deleteAssetsAsync([item.id]);
+  const handleRemove = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      const isDeleted = await MediaLibrary.deleteAssetsAsync([item.id]);
+      if (!isDeleted) {
+        // Kullanıcı Android sistem penceresinde "İptal" dedi
+        return;
+      }
 
-              try {
-                await deleteSong(item.id);
-              } catch {
-                toast({
-                  title: t("common.warning"),
-                  description: t("songs.deleteError"),
-                  variant: "warning",
-                });
-              }
+      try {
+        await deleteSong(item.id);
+      } catch {
+        // Supabase silme hatası kritik değil
+      }
 
-              toast({
-                title: t("common.success"),
-                description: t("songs.deleteSuccess"),
-                variant: "success",
-              });
-              queryClient.invalidateQueries({ queryKey: ["songs"] });
-            } catch (error: unknown) {
-              toast({
-                title: t("common.error"),
-                description: error instanceof Error ? error.message : t("songs.deleteError"),
-                variant: "error",
-              });
-            } finally {
-              setIsDeleting(false);
-            }
-          },
-        },
-      ]
-    );
+      toast({
+        title: t("common.success"),
+        description: t("songs.deleteSuccess"),
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["songs"] });
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const isUserCancel =
+        errorMsg.toLowerCase().includes("cancel") ||
+        errorMsg.toLowerCase().includes("user rejected") ||
+        errorMsg.toLowerCase().includes("denied");
+
+      if (!isUserCancel) {
+        toast({
+          title: t("common.error"),
+          description: errorMsg || t("songs.deleteError"),
+          variant: "error",
+        });
+      }
+    } finally {
+      setIsDeleting(false);
+    }
   }, [item.id, toast, queryClient, t]);
 
   // isActive is now a prop
@@ -359,8 +376,8 @@ function SongItemComponent({
     () => [
       { label: t("songs.fileName"), value: item.filename || t("songs.unknown") },
       { label: t("songs.duration"), value: duration > 0 ? formatTime(duration) : "—" },
-      { label: t("songs.album"), value: item.metadata?.album || t("songs.unknownAlbum") },
-      { label: t("songs.artist"), value: artist || t("songs.unknownArtist") },
+      { label: t("songs.album"), value: getLocalizedAlbum(item.metadata?.album, t) },
+      { label: t("songs.artist"), value: artist },
       {
         label: t("songs.createdAt"),
         value: item.creationTime
@@ -385,7 +402,9 @@ function SongItemComponent({
         borderRadius: radius(12),
         overflow: "hidden",
       }}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${artist}`}
       onPress={handlePlayPress}
       disabled={isDeleting}
     >
@@ -493,8 +512,14 @@ function SongItemComponent({
         <Popover>
           <PopoverTrigger asChild>
             <TouchableOpacity
-              className="justify-center"
-              style={{ marginStart: wp(2) }}
+              className="justify-center items-center"
+              style={{
+                marginStart: wp(2)
+              }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("playlist.moreOptions", "Daha fazla seçenek")}
               disabled={isDeleting}
             >
               {isDeleting ? (
@@ -540,6 +565,7 @@ function SongItemComponent({
                 onAddToFavorites={() => addToFavoritesMutation(item.id)}
                 onAddToQueue={handleAddToQueue}
                 onShowInfo={openInfoSheet}
+                onTrim={() => setIsTrimmerVisible(true)}
                 onRemove={handleRemove}
                 palette={palette}
                 wp={wp}
@@ -594,6 +620,12 @@ function SongItemComponent({
           <DetailsSection details={songDetails} />
         </View>
       </BottomSheet>
+
+      <AudioTrimmerModal
+        visible={isTrimmerVisible}
+        onClose={() => setIsTrimmerVisible(false)}
+        song={item}
+      />
     </TouchableOpacity>
   );
 }

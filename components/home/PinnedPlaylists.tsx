@@ -54,6 +54,10 @@ export default function PinnedPlaylists({ playlists, onPlayPlaylist }: PinnedPla
           </Text>
         </View>
         <TouchableOpacity
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t("home.seeAll", "Tümünü Gör")}
           onPress={() => router.push("/(tabs)/playlist" as Href)}
         >
           <Text
@@ -78,7 +82,9 @@ export default function PinnedPlaylists({ playlists, onPlayPlaylist }: PinnedPla
           return (
             <TouchableOpacity
               key={playlist.id}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${playlist.name}, ${playlist.song_count ?? 0} ${t("playlists.songs", "şarkı")}`}
               style={{
                 width: wp(42),
                 backgroundColor: cardBg,

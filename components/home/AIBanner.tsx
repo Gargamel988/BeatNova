@@ -19,7 +19,9 @@ export function AIBannerComponent() {
 
   return (
     <TouchableOpacity
-      activeOpacity={0.9}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${t("assistant.title", "Müzik Asistanı")}. ${t("home.aiDesc", "AI ile sana özel şarkı önerileri al")}`}
       onPress={handlePress}
       style={{
         marginBottom: hp(3),

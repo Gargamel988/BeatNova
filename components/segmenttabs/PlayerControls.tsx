@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { SkipBack, SkipForward, Pause, Play, Repeat, Repeat1, Shuffle } from "lucide-react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useResponsive } from "@/hooks/useResponsive";
+import { useTranslation } from "react-i18next";
 
 type PlayerControlsProps = {
 	shuffleActive: boolean;
@@ -29,6 +30,7 @@ type PlayerControlsProps = {
 	onLoopToggle,
 	colors,
   }: PlayerControlsProps) {
+	const { t } = useTranslation();
 	const { wp, fontSize, hp, radius } = useResponsive();
 	const sideButtonSize = wp(12);
 	const playButtonSize = wp(20);
@@ -46,6 +48,10 @@ type PlayerControlsProps = {
 	  >
 		<TouchableOpacity
 		  onPress={onShuffleToggle}
+		  activeOpacity={0.7}
+		  accessibilityRole="button"
+		  accessibilityLabel={t("player.shuffle", "Karışık Çal")}
+		  accessibilityState={{ selected: shuffleActive }}
 		  className=" items-center justify-center"
 		  style={{
 			width: sideButtonSize,
@@ -70,6 +76,9 @@ type PlayerControlsProps = {
 		</TouchableOpacity>
 		<TouchableOpacity
 		  onPress={onPrevious}
+		  activeOpacity={0.7}
+		  accessibilityRole="button"
+		  accessibilityLabel={t("player.previous", "Önceki Şarkı")}
 		  className=" items-center justify-center"
 		  style={{
 			width: sideButtonSize,
@@ -82,6 +91,9 @@ type PlayerControlsProps = {
 		</TouchableOpacity>
 		<TouchableOpacity
 		  onPress={onPlayToggle}
+		  activeOpacity={0.7}
+		  accessibilityRole="button"
+		  accessibilityLabel={isPlaying ? t("player.pause", "Duraklat") : t("player.play", "Oynat")}
 		  className=" items-center justify-center"
 		  style={{
 			width: playButtonSize,
@@ -98,6 +110,9 @@ type PlayerControlsProps = {
 		</TouchableOpacity>
 		<TouchableOpacity
 		  onPress={onNext}
+		  activeOpacity={0.7}
+		  accessibilityRole="button"
+		  accessibilityLabel={t("player.next", "Sonraki Şarkı")}
 		  className=" items-center justify-center"
 		  style={{
 			width: sideButtonSize,
@@ -110,6 +125,15 @@ type PlayerControlsProps = {
 		</TouchableOpacity>
 		<TouchableOpacity
 		  onPress={onLoopToggle}
+		  activeOpacity={0.7}
+		  accessibilityRole="button"
+		  accessibilityLabel={
+			loopMode === "all"
+			  ? t("player.repeatAll", "Tümünü Tekrarla")
+			  : loopMode === "one"
+			  ? t("player.repeatOne", "Bir Şarkıyı Tekrarla")
+			  : t("player.repeatOff", "Tekrar Kapalı")
+		  }
 		  className=" items-center justify-center"
 		  style={{
 			width: sideButtonSize,

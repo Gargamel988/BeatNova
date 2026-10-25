@@ -22,7 +22,7 @@ import SortSheet from "@/components/songs/SortSheet";
 import SearchAndFilterBar from "@/components/songs/SearchAndFilterBar";
 
 type FilterKey = "favorites" | "downloaded" | "recent" | "hasArtwork";
-type SongActionKey = "addToQueue" | "addToPlaylist" | "addToFavorites" | "info" | "remove";
+type SongActionKey = "addToQueue" | "addToPlaylist" | "addToFavorites" | "info" | "trim" | "remove";
 
 const INITIAL_FILTERS: Record<FilterKey, boolean> = {
   favorites: false,
@@ -277,7 +277,7 @@ export default function Songs() {
           renderItem={renderSong}
           contentContainerStyle={{
             paddingTop: hp(4),
-            paddingBottom: isPlaying ? hp(20) : hp(8),
+            paddingBottom: isPlaying ? hp(22) : hp(12),
           }}
           showsVerticalScrollIndicator={false}
           refreshing={isRefetching}

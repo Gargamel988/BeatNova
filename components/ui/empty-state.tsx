@@ -50,17 +50,28 @@ export function EmptyState({
 
   return (
     <View
-      style={{
-        backgroundColor: cardBg,
-        borderRadius: radius(16),
-        borderWidth: 1,
-        borderColor: borderColor,
-        padding: wp(6),
-        alignItems: "center",
-        marginTop: hp(4),
-      }}
+      accessibilityRole="text"
+      style={[
+        {
+          backgroundColor: cardBg,
+          borderRadius: radius(16),
+          borderWidth: 1,
+          borderColor: borderColor,
+          padding: wp(6),
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: fullScreen ? 0 : hp(4),
+        },
+        fullScreen && {
+          flex: 1,
+          marginHorizontal: wp(4),
+          marginVertical: hp(4),
+        },
+      ]}
     >
-      <IconComponent size={wp(10)} color={textSecondary} />
+      <View accessible={false} importantForAccessibility="no">
+        <IconComponent size={wp(10)} color={textSecondary} />
+      </View>
       <Text
         style={{
           fontSize: fontSize(18),

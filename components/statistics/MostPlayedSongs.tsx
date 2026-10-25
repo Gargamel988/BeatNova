@@ -51,12 +51,11 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
     all: t("stats.allTime"),
   };
   const filteredSongs = React.useMemo(() => {
-    if (!songs || songs.length === 0) return [];
-
     const historyBySongId: Record<string, { seconds: number; plays: number }> = {};
 
     if (timeFilter === "all") {
       listeningHistory.forEach((h) => {
+        if (!h.song_id) return;
         if (!historyBySongId[h.song_id]) historyBySongId[h.song_id] = { seconds: 0, plays: 0 };
         historyBySongId[h.song_id].seconds += h.total_seconds || 0;
         historyBySongId[h.song_id].plays += h.play_count || 0;
@@ -78,45 +77,66 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
       }
 
       dailyRows.forEach((r) => {
-        if (r.day >= startStr) {
+        if (r.day >= startStr && r.song_id) {
           if (!historyBySongId[r.song_id]) historyBySongId[r.song_id] = { seconds: 0, plays: 0 };
           historyBySongId[r.song_id].seconds += r.seconds || 0;
           historyBySongId[r.song_id].plays += r.play_count || 0;
         }
       });
+
+      // Eğer seçilen periyotta kayıt yoksa genel dinleme geçmişinden besle
+      if (Object.keys(historyBySongId).length === 0 && listeningHistory.length > 0) {
+        listeningHistory.forEach((h) => {
+          if (!h.song_id) return;
+          if (!historyBySongId[h.song_id]) historyBySongId[h.song_id] = { seconds: 0, plays: 0 };
+          historyBySongId[h.song_id].seconds += h.total_seconds || 0;
+          historyBySongId[h.song_id].plays += h.play_count || 0;
+        });
+      }
     }
 
-    return songs
-      .map((song) => {
-        const stats = historyBySongId[String(song.id)];
-        if (!stats) return { ...song, plays: 0 };
+    const songMap = new Map((songs || []).map((s) => [String(s.id), s]));
 
-        const computedPlays =
-          song.duration > 0
-            ? Math.round(stats.seconds / song.duration)
-            : stats.plays;
+    const items: Song[] = [];
+    Object.entries(historyBySongId).forEach(([songId, stats]) => {
+      const existingSong = songMap.get(songId);
+      const duration = existingSong?.duration || 0;
+      const computedPlays = duration > 0 ? Math.round(stats.seconds / duration) : stats.plays;
+      const plays = Math.max(stats.plays, computedPlays);
 
-        return {
-          ...song,
-          plays: computedPlays > 0 ? computedPlays : stats.plays,
-        };
-      })
-      .filter((song) => song.plays > 0)
-      .sort((a, b) => b.plays - a.plays)
-      .slice(0, 5);
+      if (plays > 0) {
+        items.push({
+          id: songId,
+          title: existingSong?.title || `Şarkı #${songId}`,
+          artist: existingSong?.artist || "Bilinmeyen Sanatçı",
+          duration,
+          cover: existingSong?.cover || null,
+          plays,
+        });
+      }
+    });
+
+    return items.sort((a, b) => b.plays - a.plays).slice(0, 5);
   }, [songs, listeningHistory, dailyRows, timeFilter]);
 
   return (
     <ChartContainer
       title={t("stats.mostPlayedTitle")}
       description={t("stats.mostPlayedDesc")}
-      style={{ gap: hp(1.2), borderWidth: 1, borderColor: colors.overlay.white12 }}
+      style={{
+        gap: hp(1.2),
+        borderRadius: radius(18),
+        padding: wp(3.5),
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.overlay.white12,
+      }}
     >
       <View
         style={{
           flexDirection: "row",
-          gap: wp(1),
-          marginBottom: hp(0.8),
+          gap: wp(2),
+          marginBottom: hp(1),
         }}
       >
         {(["week", "month", "all"] as TimeFilter[]).map((filter) => (
@@ -124,8 +144,8 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
             key={filter}
             onPress={() => setTimeFilter(filter)}
             style={{
-              paddingHorizontal: wp(1.5),
-              paddingVertical: hp(0.4),
+              paddingHorizontal: wp(3),
+              paddingVertical: hp(0.7),
               borderRadius: radius(10),
               backgroundColor: timeFilter === filter ? colors.primary : colors.overlay.white10,
               alignItems: "center",
@@ -136,7 +156,7 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
               style={{
                 fontSize: fontSize(12),
                 fontWeight: "600",
-                color: timeFilter === filter ? colors.foreground : colors.textSecondary,
+                color: timeFilter === filter ? "#FFFFFF" : colors.textSecondary,
               }}
             >
               {filterLabels[filter]}
@@ -145,7 +165,20 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
         ))}
       </View>
 
-      {filteredSongs.map((song, index) => (
+      {filteredSongs.length === 0 ? (
+        <View
+          style={{
+            paddingVertical: hp(3),
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: colors.textSecondary, fontSize: fontSize(13) }}>
+            {t("stats.noDataDesc", { defaultValue: "Bu dönemde dinleme kaydı bulunamadı" })}
+          </Text>
+        </View>
+      ) : (
+        filteredSongs.map((song, index) => (
         <View
           key={song.id}
           style={{
@@ -257,7 +290,7 @@ export function MostPlayedSongs({ songs, listeningHistory = [], dailyRows = [] }
             </Text>
           </View>
         </View>
-      ))}
+      )))}
     </ChartContainer>
   );
 }

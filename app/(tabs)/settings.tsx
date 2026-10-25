@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
-  Alert,
   Linking,
   AppState,
 } from "react-native";
+import { useConfirmDialog } from "@/components/ui/confirm-modal";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColor } from "@/hooks/useColor";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -29,6 +29,8 @@ import {
   ImageIcon,
   Flag,
   LogOut,
+  SlidersHorizontal,
+  Sparkles,
 } from "lucide-react-native";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -36,6 +38,7 @@ import { useAudioPlayerContext } from "@/providers/player-context";
 import * as MediaLibrary from "expo-media-library";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { SleepTimerModal } from "@/components/settings/SleepTimerModal";
+import EqualizerModal from "@/components/settings/EqualizerModal";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 
@@ -59,8 +62,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoPlay: false,
 };
 
-// Bileşen dışında tanımlı: Settings her render olduğunda yeniden mount olmaz
-// (Switch animasyonu ve dokunma durumu korunur).
 type SettingItemProps = {
   icon: any;
   title: string;
@@ -89,6 +90,7 @@ function SettingItem({
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
   const cardBg = useColor("card");
+  const borderColor = useColor("border");
 
   const accent = isDangerous ? palette.red : palette.primary;
 
@@ -97,71 +99,103 @@ function SettingItem({
       onPress={showToggle ? () => onToggleChange?.(!toggleValue) : onPress}
       activeOpacity={0.7}
       disabled={disabled}
+      accessibilityRole={showToggle ? "switch" : "button"}
+      accessibilityState={{
+        disabled,
+        checked: showToggle ? toggleValue : undefined,
+      }}
+      accessibilityLabel={`${title}${subtitle ? `, ${subtitle}` : ""}`}
       style={{
         backgroundColor: cardBg,
         borderRadius: radius(16),
-        padding: wp(4),
-        marginBottom: hp(1.5),
+        paddingHorizontal: wp(3.5),
+        paddingVertical: hp(1.4),
+        marginBottom: hp(1.2),
+        minHeight: Math.max(62, hp(7.5)),
         flexDirection: "row",
         alignItems: "center",
+        borderWidth: 1,
+        borderColor: borderColor + "25",
         opacity: disabled ? 0.6 : 1,
       }}
     >
       <View
         style={{
-          width: wp(12),
-          height: wp(12),
+          width: wp(11),
+          height: wp(11),
           borderRadius: radius(12),
-          backgroundColor: accent + "20",
+          backgroundColor: accent + "18",
           alignItems: "center",
           justifyContent: "center",
-          marginEnd: wp(3),
+          marginEnd: wp(3.5),
         }}
       >
-        <Icon size={wp(6)} color={accent} />
+        <Icon size={wp(5.5)} color={accent} />
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, paddingEnd: wp(2), justifyContent: "center" }}>
         <Text
+          numberOfLines={1}
           style={{
             fontSize: fontSize(15),
             fontWeight: "600",
             color: isDangerous ? palette.red : textPrimary,
-            marginBottom: hp(0.3),
+            marginBottom: subtitle ? hp(0.2) : 0,
+            textAlign: "left",
           }}
         >
           {title}
         </Text>
         {subtitle ? (
-          <Text style={{ fontSize: fontSize(13), color: textSecondary }}>{subtitle}</Text>
+          <Text
+            numberOfLines={1}
+            style={{
+              fontSize: fontSize(12.5),
+              color: textSecondary,
+              textAlign: "left",
+            }}
+          >
+            {subtitle}
+          </Text>
         ) : null}
       </View>
-      {showToggle ? (
-        <Switch
-          value={toggleValue}
-          onValueChange={onToggleChange}
-          disabled={disabled}
-          trackColor={{ false: "#767577", true: palette.primary }}
-          thumbColor={toggleValue ? "#FFFFFF" : "#f4f3f4"}
-        />
-      ) : (
-        <ChevronRight size={wp(5)} color={isDangerous ? palette.red : textSecondary} />
-      )}
+      <View
+        style={{
+          minWidth: 46,
+          alignItems: "flex-end",
+          justifyContent: "center",
+        }}
+      >
+        {showToggle ? (
+          <Switch
+            value={toggleValue}
+            onValueChange={onToggleChange}
+            disabled={disabled}
+            trackColor={{ false: "#767577", true: palette.primary }}
+            thumbColor={toggleValue ? "#FFFFFF" : "#f4f3f4"}
+          />
+        ) : (
+          <ChevronRight size={wp(5)} color={isDangerous ? palette.red : textSecondary} />
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
 
 function SectionTitle({ title, first = false }: { title: string; first?: boolean }) {
-  const { hp, fontSize } = useResponsive();
-  const textPrimary = useColor("authPrimaryText");
+  const { hp, fontSize, wp } = useResponsive();
+  const textSecondary = useColor("authSecondaryText");
 
   return (
     <Text
       style={{
-        fontSize: fontSize(16),
-        fontWeight: "600",
-        color: textPrimary,
-        marginBottom: hp(1.5),
-        marginTop: first ? hp(1) : hp(2),
+        fontSize: fontSize(12),
+        fontWeight: "700",
+        color: textSecondary,
+        textTransform: "uppercase",
+        letterSpacing: 0.8,
+        marginBottom: hp(1),
+        marginTop: first ? hp(0.5) : hp(2.2),
+        paddingHorizontal: wp(1),
       }}
     >
       {title}
@@ -186,12 +220,13 @@ export default function Settings() {
   } = useAudioPlayerContext();
 
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isSleepTimerModalVisible, setIsSleepTimerModalVisible] = useState(false);
+  const [isEqualizerModalVisible, setIsEqualizerModalVisible] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mediaStatus, setMediaStatus] = useState<string>("undetermined");
+  const { confirm, alert } = useConfirmDialog();
 
   const updateSetting = useCallback(
     <K extends keyof AppSettings>(key: K, value: AppSettings[K]) =>
@@ -228,7 +263,7 @@ export default function Settings() {
     return () => sub.remove();
   }, []);
 
-  // Ayarları yükle
+  // Ayarları arka planda yükle
   useEffect(() => {
     let isMounted = true;
     const loadSettings = async () => {
@@ -244,8 +279,6 @@ export default function Settings() {
         }
       } catch (error) {
         console.error("Ayarlar yüklenemedi:", error);
-      } finally {
-        if (isMounted) setIsLoaded(true);
       }
     };
     loadSettings();
@@ -256,11 +289,10 @@ export default function Settings() {
 
   // Ayarları kaydet
   useEffect(() => {
-    if (!isLoaded) return;
     AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)).catch((error) =>
       console.error("Ayarlar kaydedilemedi:", error)
     );
-  }, [isLoaded, settings]);
+  }, [settings]);
 
   const formatTimer = (seconds: number | null) => {
     if (seconds === null || seconds <= 0) return t("common.off");
@@ -270,24 +302,29 @@ export default function Settings() {
   };
 
   const handleLogout = () => {
-    Alert.alert(t("settings.logout"), t("settings.logoutConfirm"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("settings.logout"),
-        style: "destructive",
-        onPress: async () => {
-          if (isLoggingOut) return;
-          setIsLoggingOut(true);
-          try {
-            await logout();
-            router.replace("/(auth)/login");
-          } catch (error: any) {
-            Alert.alert(t("common.error"), error?.message || t("settings.logoutError"));
-            setIsLoggingOut(false);
-          }
-        },
+    confirm({
+      title: t("settings.logout"),
+      message: t("settings.logoutConfirm"),
+      variant: "destructive",
+      confirmText: t("settings.logout"),
+      cancelText: t("common.cancel"),
+      onConfirm: async () => {
+        if (isLoggingOut) return;
+        setIsLoggingOut(true);
+        try {
+          await logout();
+          router.replace("/(auth)/login");
+        } catch (error: unknown) {
+          const errorMsg = error instanceof Error ? error.message : typeof error === 'object' && error && 'message' in error ? String((error as { message: unknown }).message) : String(error);
+          alert({
+            title: t("common.error"),
+            message: errorMsg || t("settings.logoutError"),
+            variant: "destructive",
+          });
+          setIsLoggingOut(false);
+        }
       },
-    ]);
+    });
   };
 
   const handleLoopModeChange = () => {
@@ -295,31 +332,21 @@ export default function Settings() {
     updateLoopMode(LOOP_MODES[nextIndex]);
   };
 
-  if (!isLoaded) {
-    return (
-      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: textPrimary }}>{t("common.loading")}</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   const permissionSubtitle =
     mediaStatus === "granted" ? t("settings.accessGranted") : t("settings.accessDenied");
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingHorizontal: wp(4),
-          paddingTop: hp(2.5),
-          paddingBottom: isPlaying ? hp(20) : hp(8),
+          paddingTop: hp(2),
+          paddingBottom: isPlaying ? hp(24) : hp(14),
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ marginBottom: hp(3) }}>
+        <View style={{ marginBottom: hp(2.5), paddingHorizontal: wp(1) }}>
           <Text
             style={{
               fontSize: fontSize(28),
@@ -360,6 +387,13 @@ export default function Settings() {
           disabled={isLoggingOut}
         />
         <SettingItem
+          icon={Sparkles}
+          title={t("galaxy.title", { defaultValue: "Galaksin" })}
+          subtitle={t("galaxy.promoTitle", { defaultValue: "Galaksin & Playlist Çiz" })}
+          onPress={() => router.push("/galaxy" as any)}
+          disabled={isLoggingOut}
+        />
+        <SettingItem
           icon={Flag}
           title={t("settings.language")}
           subtitle={t("settings.languageSubtitle")}
@@ -368,6 +402,13 @@ export default function Settings() {
         />
 
         <SectionTitle title={t("settings.playback")} />
+        <SettingItem
+          icon={SlidersHorizontal}
+          title={t("equalizer.title", "Ekolayzır")}
+          subtitle={t("equalizer.subtitle", "Ses frekansları ve bas güçlendirme")}
+          onPress={() => setIsEqualizerModalVisible(true)}
+          disabled={isLoggingOut}
+        />
         <SettingItem
           icon={Volume2}
           title={t("settings.soundNormalization")}
@@ -415,7 +456,13 @@ export default function Settings() {
           icon={Info}
           title={t("settings.about")}
           subtitle="BeatNova v1.0.0"
-          onPress={() => Alert.alert(t("settings.aboutTitle"), t("settings.aboutDesc"))}
+          onPress={() =>
+            alert({
+              title: t("settings.aboutTitle"),
+              message: t("settings.aboutDesc"),
+              variant: "info",
+            })
+          }
           disabled={isLoggingOut}
         />
 
@@ -455,6 +502,11 @@ export default function Settings() {
       <SleepTimerModal
         visible={isSleepTimerModalVisible}
         onClose={() => setIsSleepTimerModalVisible(false)}
+      />
+
+      <EqualizerModal
+        visible={isEqualizerModalVisible}
+        onClose={() => setIsEqualizerModalVisible(false)}
       />
 
       <LanguageSelector

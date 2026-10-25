@@ -1,0 +1,57 @@
+diff --git a/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/BaseVideoTrimModule.kt b/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/BaseVideoTrimModule.kt
+index f16fd58..6190308 100644
+--- a/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/BaseVideoTrimModule.kt
++++ b/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/BaseVideoTrimModule.kt
+@@ -621,6 +621,52 @@ open class BaseVideoTrimModule internal constructor(
+ 
+     val resolvedOutputFile = outputFile
+ 
++    val isAudio = options?.getString("type") == "audio"
++    if (isAudio) {
++      val ext = options?.getString("outputExt") ?: "m4a"
++      val resolvedInput = if (url.startsWith("content://")) {
++        com.arthenica.ffmpegkit.FFmpegKitConfig.getSafParameterForRead(reactApplicationContext, Uri.parse(url))
++      } else {
++        url
++      }
++      val startLong = startTime.toLong()
++      val endLong = endTime.toLong()
++      val cmds = mutableListOf(
++        "-y",
++        "-ss", "${startLong}ms",
++        "-to", "${endLong}ms",
++        "-i", resolvedInput,
++        "-vn",
++      )
++      if (ext == "m4a" || ext == "aac") {
++        cmds.addAll(listOf("-c:a", "aac", "-b:a", "192k"))
++      } else {
++        cmds.addAll(listOf("-c:a", "copy"))
++      }
++      cmds.addAll(listOf("-metadata", "creation_time=$formattedDateTime", resolvedOutputFile))
++
++      Log.d(TAG, "Executing audio trim: ${cmds.joinToString(" ")}")
++      FFmpegKit.executeWithArgumentsAsync(cmds.toTypedArray(), { session ->
++        val returnCode = session.returnCode
++        UiThreadUtil.runOnUiThread {
++          if (ReturnCode.isSuccess(returnCode)) {
++            val result = Arguments.createMap()
++            result.putString("outputPath", resolvedOutputFile)
++            result.putDouble("startTime", startTime)
++            result.putDouble("endTime", endTime)
++            result.putDouble("duration", endTime - startTime)
++            result.putBoolean("success", true)
++            promise.resolve(result)
++          } else {
++            val logs = session.allLogsAsString ?: ""
++            Log.e(TAG, "Audio trim failed: rc $returnCode\n$logs")
++            promise.reject(Exception("Audio trim failed: rc $returnCode\n$logs"))
++          }
++        }
++      }, null, null)
++      return
++    }
++
+     // Headless trim: no editor UI, so no transforms (flip/rotate/crop) are possible.
+     // Re-encode for enablePreciseTrimming (frame-accurate cuts) or non-1.0 speed (filters + atempo).
+     val enablePrecise = options?.hasKey("enablePreciseTrimming") == true &&

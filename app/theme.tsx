@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { useConfirmDialog } from "@/components/ui/confirm-modal";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useModeToggle } from "@/hooks/useModeToggle";
@@ -56,6 +57,7 @@ export default function ThemePlayground() {
   const { showRewarded, isRewardedLoaded } = useAds();
 
   const [unlockedThemes, setUnlockedThemes] = React.useState<string[]>([]);
+  const { confirm, alert } = useConfirmDialog();
 
   React.useEffect(() => {
     loadUnlockedThemes();
@@ -92,31 +94,33 @@ export default function ThemePlayground() {
 
     if (isPremium && !isUnlocked) {
       if (!isRewardedLoaded('THEME_UNLOCK')) {
-        Alert.alert(
-          t("theme.adNotReady"),
-          t("theme.adNotReadyDesc")
-        );
+        alert({
+          title: t("theme.adNotReady"),
+          message: t("theme.adNotReadyDesc"),
+          variant: "warning",
+        });
         return;
       }
 
-      Alert.alert(
-        t("theme.premiumTitle"),
-        t("theme.premiumConfirm"),
-        [
-          { text: t("theme.cancel"), style: "cancel" },
-          {
-            text: t("theme.watchAndUnlock"),
-            onPress: () => {
-              showRewarded('THEME_UNLOCK', () => {
-                unlockTheme(key);
-                setMode(key);
-                const themeLabel = t(`theme.themes.${key}.name` as any, { defaultValue: key });
-                Alert.alert(t("theme.congrats"), t("theme.unlockedDesc", { name: themeLabel }));
-              });
-            },
-          },
-        ]
-      );
+      confirm({
+        title: t("theme.premiumTitle"),
+        message: t("theme.premiumConfirm"),
+        variant: "info",
+        confirmText: t("theme.watchAndUnlock"),
+        cancelText: t("theme.cancel"),
+        onConfirm: () => {
+          showRewarded('THEME_UNLOCK', () => {
+            unlockTheme(key);
+            setMode(key);
+            const themeLabel = t(`theme.themes.${key}.name` as any, { defaultValue: key });
+            alert({
+              title: t("theme.congrats"),
+              message: t("theme.unlockedDesc", { name: themeLabel }),
+              variant: "success",
+            });
+          });
+        },
+      });
     } else {
       setMode(key);
     }
@@ -127,7 +131,7 @@ export default function ThemePlayground() {
       colors={[backgroundStart, backgroundMid, backgroundEnd]}
       style={{ flex: 1 }}
     >
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <ScrollView
           contentContainerStyle={{
             paddingHorizontal: wp(5),
@@ -147,6 +151,9 @@ export default function ThemePlayground() {
           >
             <TouchableOpacity
               onPress={() => router.back()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.back", "Geri")}
               style={{
                 width: wp(11),
                 height: wp(11),
@@ -185,10 +192,14 @@ export default function ThemePlayground() {
             </View>
             <TouchableOpacity  
               disabled={mutateUpdateProfile.isPending}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("theme.apply")}
               style={{
                 backgroundColor: primary,
-                padding: wp(4),
+                paddingHorizontal: wp(4),
+                paddingVertical: hp(1.2),
+                minHeight: 48,
                 borderRadius: radius(16),
                 alignItems: "center",
                 justifyContent: "center",
@@ -220,7 +231,10 @@ export default function ThemePlayground() {
                     onPress={() => {
                       handleThemeSelect(key);
                     }}
-                    activeOpacity={0.8}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={`${label}. ${description}${isLocked ? ` (${t("theme.premiumTitle", "Premium")})` : ""}`}
                     style={{
                       borderRadius: radius(20),
                       overflow: "hidden",

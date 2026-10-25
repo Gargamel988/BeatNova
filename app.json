@@ -29,7 +29,9 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.WAKE_LOCK",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.WRITE_SETTINGS",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "package": "com.gargamel9288.beatnova"
     },
@@ -92,7 +94,8 @@
         {
           "androidAppId": "ca-app-pub-1444133443338193~5350662155"
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

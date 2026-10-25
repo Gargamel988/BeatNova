@@ -109,7 +109,9 @@ export function SearchBar({
   return (
     <View style={[baseStyle, containerStyle]}>
       {/* Left Icon */}
-      {leftIcon || <Icon name={Search} size={16} color={muted} />}
+      <View accessible={false} importantForAccessibility="no">
+        {leftIcon || <Icon name={Search} size={16} color={muted} />}
+      </View>
 
       {/* Text Input */}
       <TextInput
@@ -119,6 +121,9 @@ export function SearchBar({
         placeholderTextColor={muted}
         value={displayValue}
         onChangeText={handleTextChange}
+        accessibilityRole="search"
+        accessibilityLabel={defaultPlaceholder}
+        returnKeyType="search"
         {...props}
       />
 
@@ -135,6 +140,9 @@ export function SearchBar({
       {showClear && !loading && (
         <TouchableOpacity
           onPress={handleClear}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.clear', 'Temizle')}
           style={{
             backgroundColor: icon,
             padding: 4,

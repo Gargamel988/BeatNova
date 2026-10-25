@@ -1,7 +1,7 @@
 import { useCallback, Dispatch, SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import * as MediaLibrary from "expo-media-library/legacy";
-import type { Asset } from "expo-media-library/legacy";
+import * as MediaLibrary from "expo-media-library";
+import type { Asset } from "expo-media-library";
 import { parseFilename, extractYoutubeId } from "@/utils/audioMetadata";
 import { queryKeys } from "@/constants/queryKeys";
 
@@ -17,6 +17,7 @@ export interface SongMetadata {
 }
 
 export interface Song extends Asset {
+  asset_id?: string;
   metadata: SongMetadata;
   genre?: string;
   mood?: string[];
@@ -88,6 +89,25 @@ export default function useSongsService() {
     [queryClient]
   );
 
+function isRingtoneOrSystemAsset(filename?: string, uri?: string): boolean {
+  const name = (filename || "").toLowerCase();
+  const path = (uri || "").toLowerCase();
+
+  return (
+    name.includes("_ringtone") ||
+    name.includes("beatnova_ringtone") ||
+    name.startsWith("ringtone_") ||
+    name.startsWith("alarm_") ||
+    name.startsWith("notification_") ||
+    path.includes("/ringtones/") ||
+    path.includes("/notifications/") ||
+    path.includes("/alarms/") ||
+    path.includes("beatnova_ringtone") ||
+    path.includes("beatnova%20ringtones") ||
+    path.includes("beatnova ringtones")
+  );
+}
+
   const loadSongs = async (): Promise<Song[]> => {
     try {
       const { status } = await MediaLibrary.getPermissionsAsync();
@@ -102,8 +122,13 @@ export default function useSongsService() {
         sortBy: MediaLibrary.SortBy.creationTime,
       });
 
-      const processedSongs: Song[] = await Promise.all(
-        media.assets.map(async (asset) => {
+      const rawSongs = await Promise.all<Song | null>(
+        media.assets.map(async (asset): Promise<Song | null> => {
+          // 1. Dosya adından ve mevcut URI'den kontrol et
+          if (isRingtoneOrSystemAsset(asset.filename, asset.uri)) {
+            return null;
+          }
+
           const parsed = parseFilename(asset.filename);
           let uri = asset.uri;
 
@@ -114,6 +139,11 @@ export default function useSongsService() {
             } catch (e) {
               console.error("Asset info error:", e);
             }
+          }
+
+          // 2. Çözümlenmiş yerel dizin yolundan da kontrol et
+          if (isRingtoneOrSystemAsset(asset.filename, uri)) {
+            return null;
           }
 
           return {
@@ -129,6 +159,10 @@ export default function useSongsService() {
             },
           };
         })
+      );
+
+      const processedSongs: Song[] = rawSongs.filter(
+        (song): song is Song => song !== null
       );
 
       return processedSongs;

@@ -4,44 +4,64 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native (prebuild ile oluşan klasörler — CNG kullanıyorsan bunlar ignore edilmeli)
-# Eğer android/ios klasörlerini elle commit ediyorsan (bare workflow) bu iki satırı SİLME dokunma
-# Ama "npx expo prebuild" ile otomatik üretiyorsan bunları ignore et:
-# /android
-# /ios
-
 # Dependencies
 node_modules/
 
-# Native build çıktıları
+# Native Android Build Artifacts & Caches
+android/app/build/
+android/build/
+android/.gradle/
+android/app/.cxx/
+android/.cxx/
+android/local.properties
+android/app/debug.keystore
+modules/**/build/
+modules/**/.gradle/
+modules/**/.cxx/
 *.jks
+*.keystore
+
+# Native iOS Build Artifacts & Caches
+ios/Pods/
+ios/build/
+ios/DerivedData/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+
+# Signing & Keys
 *.p8
 *.p12
 *.key
 *.mobileprovision
 *.orig.*
-android/app/build/
-android/build/
-android/.gradle/
-ios/Pods/
-ios/build/
 
-# Metro
+# Native binaries
+*.apk
+*.aab
+*.apks
+*.ipa
+
+# Metro Bundler
 .metro-health-check*
+.metro/
 
-# Debug/log
+# Debug & Logs
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 *.log
 
-# macOS
+# OS Files
 .DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 
-# Environment / secrets
+# Environment & Secrets (Never commit secrets!)
 .env
 .env.local
-.env*.local
+.env.*.local
+.env.production
 ServicesAccount.json
 google-services.json
 GoogleService-Info.plist
@@ -49,16 +69,26 @@ GoogleService-Info.plist
 # EAS
 credentials.json
 
-# TypeScript
+# TypeScript & Linter
 *.tsbuildinfo
+.eslintcache
 
-# Editor
+# Editor & IDE
 .vscode/
 .idea/
+*.iml
 
 # Testing
 coverage/
+.nyc_output/
 
-# Diğer
-*.orig
+# Temporary / Scratch & AI Agent
+scratch/
 .tmp/
+tmp/
+temp/
+*.tmp
+*.orig
+*.md
+.agents/
+.gemini/

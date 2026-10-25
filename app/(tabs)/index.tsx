@@ -11,12 +11,14 @@ import { LoadingState } from "@/components/ui/loading-state";
 import useSongsService from "@/components/songs/songsService";
 import HomeHeader from "@/components/home/HomeHeader";
 import NowPlayingCard from "@/components/home/NowPlayingCard";
-import StatsCards from "@/components/home/StatsCards";
+import { GalaxyPromoCard } from "@/components/home/GalaxyPromoCard";
 import AIBanner from "@/components/home/AIBanner";
 import QuickAccess from "@/components/home/QuickAccess";
 import PinnedPlaylists from "@/components/home/PinnedPlaylists";
 import RecentSongs from "@/components/home/RecentSongs";
 import PopularSongs from "@/components/home/PopularSongs";
+import SuggestedPlaylistSection from "@/components/playlist/SuggestedPlaylistSection";
+import { useSuggestedPlaylists } from "@/hooks/useSuggestedPlaylists";
 import PlayListPlayModal from "@/components/playlist/PlayListPlayModal";
 import { useColor } from "@/hooks/useColor";
 import { AppBannerAd } from "@/components/AppBannerAd";
@@ -105,6 +107,8 @@ export default function Index() {
     queryFn: () => getPlaylists(),
   });
 
+  const { data: suggestedPlaylists = [] } = useSuggestedPlaylists(deviceSongs.data || []);
+
   // id -> şarkı haritası (O(1) erişim)
   const songMap = useMemo(() => {
     const map = new Map<string, any>();
@@ -184,12 +188,12 @@ export default function Index() {
   const showSleepTimerButton = isSleepTimerActive || isPlaying;
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["bottom", "top"]}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: wp(5),
           paddingTop: hp(2),
-          paddingBottom: isPlaying ? hp(20) : hp(8),
+          paddingBottom: isPlaying ? hp(22) : hp(12),
         }}
         showsVerticalScrollIndicator={false}
       >
@@ -197,6 +201,9 @@ export default function Index() {
 
         {permissionStatus === "denied" && (
           <TouchableOpacity
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t("home.permissionTitle", "Müzik erişimi gerekli")}
             onPress={handleRequestPermission}
             style={{
               marginBottom: hp(2),
@@ -221,6 +228,7 @@ export default function Index() {
           </TouchableOpacity>
         )}
 
+
         <View style={{ marginBottom: hp(2) }}>
           <View
             style={{
@@ -230,12 +238,23 @@ export default function Index() {
               marginBottom: hp(1),
             }}
           >
-            <Text style={{ fontSize: fontSize(20), fontWeight: "800", color: palette.textPrimary }}>
-              {t("home.nowPlaying", "Şimdi Çalıyor")}
-            </Text>
+            {activeSong != null && (
+              <Text style={{ fontSize: fontSize(20), fontWeight: "800", color: palette.textPrimary }}>
+                {t("home.nowPlaying", "Şimdi Çalıyor")}
+              </Text>
+            )}
 
             {showSleepTimerButton && (
+
               <TouchableOpacity
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isSleepTimerActive
+                    ? `${t("home.sleepTimer", "Uyku Zamanlayıcısı")}: ${formatTimerShort(sleepTimerRemaining)}`
+                    : t("home.sleepTimer", "Uyku Zamanlayıcısı")
+                }
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 onPress={() => setIsSleepTimerModalVisible(true)}
                 style={{
                   flexDirection: "row",
@@ -245,6 +264,7 @@ export default function Index() {
                   paddingVertical: hp(0.6),
                   borderRadius: radius(20),
                   gap: wp(1.5),
+                  minHeight: 36,
                 }}
               >
                 <Clock size={14} color={palette.primary} />
@@ -259,22 +279,27 @@ export default function Index() {
           <NowPlayingCard activeSong={activeSong} />
         </View>
 
-        <StatsCards
-          totalSongs={deviceSongs.data?.length || 0}
-          totalPlaylists={playlists.data?.length || 0}
-          totalFavorites={favorites.data?.length || 0}
-        />
-        <AIBanner />
         <QuickAccess
           songsCount={deviceSongs.data?.length || 0}
           playlistsCount={playlists.data?.length || 0}
           favoritesCount={favorites.data?.length || 0}
         />
-        <AppBannerAd placement="home" style={{ marginVertical: hp(1) }} />
+
+        {suggestedPlaylists.length > 0 && (
+          <SuggestedPlaylistSection playlists={suggestedPlaylists} />
+        )}
+
+        <GalaxyPromoCard />
+
+        <AIBanner />
+
         <PinnedPlaylists
           playlists={playlists.data?.slice(0, 3) || []}
           onPlayPlaylist={handlePlayPlaylist}
         />
+
+        <AppBannerAd placement="home" style={{ marginVertical: hp(1) }} />
+
         <RecentSongs songs={recentSongs} onPlaySong={handlePlaySong} />
         <PopularSongs songs={popularSongs} onPlaySong={handlePlaySong} />
       </ScrollView>

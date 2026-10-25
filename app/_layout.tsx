@@ -17,10 +17,13 @@ import { PlaylistProvider } from "@/providers/playlist-context";
 import GlobalMiniPlayer from "@/components/GlobalMiniPlayer";
 import { supabase } from "@/lib/supabase";
 import { ToastProvider } from "@/components/ui/toast";
+import { ConfirmDialogProvider } from "@/components/ui/confirm-modal";
 import { useColor } from "@/hooks/useColor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useResponsive } from "@/hooks/useResponsive";
 import { AnimatedLogoSplash } from "@/components/AnimatedLogoSplash";
+import { useRatingPrompt } from "@/hooks/useRatingPrompt";
+import { RatingModal } from "@/components/feedback/RatingModal";
 import { AdsProvider } from "@/providers/AdsProvider";
 import * as MediaLibrary from "expo-media-library";
 import { ShieldAlert } from "lucide-react-native";
@@ -67,7 +70,9 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <ToastProvider>
-            <RootContent colorScheme={colorScheme} />
+            <ConfirmDialogProvider>
+              <RootContent colorScheme={colorScheme} />
+            </ConfirmDialogProvider>
           </ToastProvider>
         </ThemeProvider>
       </QueryClientProvider>
@@ -179,8 +184,8 @@ function RootContent({ colorScheme }: RootContentProps) {
 
   useEffect(() => {
     if (Platform.OS === "android") {
-      NavigationBar.setStyle(colorScheme === "light" ? "dark" : "light");
-      setBackgroundColorAsync("#000000");
+      NavigationBar.setButtonStyleAsync("light").catch(() => {});
+      setBackgroundColorAsync("#000000").catch(() => {});
     }
   }, [colorScheme]);
 
@@ -190,6 +195,12 @@ function RootContent({ colorScheme }: RootContentProps) {
   const primaryColor = useColor("primary");
 
   const isTabsPage = segments[0] === "(tabs)";
+  const isGalaxyPage = segments[0] === "galaxy";
+  const isAuthPage = segments[0] === "(auth)";
+
+  // Google Play Değerlendirme Akışı (5 dk aktif kullanım sonrası güvenli ekranda)
+  const isSafeToPrompt = isAuthenticated && !isGalaxyPage && !isAuthPage && !isLoading;
+  const ratingPrompt = useRatingPrompt(isSafeToPrompt);
 
   if (isLoading) {
     return (
@@ -322,7 +333,7 @@ function RootContent({ colorScheme }: RootContentProps) {
       <AdsProvider>
         <AudioPlayerProvider>
           <PlaylistProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
+            <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000000" }}>
               <LinearGradient
                 colors={[start, mid, end] as [string, string, string]}
                 start={{ x: 0, y: 1 }}
@@ -344,14 +355,26 @@ function RootContent({ colorScheme }: RootContentProps) {
                   <Stack.Screen name="favorite" options={{ animation: "slide_from_right" }} />
                   <Stack.Screen name="statistic" options={{ animation: "slide_from_right" }} />
                   <Stack.Screen name="theme" options={{ animation: "slide_from_right" }} />
+                  <Stack.Screen name="galaxy" options={{ animation: "slide_from_bottom" }} />
                   <Stack.Screen name="(auth)" />
                   <Stack.Screen name="+not-found" />
                 </Stack>
-                {isAuthenticated && (
+                {isAuthenticated && !isGalaxyPage && (
                   <>
                     <GlobalMiniPlayer hasTabBar={isTabsPage} />
                   </>
                 )}
+
+                <RatingModal
+                  visible={ratingPrompt.isVisible}
+                  step={ratingPrompt.step}
+                  isSubmitting={ratingPrompt.isSubmitting}
+                  onAnswerYes={ratingPrompt.onAnswerYes}
+                  onAnswerNo={ratingPrompt.onAnswerNo}
+                  onDismissLater={ratingPrompt.onDismissLater}
+                  onSubmitFeedback={ratingPrompt.onSubmitFeedback}
+                  onClose={ratingPrompt.onClose}
+                />
               </LinearGradient>
             </GestureHandlerRootView>
           </PlaylistProvider>

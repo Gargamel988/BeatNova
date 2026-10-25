@@ -1,21 +1,15 @@
 import React from "react";
-import { TouchableOpacity } from "react-native";
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
-import { Icon } from "@/components/ui/icon";
-import { BarChart3 } from "lucide-react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
-import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 export function HomeHeaderComponent() {
   const { t } = useTranslation();
-  const { wp, hp, fontSize, radius } = useResponsive();
-  const cardBg = useColor("card");
+  const { hp, fontSize } = useResponsive();
   const textPrimary = useColor("authPrimaryText");
   const textSecondary = useColor("authSecondaryText");
-  const borderColor = useColor("border");
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -51,24 +45,7 @@ export function HomeHeaderComponent() {
           {t("home.startMusic", "Müzik Keyfin Başlasın")}
         </Text>
       </View>
-      <TouchableOpacity
-        onPress={() => {
-          router.push("/statistic" as any);
-        }}
-        className="items-center justify-center"
-        style={{
-          width: wp(12),
-          height: wp(12),
-          borderRadius: radius(12),
-          backgroundColor: cardBg,
-          borderWidth: 1,
-          borderColor,
-        }}
-        activeOpacity={0.7}
-        accessibilityLabel={t("stats.title", "İstatistikler")}
-      >
-        <Icon name={BarChart3} size={22} color={textPrimary} />
-      </TouchableOpacity>
+
     </View>
   );
 }

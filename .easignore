@@ -1,56 +1,81 @@
-# Build artifacts - EAS Build kendi build yapacak
+# Build artifacts - EAS Build builds cleanly in remote container
 android/app/build/
 android/build/
 android/.gradle/
+android/app/.cxx/
+android/.cxx/
 android/local.properties
 android/app/debug.keystore
+modules/**/build/
+modules/**/.gradle/
+modules/**/.cxx/
+ios/Pods/
+ios/build/
+ios/DerivedData/
 
-# Node modules - EAS Build kendi yükleyecek
+# Node modules - EAS Build installs fresh dependencies on build container
 node_modules/
 
-# Git - gereksiz
+# Git - not needed in build archive
 .git/
 .gitignore
 
-# Cache ve log dosyaları
+# Cache and logs
 *.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 *.cache
 .cache/
 .expo/
 .expo-shared/
+.metro/
 
-# OS dosyaları
+# OS files
 .DS_Store
 Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 *.swp
 *.swo
 *~
 
-# IDE dosyaları
+# IDE & Editor files
 .idea/
 .vscode/
 *.iml
 
-# Test ve coverage
+# Test, coverage & test specifications (not needed in bundle)
 coverage/
 .nyc_output/
+utils/__tests__/
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
 
-# Temporary dosyalar
+# Temporary & scratch files
+scratch/
 tmp/
 temp/
 *.tmp
+.tmp/
 
-# Environment dosyaları (güvenlik)
+# Environment files (managed via EAS secrets / eas.json)
 .env.local
 .env.*.local
 
-# Metro bundler cache
-.metro/
-
-# Build outputs
+# Build outputs & pre-existing binaries
 dist/
 build/
 *.apk
 *.aab
+*.apks
 *.ipa
 
+# Documentation & AI tools (saves upload bandwidth & build archive size)
+*.md
+docs/
+.agents/
+.gemini/

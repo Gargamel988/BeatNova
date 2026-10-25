@@ -33,7 +33,7 @@ export function Progress({
   const primaryColor = useColor('primary');
   const mutedColor = useColor('muted');
 
-  const clampedValue = Math.max(0, Math.min(100, value));
+  const clampedValue = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
   const progressWidth = useSharedValue(clampedValue);
   const containerWidth = useSharedValue(200); // Default width, will be updated
   const isDragging = useSharedValue(false);

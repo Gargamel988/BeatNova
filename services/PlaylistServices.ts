@@ -1,18 +1,12 @@
 import { supabase } from "@/lib/supabase";
-import { PlaylistType, PlaylistCreatePayload } from "@/type/PlaylistType";
-import { Song } from "@/type/SongType";
+import type { PlaylistType, PlaylistCreatePayload } from "@/type/PlaylistType";
+import type { Song } from "@/type/SongType";
 import { getUser } from "@/lib/user";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type RawPlaylistSong = {
+  song_id: string;
   song_duration: number | null;
-  songs: {
-    cover_url: string | null;
-    duration: number | null;
-  } | {
-    cover_url: string | null;
-    duration: number | null;
-  }[] | null;
 };
 
 type RawPlaylist = {
@@ -43,11 +37,8 @@ const getPlaylists = async (): Promise<PlaylistType[]> => {
       .select(`
         *,
         playlist_songs (
-          song_duration,
-          songs (
-            cover_url,
-            duration
-          )
+          song_id,
+          song_duration
         )
       `)
       .order("created_at", { ascending: false })
@@ -63,7 +54,27 @@ const getPlaylists = async (): Promise<PlaylistType[]> => {
 
     const rawList = playlists as unknown as RawPlaylist[];
 
-    // Tek sorguda gelen verileri yerel olarak (istemcide) işle (N+1 sorununu çözer)
+    // Kapak görselleri için ilk 4 şarkının ID'lerini topla
+    const coverSongIds = new Set<string>();
+    rawList.forEach((pl) => {
+      (pl.playlist_songs ?? []).slice(0, 4).forEach((ps) => {
+        if (ps.song_id) coverSongIds.add(ps.song_id);
+      });
+    });
+
+    const coverMap = new Map<string, string>();
+    if (coverSongIds.size > 0) {
+      const { data: covers } = await supabase
+        .from("songs")
+        .select("id, cover_url")
+        .in("id", Array.from(coverSongIds))
+        .eq("users_id", user.id);
+
+      (covers ?? []).forEach((c) => {
+        if (c.cover_url) coverMap.set(c.id, c.cover_url);
+      });
+    }
+
     const playlistsWithCounts: PlaylistType[] = rawList.map((playlist) => {
       const pSongs = playlist.playlist_songs ?? [];
       const songCount = pSongs.length;
@@ -72,20 +83,12 @@ const getPlaylists = async (): Promise<PlaylistType[]> => {
       const songCoverUrls: string[] = [];
 
       pSongs.forEach((ps) => {
-        // Süre hesaplama
-        let duration = ps.song_duration;
-        if (duration == null) {
-          const songsObj = Array.isArray(ps.songs) ? ps.songs[0] : ps.songs;
-          duration = songsObj?.duration ?? 0;
-        }
-        totalDuration += Number(duration) || 0;
+        totalDuration += Number(ps.song_duration) || 0;
 
-        // İlk 4 şarkının kapak resmini al
-        if (songCoverUrls.length < 4) {
-          const songsObj = Array.isArray(ps.songs) ? ps.songs[0] : ps.songs;
-          const coverUrl = songsObj?.cover_url;
-          if (coverUrl && typeof coverUrl === "string" && coverUrl.trim() !== "") {
-            songCoverUrls.push(coverUrl.trim());
+        if (songCoverUrls.length < 4 && ps.song_id) {
+          const cover = coverMap.get(ps.song_id);
+          if (cover && typeof cover === "string" && cover.trim() !== "") {
+            songCoverUrls.push(cover.trim());
           }
         }
       });
@@ -109,7 +112,12 @@ const getPlaylists = async (): Promise<PlaylistType[]> => {
     return playlistsWithCounts;
   } catch (error: unknown) {
     if (__DEV__) {
-      console.warn("getPlaylists error:", error instanceof Error ? error.message : String(error));
+      const errDetails = error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null
+          ? JSON.stringify(error)
+          : String(error);
+      console.warn("getPlaylists error:", errDetails);
     }
     return [];
   }
@@ -276,13 +284,15 @@ const getPlaylistSongs = async (playlistId: number | string): Promise<Song[]> =>
       return [];
     }
 
-    // Tek sorguda playlist şarkılarını ve song detaylarını getir
+    const user = await getUser();
+    if (!user?.id) {
+      return [];
+    }
+
+    // 1. Playlist şarkı sıralamasını ve song_id'leri çek
     const { data: playlistSongs, error: playlistSongsError } = await supabase
       .from("playlist_songs")
-      .select(`
-        id,
-        songs (*)
-      `)
+      .select("id, song_id, position, song_duration")
       .eq("playlist_id", playlistId)
       .order("position", { ascending: true });
 
@@ -294,16 +304,38 @@ const getPlaylistSongs = async (playlistId: number | string): Promise<Song[]> =>
       return [];
     }
 
-    // Gelen veriden songs objelerini çıkart
+    const songIds = playlistSongs.map((ps) => ps.song_id).filter(Boolean);
+    if (songIds.length === 0) {
+      return [];
+    }
+
+    // 2. composite PK (users_id, id) ile sadece bu kullanıcının şarkılarını çek
+    const { data: songsData, error: songsError } = await supabase
+      .from("songs")
+      .select("*")
+      .in("id", songIds)
+      .eq("users_id", user.id);
+
+    if (songsError) {
+      throw songsError;
+    }
+
+    const songsMap = new Map((songsData ?? []).map((s) => [s.id, s as unknown as Song]));
+
     const orderedSongs = playlistSongs
-      .map((item) => {
-        const songObj = Array.isArray(item.songs) ? item.songs[0] : item.songs;
-        return songObj as unknown as Song | null;
-      })
+      .map((item) => songsMap.get(item.song_id))
       .filter((song): song is Song => song !== null && song !== undefined);
 
     return orderedSongs;
-  } catch {
+  } catch (error: unknown) {
+    if (__DEV__) {
+      const errDetails = error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null
+          ? JSON.stringify(error)
+          : String(error);
+      console.warn("getPlaylistSongs error:", errDetails);
+    }
     return [];
   }
 };

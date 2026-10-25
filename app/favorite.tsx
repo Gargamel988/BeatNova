@@ -166,7 +166,7 @@ export default function Favorite() {
       colors={[backgroundStart, backgroundMid, backgroundEnd]}
       style={{ flex: 1 }}
     >
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <ScrollView
           contentContainerStyle={{
             paddingBottom: hp(15),
@@ -185,6 +185,9 @@ export default function Favorite() {
           >
             <TouchableOpacity
               onPress={() => router.back()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.back", "Geri")}
               style={{
                 width: wp(11),
                 height: wp(11),
@@ -239,8 +242,12 @@ export default function Favorite() {
             >
               <TouchableOpacity
                 onPress={handlePlayAll}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("fav.play")}
                 style={{
                   flex: 1,
+                  minHeight: 48,
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",
@@ -265,8 +272,12 @@ export default function Favorite() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleShuffle}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("fav.shufflePlay")}
                 style={{
                   flex: 1,
+                  minHeight: 48,
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",

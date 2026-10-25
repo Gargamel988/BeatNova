@@ -46,3 +46,76 @@ export function extractYoutubeId(filename: string): string | null {
 
   return null;
 }
+
+/**
+ * Sanatçı adı boşsa veya varsayılan "Bilinmeyen Sanatçı" ise aktif dildeki çeviriyi döner.
+ */
+export function getLocalizedArtist(
+  artist: string | undefined | null,
+  t: (key: string, options?: any) => string
+): string {
+  if (!artist || artist.trim() === "") {
+    return t("songs.unknownArtist", { defaultValue: "Bilinmeyen Sanatçı" });
+  }
+  const clean = artist.trim().toLowerCase();
+  if (
+    clean === "bilinmeyen sanatçı" ||
+    clean === "bilinmeyen" ||
+    clean === "unknown artist" ||
+    clean === "unknown" ||
+    clean === "<unknown>" ||
+    clean === "<bilinmiyor>"
+  ) {
+    return t("songs.unknownArtist", { defaultValue: "Bilinmeyen Sanatçı" });
+  }
+  return artist;
+}
+
+/**
+ * Şarkı adı boşsa veya varsayılan "Bilinmeyen Şarkı" ise aktif dildeki çeviriyi döner.
+ */
+export function getLocalizedTitle(
+  title: string | undefined | null,
+  t: (key: string, options?: any) => string
+): string {
+  if (!title || title.trim() === "") {
+    return t("songs.unknownTitle", { defaultValue: "Bilinmeyen Şarkı" });
+  }
+  const clean = title.trim().toLowerCase();
+  if (
+    clean === "bilinmeyen şarkı" ||
+    clean === "bilinmeyen" ||
+    clean === "unknown title" ||
+    clean === "unknown song" ||
+    clean === "unknown" ||
+    clean === "<unknown>" ||
+    clean === "<bilinmiyor>"
+  ) {
+    return t("songs.unknownTitle", { defaultValue: "Bilinmeyen Şarkı" });
+  }
+  return title;
+}
+
+/**
+ * Albüm adı boşsa veya varsayılan "Bilinmeyen Albüm" ise aktif dildeki çeviriyi döner.
+ */
+export function getLocalizedAlbum(
+  album: string | undefined | null,
+  t: (key: string, options?: any) => string
+): string {
+  if (!album || album.trim() === "") {
+    return t("songs.unknownAlbum", { defaultValue: "Bilinmeyen Albüm" });
+  }
+  const clean = album.trim().toLowerCase();
+  if (
+    clean === "bilinmeyen albüm" ||
+    clean === "bilinmeyen" ||
+    clean === "unknown album" ||
+    clean === "unknown" ||
+    clean === "<unknown>" ||
+    clean === "<bilinmiyor>"
+  ) {
+    return t("songs.unknownAlbum", { defaultValue: "Bilinmeyen Albüm" });
+  }
+  return album;
+}

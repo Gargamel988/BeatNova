@@ -8,6 +8,7 @@ export const queryKeys = {
     all: () => ["playlists"] as const,
     detail: (id: number | string) => ["playlists", id] as const,
     songs: (id: number | string) => ["playlist-songs", id] as const,
+    suggestions: () => ["suggested-playlists"] as const,
   },
   songs: {
     all: () => ["songs"] as const,
@@ -19,10 +20,14 @@ export const queryKeys = {
   statistics: {
     listeningHistory: () => ["listeninghistory"] as const,
     listeningDaily: (from: string) => ["listening-daily", from] as const,
+    wrapped: (period: string) => ["wrapped", period] as const,
   },
   friends: {
     all: () => ["friends"] as const,
     requests: () => ["friendRequests"] as const,
     search: (query: string) => ["friends", "search", query] as const,
+  },
+  galaxy: {
+    stats: () => ["galaxy-stats"] as const,
   },
 } as const;

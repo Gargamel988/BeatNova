@@ -1,6 +1,7 @@
 import { View } from "@/components/ui/view";
 import { Text } from "@/components/ui/text";
-import { Modal, TouchableOpacity, Image, FlatList, Alert, Share } from "react-native";
+import { Modal, TouchableOpacity, Image, FlatList, Share } from "react-native";
+import { useConfirmDialog } from "@/components/ui/confirm-modal";
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import DraggableFlatList, { ScaleDecorator } from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -61,6 +62,7 @@ export default function PlayListPlayModal({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { confirm } = useConfirmDialog();
   const { palette: colors } = useThemeModeContext();
   const { wp, hp, fontSize, radius } = useResponsive();
   const { play, activeSong, shuffle } = useAudioPlayerContext();
@@ -283,41 +285,37 @@ export default function PlayListPlayModal({
   // Playlist sil
   const handleDelete = useCallback(() => {
     setIsMoreMenuVisible(false);
-    setTimeout(() => {
-      Alert.alert(
-        t("playlist.deleteTitle"),
-        t("playlist.deleteConfirmModal"),
-        [
-          { text: t("common.cancel"), style: "cancel" },
-          {
-            text: t("playlist.delete"),
-            style: "destructive",
-            onPress: () => deleteMutation.mutate(playlistId),
-          },
-        ]
-      );
-    }, 300);
-  }, [playlistId, deleteMutation, t]);
+    confirm({
+      title: t("playlist.deleteTitle"),
+      message: t("playlist.deleteConfirmModal"),
+      variant: "destructive",
+      confirmText: t("playlist.delete"),
+      cancelText: t("common.cancel"),
+      onConfirm: () => {
+        deleteMutation.mutate(playlistId);
+      },
+    });
+  }, [playlistId, deleteMutation, confirm, t]);
 
   // Şarkıyı playlistten çıkar
   const handleRemoveSong = useCallback(
     (songId: string) => {
-      Alert.alert(t("playlist.removeSongTitle"), t("playlist.removeSongConfirm"), [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("playlist.remove"),
-          style: "destructive",
-          onPress: () => {
-            removeSongMutation.mutate({ songId, plId: playlistId });
-            // Reorder modundayken local listeden de çıkar
-            if (isReorderMode) {
-              setReorderedSongs((prev) => prev.filter((s) => s.id !== songId));
-            }
-          },
+      confirm({
+        title: t("playlist.removeSongTitle"),
+        message: t("playlist.removeSongConfirm"),
+        variant: "destructive",
+        confirmText: t("playlist.remove"),
+        cancelText: t("common.cancel"),
+        onConfirm: () => {
+          removeSongMutation.mutate({ songId, plId: playlistId });
+          // Reorder modundayken local listeden de çıkar
+          if (isReorderMode) {
+            setReorderedSongs((prev) => prev.filter((s) => s.id !== songId));
+          }
         },
-      ]);
+      });
     },
-    [playlistId, removeSongMutation, isReorderMode, t]
+    [playlistId, removeSongMutation, isReorderMode, confirm, t]
   );
 
   // handleMoveUp ve handleMoveDown artık gerekli değil (DraggableFlatList kullanılıyor)
@@ -402,6 +400,9 @@ export default function PlayListPlayModal({
           {isReorderMode && (
             <TouchableOpacity
               onPressIn={drag}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel={t("playlist.changeOrder", "Sıralamayı değiştir")}
               style={{
                 marginEnd: wp(3),
                 padding: wp(1),
@@ -505,6 +506,10 @@ export default function PlayListPlayModal({
           <TouchableOpacity
             onPress={() => handleRemoveSong(item.id)}
             disabled={removeSongMutation.isPending}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={t("playlist.removeSong", "Şarkıyı listeden kaldır")}
+            activeOpacity={0.7}
             style={{
               padding: wp(2),
               borderRadius: radius(8),
@@ -650,6 +655,10 @@ export default function PlayListPlayModal({
               <TouchableOpacity
                 onPress={handleSaveOrder}
                 disabled={reorderMutation.isPending}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("playlist.save")}
+                activeOpacity={0.7}
                 style={{
                   backgroundColor: accent,
                   borderRadius: radius(10),
@@ -681,6 +690,10 @@ export default function PlayListPlayModal({
                   setHasOrderChanged(false);
                   if (songs) setReorderedSongs([...songs]);
                 }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.cancel", "İptal")}
+                activeOpacity={0.7}
                 style={{
                   backgroundColor: cardBg,
                   borderRadius: radius(10),
@@ -696,6 +709,10 @@ export default function PlayListPlayModal({
               <>
                 <TouchableOpacity
                   onPress={() => setIsMoreMenuVisible(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("playlist.moreOptions", "Daha fazla seçenek")}
+                  activeOpacity={0.7}
                   style={{
                     backgroundColor: cardBg,
                     borderRadius: radius(10),
@@ -707,6 +724,10 @@ export default function PlayListPlayModal({
 
                 <TouchableOpacity
                   onPress={onClose}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("common.close", "Kapat")}
+                  activeOpacity={0.7}
                   style={{
                     backgroundColor: cardBg,
                     borderRadius: radius(10),

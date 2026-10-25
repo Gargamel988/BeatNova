@@ -196,6 +196,10 @@ export default function PlaylistModal({
             </View>
             <TouchableOpacity
               onPress={resetAndClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.close", "Kapat")}
               style={{
                 width: wp(10),
                 height: wp(10),

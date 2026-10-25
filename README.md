@@ -55,10 +55,23 @@
 - 📋 Kendi playlistlerinizi oluşturun
 - 📱 Veriler cihazda güvenle saklanır
 
-### 🌐 Çevrimdışı Destek
-- 📡 İnternet bağlantısı kontrolü (`NetInfo`)
-- ✈️ Çevrimdışıyken müzik dinlemeye devam edin
-- ⚠️ Uyarılı mod — Kullanıcıyı bilgilendirerek sorunsuz deneyim
+### 🔔 Zil Sesi Kesme & Ayarlama (Sadece Android)
+- ✂️ Şarkıdan 3 ila 30 saniye arası bölüm seçme (`react-native-video-trim`)
+- 🎚️ Çift tutamaklı Reanimated + Gesture Handler aralık seçici ve dalga formu
+- 🔁 Seçilen aralığı canlı döngüsel (loop) önizleme
+- 📁 MediaStore `DIRECTORY_RINGTONES` entegrasyonu (mükerrer kayıt temizleme korumalı)
+- ⚙️ Sistem ayarı değiştirme izni (`WRITE_SETTINGS`) kontrolü ve yönlendirmesi
+- 🔔 Tek dokunuşla varsayılan Android zil sesi yapma (`RingtoneManager`)
+- ⚠️ *Not: Bu özellik yerel Android MediaStore ve RingtoneManager kullandığı için Expo Go üzerinde çalışmaz; Development Build (`npx expo run:android`) gerektirir.*
+
+### 🎛️ Donanımsal Ekolayzır & Ses Stüdyosu (Sadece Android)
+- 🎚️ 5-Bant Donanımsal Grafik Ekolayzır (60 Hz, 230 Hz, 910 Hz, 3.6 kHz, 14 kHz; -12 dB ila +12 dB)
+- 🔊 Yerel Android Ses Efekti motoru (`android.media.audiofx.Equalizer`)
+- 💥 Bas Güçlendirici (0% - 100% `android.media.audiofx.BassBoost`)
+- 🌐 3D Çevreleyen Ses Sanallaştırıcı (0% - 100% `android.media.audiofx.Virtualizer`)
+- 🎵 8 Farklı Hazır Müzik Profili (Flat, Bass Boost, Vocal, Rock, Pop, Jazz, Electronic, Classical)
+- ⚡ 0ms anlık ses filtresi güncellemesi ve otomatik ses oturumu takibi (`AudioSession` listener)
+- ⚠️ *Not: Donanımsal DSP filtreleri yerel Android ses katmanına bağlı olduğu için Expo Go üzerinde çalışmaz; Development Build (`npx expo run:android`) gerektirir.*
 
 ---
 
@@ -123,6 +136,20 @@ BeatNova/
 
 ---
 
+
+## 🚀 Geliştirme & Build Alma
+ 
+Bu projede özel yerel modüller (`ringtone-setter`, `react-native-video-trim`) bulunduğu için standart Expo Go uygulaması yerine **Expo Development Build** kullanılmalıdır.
+ 
+```bash
+# Yerel Android Cihaz/Emülatör için Development Build:
+npx expo run:android
+
+# EAS Build ile Cloud üzerinde Development Build:
+eas build --profile development --platform android
+```
+
+---
 
 ## 📱 Ekran Görüntüleri
 

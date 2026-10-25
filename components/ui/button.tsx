@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { LucideProps } from 'lucide-react-native';
 import { forwardRef } from 'react';
 import {
+  Platform,
   Pressable,
   TextStyle,
   TouchableOpacity,
@@ -87,18 +88,21 @@ export const Button = forwardRef<View, ButtonProps>(
         justifyContent: 'center',
       };
 
-      // Size variants
+      // Size variants (Android 48dp, iOS 44pt minimum)
       switch (size) {
         case 'sm':
-          Object.assign(baseStyle, { height: 44, paddingHorizontal: 24 });
+          Object.assign(baseStyle, {
+            height: Platform.select({ ios: 44, android: 48, default: 44 }),
+            paddingHorizontal: 24,
+          });
           break;
         case 'lg':
           Object.assign(baseStyle, { height: 54, paddingHorizontal: 36 });
           break;
         case 'icon':
           Object.assign(baseStyle, {
-            height: HEIGHT,
-            width: HEIGHT,
+            height: Math.max(HEIGHT, Platform.select({ ios: 44, android: 48, default: 44 }) ?? 44),
+            width: Math.max(HEIGHT, Platform.select({ ios: 44, android: 48, default: 44 }) ?? 44),
             paddingHorizontal: 0,
           });
           break;
@@ -322,6 +326,8 @@ export const Button = forwardRef<View, ButtonProps>(
     const iconSize = getIconSize();
     const styleWithoutFlex = getStyleWithoutFlex();
 
+    const defaultA11yLabel = typeof children === 'string' ? children : undefined;
+
     return animation ? (
       <Pressable
         ref={ref}
@@ -329,6 +335,9 @@ export const Button = forwardRef<View, ButtonProps>(
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || loading}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: disabled || loading, busy: loading }}
+        accessibilityLabel={props.accessibilityLabel ?? defaultA11yLabel}
         style={getPressableStyle()}
         {...props}
       >
@@ -366,7 +375,10 @@ export const Button = forwardRef<View, ButtonProps>(
         style={[buttonStyle, disabled && { opacity: 1 }, styleWithoutFlex]}
         onPress={handleTouchablePress}
         disabled={disabled || loading}
-        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: disabled || loading, busy: loading }}
+        accessibilityLabel={props.accessibilityLabel ?? defaultA11yLabel}
+        activeOpacity={0.7}
         {...props}
       >
         {loading ? (

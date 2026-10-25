@@ -28,9 +28,29 @@ export function ReplayScore({ songs }: ReplayScoreProps) {
     <ChartContainer
       title={t("stats.replayTitle")}
       description={t("stats.replayDesc")}
-      style={{ gap: hp(1.5) }}
+      style={{
+        gap: hp(1.5),
+        borderRadius: radius(18),
+        padding: wp(3.5),
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.overlay.white12,
+      }}
     >
-      {songs.map((song, index) => (
+      {songs.length === 0 ? (
+        <View
+          style={{
+            paddingVertical: hp(2.5),
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: colors.textSecondary, fontSize: fontSize(13) }}>
+            {t("stats.noDataDesc", { defaultValue: "Henüz tekrar dinleme verisi yok" })}
+          </Text>
+        </View>
+      ) : (
+        songs.map((song, index) => (
         <Card
           key={index}
           style={{
@@ -111,7 +131,7 @@ export function ReplayScore({ songs }: ReplayScoreProps) {
             </View>
           </CardContent>
         </Card>
-      ))}
+      )))}
     </ChartContainer>
   );
 }

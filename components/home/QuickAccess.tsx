@@ -76,7 +76,9 @@ export function QuickAccessComponent({
         {quickAccessItems.map((item) => (
           <TouchableOpacity
             key={item.title}
-            activeOpacity={0.9}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.title}, ${item.subtitle}`}
             style={{
               width: wp(43),
               backgroundColor: cardBg,

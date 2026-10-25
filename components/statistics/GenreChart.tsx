@@ -27,7 +27,14 @@ export function GenreChart({ data }: GenreChartProps) {
     <ChartContainer
       title={t("stats.genreTitle")}
       description={t("stats.genreDesc")}
-      style={{ gap: hp(1.5) }}
+      style={{
+        gap: hp(1.5),
+        borderRadius: radius(18),
+        padding: wp(3.5),
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.overlay.white12,
+      }}
     >
       <View style={{ gap: hp(1) }}>
         {data.map((item) => {

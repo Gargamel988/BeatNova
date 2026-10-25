@@ -208,6 +208,8 @@ export const Input = forwardRef<TextInput, InputProps>(
                 onBlur={handleBlur}
                 editable={!disabled}
                 selectionColor={primary}
+                accessibilityLabel={label || placeholder || props.accessibilityLabel}
+                aria-invalid={!!error}
                 {...props}
               />
             </>
@@ -229,6 +231,8 @@ export const Input = forwardRef<TextInput, InputProps>(
                   gap: 8,
                 }}
                 pointerEvents='none'
+                accessible={false}
+                importantForAccessibility="no"
               >
                 {icon && (
                   <Icon name={icon} size={16} color={error ? danger : muted} />
@@ -262,6 +266,8 @@ export const Input = forwardRef<TextInput, InputProps>(
                   editable={!disabled}
                   placeholder={placeholder}
                   selectionColor={primary}
+                  accessibilityLabel={label || placeholder || props.accessibilityLabel}
+                  aria-invalid={!!error}
                   {...props}
                 />
               </View>

@@ -1,6 +1,8 @@
 import { useCallback } from "react";
-import { Alert, Share } from "react-native";
+import { Share } from "react-native";
 import { useToast } from "@/components/ui/toast";
+import { useConfirmDialog } from "@/components/ui/confirm-modal";
+import { Copy, Share2, Trash2 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { getPlaylistShareData } from "@/services/PlaylistServices";
 import { PlaylistType } from "@/type/PlaylistType";
@@ -12,24 +14,23 @@ import {
 export function usePlaylistActions(playlist: PlaylistType) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { confirm, actionSheet } = useConfirmDialog();
 
   const deleteMutation = useDeletePlaylistMutation();
   const cloneMutation = useClonePlaylistMutation();
 
   const handleDelete = useCallback(() => {
-    Alert.alert(
-      t("playlist.deleteTitle"),
-      t("playlist.deleteConfirm"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("playlist.delete"),
-          style: "destructive",
-          onPress: () => deleteMutation.mutate(playlist.id as number),
-        },
-      ]
-    );
-  }, [playlist.id, deleteMutation, t]);
+    confirm({
+      title: t("playlist.deleteTitle"),
+      message: t("playlist.deleteConfirm"),
+      variant: "destructive",
+      confirmText: t("playlist.delete"),
+      cancelText: t("common.cancel"),
+      onConfirm: () => {
+        deleteMutation.mutate(playlist.id as number);
+      },
+    });
+  }, [playlist.id, deleteMutation, confirm, t]);
 
   const handleClone = useCallback(() => {
     cloneMutation.mutate(playlist.id as number);
@@ -55,30 +56,29 @@ export function usePlaylistActions(playlist: PlaylistType) {
   }, [playlist.id, toast, t]);
 
   const showActionsMenu = useCallback(() => {
-    Alert.alert(
-      playlist.name,
-      t("playlist.longPressTitle"),
-      [
+    actionSheet({
+      title: playlist.name,
+      message: t("playlist.longPressTitle"),
+      actions: [
         {
-          text: t("playlist.clone"),
+          label: t("playlist.clone"),
+          icon: Copy,
           onPress: handleClone,
         },
         {
-          text: t("playlist.share"),
+          label: t("playlist.share"),
+          icon: Share2,
           onPress: handleShare,
         },
         {
-          text: t("playlist.delete"),
-          style: "destructive",
+          label: t("playlist.delete"),
+          icon: Trash2,
+          destructive: true,
           onPress: handleDelete,
         },
-        {
-          text: t("common.cancel"),
-          style: "cancel",
-        },
-      ]
-    );
-  }, [playlist.name, handleClone, handleShare, handleDelete, t]);
+      ],
+    });
+  }, [playlist.name, handleClone, handleShare, handleDelete, actionSheet, t]);
 
   return {
     handleDelete,

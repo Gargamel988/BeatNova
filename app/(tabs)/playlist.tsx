@@ -7,17 +7,22 @@ import { Text } from "@/components/ui/text";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useColor } from "@/hooks/useColor";
 import { Icon } from "@/components/ui/icon";
-import { Search, Plus, Shuffle, Heart, Play } from "lucide-react-native";
+import { Search, Plus, Shuffle, Heart, Play, ArrowRightSquareIcon, ChevronRight, ArrowRight } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import PlaylistModal from "@/components/playlist/PlaylistModal";
-import QuickStatCard from "@/components/playlist/QuickStatCard";
 import PinnedPlaylistCard from "@/components/playlist/PinnedPlaylistCard";
 import PlaylistListItem from "@/components/playlist/PlaylistListItem";
 import PlayListPlayModal from "@/components/playlist/PlayListPlayModal";
+import SmartPlaylistSection from "@/components/playlist/SmartPlaylistSection";
+import SuggestedPlaylistSection from "@/components/playlist/SuggestedPlaylistSection";
+import { GalaxyPlaylistCta } from "@/components/playlist/GalaxyPlaylistCta";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { getPlaylists } from "@/services/PlaylistServices";
+import { useSmartPlaylists } from "@/hooks/useSmartPlaylists";
+import { useSuggestedPlaylists } from "@/hooks/useSuggestedPlaylists";
+import useSongsService from "@/hooks/useSongsService";
 import { formatTime } from "@/utils/format";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -43,10 +48,13 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
   );
 }
 
+type PlaylistTab = "all" | "pinned" | "suggested";
+
 export default function PlaylistsPage() {
   const { t } = useTranslation();
   const { wp, hp, fontSize, radius } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTab, setSelectedTab] = useState<PlaylistTab>("all");
   const [isPlaylistModalVisible, setIsPlaylistModalVisible] = useState(false);
   const [isRandomPlaylistModalVisible, setIsRandomPlaylistModalVisible] = useState(false);
   const cardBg = useColor("card");
@@ -68,6 +76,15 @@ export default function PlaylistsPage() {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
+
+  const { loadSongs } = useSongsService();
+  const { data: deviceSongs = [] } = useQuery({
+    queryKey: ["deviceSongs"],
+    queryFn: loadSongs,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: smartPlaylists = [] } = useSmartPlaylists(deviceSongs);
+  const { data: suggestedPlaylists = [] } = useSuggestedPlaylists(deviceSongs);
 
   const [randomPlaylist, setRandomPlaylist] = useState<
     NonNullable<typeof playlists>[number] | null
@@ -96,13 +113,26 @@ export default function PlaylistsPage() {
 
   const visiblePlaylists = useMemo(() => {
     if (!playlists) return [];
-    if (!isSearching) return playlists.filter((p) => !p.isPinned);
-    return playlists.filter(
-      (p) =>
-        p.name.toLowerCase().includes(normalizedQuery) ||
-        p.mood?.some((mood: string) => mood.toLowerCase().includes(normalizedQuery))
-    );
-  }, [playlists, isSearching, normalizedQuery]);
+    if (isSearching) {
+      return playlists.filter(
+        (p) =>
+          p.name.toLowerCase().includes(normalizedQuery) ||
+          p.mood?.some((mood: string) => mood.toLowerCase().includes(normalizedQuery))
+      );
+    }
+
+    if (selectedTab === "pinned") {
+      return playlists.filter((p) => p.isPinned);
+    }
+
+    if (selectedTab === "suggested") {
+      return [];
+    }
+
+    // "all" sekmesinde: pinned olanlar üstte yatay gösterildiği için listede unpinned olanlar (veya hepsi) listelenir
+    const hasPinned = playlists.some((p) => p.isPinned);
+    return hasPinned ? playlists.filter((p) => !p.isPinned) : playlists;
+  }, [playlists, selectedTab, isSearching, normalizedQuery]);
 
   const handleRandomPlaylist = useCallback(() => {
     const withSongs = playlists?.filter((p) => (p.song_count ?? 0) > 0);
@@ -117,15 +147,17 @@ export default function PlaylistsPage() {
   // yeniden mount olmasına (yazarken klavyenin kapanmasına) yol açar.
   const header = (
     <View style={{ gap: hp(1.5), paddingBottom: hp(1) }}>
+      {/* Title & Stats */}
       <View>
-        <Text style={{ color: textPrimary, fontSize: fontSize(32), fontWeight: "800" }}>
+        <Text style={{ color: textPrimary, fontSize: fontSize(28), fontWeight: "800" }}>
           {t("playlist.title")}
         </Text>
-        <Text style={{ color: textSecondary, fontSize: fontSize(14) }}>
-          {t("playlist.subtitle_counts", { count: playlists?.length || 0, songs: totalSongs })}
+        <Text style={{ color: textSecondary, fontSize: fontSize(13), marginTop: hp(0.2) }}>
+          {playlists?.length || 0} {t("playlist.playlists")} • {totalSongs} {t("playlists.songs", "şarkı")} • {formatTime(totalDuration)}
         </Text>
       </View>
 
+      {/* Search Input */}
       <Input
         placeholder={t("playlist.searchPlaceholder")}
         placeholderTextColor={textSecondary}
@@ -141,20 +173,18 @@ export default function PlaylistsPage() {
         inputStyle={{ color: textPrimary, fontSize: fontSize(15) }}
       />
 
-      <View style={{ flexDirection: "row", gap: wp(3) }}>
-        {libraryStats.map((stat) => (
-          <QuickStatCard key={stat.label} label={stat.label} value={stat.value} />
-        ))}
-      </View>
-
+      {/* Action Buttons Row */}
       <View style={{ flexDirection: "row", gap: wp(3) }}>
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t("playlist.newPlaylist")}
           style={{
             flex: 1,
             backgroundColor: accent,
-            borderRadius: radius(14),
-            paddingVertical: hp(2),
+            borderRadius: radius(12),
+            paddingVertical: hp(1.2),
+            minHeight: 44,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
@@ -162,19 +192,22 @@ export default function PlaylistsPage() {
           }}
           onPress={() => setIsPlaylistModalVisible(true)}
         >
-          <Icon name={Plus} size={20} color={accentForeground} />
-          <Text style={{ color: accentForeground, fontSize: fontSize(15), fontWeight: "700" }}>
+          <Icon name={Plus} size={18} color={accentForeground} />
+          <Text style={{ color: accentForeground, fontSize: fontSize(14), fontWeight: "700" }}>
             {t("playlist.newPlaylist")}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t("playlist.shuffle")}
           style={{
             flex: 1,
             backgroundColor: cardBg,
-            borderRadius: radius(14),
-            paddingVertical: hp(2),
+            borderRadius: radius(12),
+            paddingVertical: hp(1.2),
+            minHeight: 44,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
@@ -184,92 +217,186 @@ export default function PlaylistsPage() {
           }}
           onPress={handleRandomPlaylist}
         >
-          <Icon name={Shuffle} size={20} color={textPrimary} />
-          <Text style={{ color: textPrimary, fontSize: fontSize(15), fontWeight: "700" }}>
+          <Icon name={Shuffle} size={18} color={textPrimary} />
+          <Text style={{ color: textPrimary, fontSize: fontSize(14), fontWeight: "700" }}>
             {t("playlist.shuffle")}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {pinnedPlaylists && pinnedPlaylists.length > 0 && !isSearching && (
+      {/* Segmented Filter Pills */}
+      {!isSearching && (
+        <View style={{ flexDirection: "row", gap: wp(2), marginVertical: hp(0.5) }}>
+          {(
+            [
+              { id: "all" as const, label: t("playlist.tabAll", "Tümü") },
+              {
+                id: "pinned" as const,
+                label: t("playlist.tabPinned", "Sabitlenenler"),
+                badge: pinnedPlaylists?.length,
+              },
+              {
+                id: "suggested" as const,
+                label: t("playlist.tabSuggested", "Önerilenler"),
+                badge: (suggestedPlaylists.length > 0 ? 1 : 0) + (smartPlaylists.length > 0 ? 1 : 0),
+              },
+            ]
+          ).map((tab) => {
+            const isActive = selectedTab === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                onPress={() => setSelectedTab(tab.id)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={tab.label}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: wp(4),
+                  paddingVertical: hp(0.9),
+                  borderRadius: radius(99),
+                  backgroundColor: isActive ? accent : cardBg,
+                  borderWidth: 1,
+                  borderColor: isActive ? accent : borderColor,
+                  gap: wp(1.5),
+                }}
+              >
+                <Text
+                  style={{
+                    color: isActive ? accentForeground : textSecondary,
+                    fontSize: fontSize(13),
+                    fontWeight: isActive ? "800" : "600",
+                  }}
+                >
+                  {tab.label}
+                </Text>
+                {tab.badge != null && tab.badge > 0 && (
+                  <View
+                    style={{
+                      paddingHorizontal: wp(1.8),
+                      paddingVertical: hp(0.1),
+                      borderRadius: radius(99),
+                      backgroundColor: isActive
+                        ? "rgba(0,0,0,0.18)"
+                        : "rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: isActive ? accentForeground : textSecondary,
+                        fontSize: fontSize(11),
+                        fontWeight: "700",
+                      }}
+                    >
+                      {tab.badge}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      {/* TAB: ALL */}
+      {selectedTab === "all" && !isSearching && (
         <>
-          <SectionHeader
-            title={t("playlist.pinned")}
-            subtitle={t("playlist.pinnedSubtitle")}
-          />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: wp(3), paddingBottom: hp(1) }}
+          {/* Favorites (Beğenilen Şarkılar) Card */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${t("favorites.title", "Beğenilen Şarkılar")}. ${t("favorites.autoPlaylist", "Otomatik Liste")}`}
+            onPress={() => router.push("/favorite" as any)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              padding: wp(3.5),
+              borderRadius: radius(16),
+              backgroundColor: cardBg,
+              borderWidth: 1,
+              borderColor,
+              gap: wp(3.5),
+            }}
           >
-            {pinnedPlaylists.map((playlist) => (
-              <PinnedPlaylistCard key={playlist.id} playlist={playlist} />
-            ))}
-          </ScrollView>
+            <LinearGradient
+              colors={["#8B5CF6", "#6366F1", "#EC4899"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: wp(13),
+                height: wp(13),
+                borderRadius: radius(12),
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Icon name={Heart} size={24} color="#FFFFFF" />
+            </LinearGradient>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: textPrimary, fontSize: fontSize(16), fontWeight: "700" }}>
+                {t("favorites.title", "Beğenilen Şarkılar")}
+              </Text>
+              <Text style={{ color: textSecondary, fontSize: fontSize(12), marginTop: 2 }}>
+                {t("favorites.autoPlaylist", "Otomatik Liste")} • {t("favorites.title", "Favorilerim")}
+              </Text>
+            </View>
+            <Icon name={ArrowRight} size={25} color={accentForeground} />
+          </TouchableOpacity>
+
+          {/* Pinned Playlists Horizontal Carousel (if any) */}
+          {pinnedPlaylists && pinnedPlaylists.length > 0 && (
+            <>
+              <SectionHeader
+                title={t("playlist.pinned")}
+                subtitle={t("playlist.pinnedSubtitle")}
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: wp(3), paddingBottom: hp(0.5) }}
+              >
+                {pinnedPlaylists.map((playlist) => (
+                  <PinnedPlaylistCard key={playlist.id} playlist={playlist} />
+                ))}
+              </ScrollView>
+            </>
+          )}
+
+          <SectionHeader
+            title={t("playlist.allPlaylists")}
+            subtitle={t("playlist.allPlaylistsSubtitle")}
+          />
         </>
       )}
 
-      {!isSearching && (
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => router.push("/favorite" as any)}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            padding: wp(4),
-            borderRadius: radius(16),
-            backgroundColor: cardBg,
-            borderWidth: 1,
-            borderColor,
-            marginBottom: hp(2),
-            gap: wp(3.5),
-          }}
-        >
-          <LinearGradient
-            colors={["#8B5CF6", "#6366F1", "#EC4899"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              width: wp(14),
-              height: wp(14),
-              borderRadius: radius(12),
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon name={Heart} size={26} color="#FFFFFF" />
-          </LinearGradient>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: textPrimary, fontSize: fontSize(17), fontWeight: "700" }}>
-              {t("favorites.title", "Beğenilen Şarkılar")}
-            </Text>
-            <Text style={{ color: textSecondary, fontSize: fontSize(13), marginTop: 2 }}>
-              {t("favorites.autoPlaylist", "Otomatik Liste")} • {t("favorites.title", "Favorilerim")}
-            </Text>
-          </View>
-          <View
-            style={{
-              width: wp(9),
-              height: wp(9),
-              borderRadius: radius(99),
-              backgroundColor: accent + "22",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon name={Play} size={16} color={accent} />
-          </View>
-        </TouchableOpacity>
+      {/* TAB: SUGGESTED */}
+      {selectedTab === "suggested" && !isSearching && (
+        <View style={{ gap: hp(2) }}>
+          {suggestedPlaylists.length > 0 && (
+            <SuggestedPlaylistSection playlists={suggestedPlaylists} />
+          )}
+          {smartPlaylists.length > 0 && (
+            <SmartPlaylistSection playlists={smartPlaylists} />
+          )}
+        </View>
       )}
 
-      <SectionHeader
-        title={isSearching ? t("playlist.searchResults") : t("playlist.allPlaylists")}
-        subtitle={
-          isSearching
-            ? t("playlist.searchResultsCount", { count: visiblePlaylists.length })
-            : t("playlist.allPlaylistsSubtitle")
-        }
-      />
+      {/* TAB: PINNED */}
+      {selectedTab === "pinned" && !isSearching && (
+        <SectionHeader
+          title={t("playlist.pinned")}
+          subtitle={t("playlist.pinnedSubtitle")}
+        />
+      )}
+
+      {/* SEARCHING */}
+      {isSearching && (
+        <SectionHeader
+          title={t("playlist.searchResults")}
+          subtitle={t("playlist.searchResultsCount", { count: visiblePlaylists.length })}
+        />
+      )}
     </View>
   );
 
@@ -293,6 +420,20 @@ export default function PlaylistsPage() {
         />
       );
 
+    if (selectedTab === "suggested") {
+      return null;
+    }
+
+    if (selectedTab === "pinned" && !isSearching) {
+      return (
+        <EmptyState
+          title={t("playlist.pinned")}
+          message={t("playlist.pinnedSubtitle")}
+          icon="playlist"
+        />
+      );
+    }
+
     return (
       <EmptyState
         title={isSearching ? t("playlist.notFound") : t("playlist.noPlaylists")}
@@ -304,7 +445,7 @@ export default function PlaylistsPage() {
         icon={isSearching ? "search" : "playlist"}
       />
     );
-  }, [playlistsLoading, playlistsError, isSearching, searchQuery, refetchPlaylists, t]);
+  }, [playlistsLoading, playlistsError, selectedTab, isSearching, searchQuery, refetchPlaylists, t]);
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
@@ -313,12 +454,13 @@ export default function PlaylistsPage() {
         renderItem={renderItem}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={header}
+        ListFooterComponent={<GalaxyPlaylistCta />}
         ListEmptyComponent={renderEmpty}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingHorizontal: wp(5),
           paddingTop: hp(2),
-          paddingBottom: isPlaying ? hp(20) : hp(8),
+          paddingBottom: isPlaying ? hp(22) : hp(12),
         }}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews
